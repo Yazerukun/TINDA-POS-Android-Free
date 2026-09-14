@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, Receipt } from 'lucide-react'
 import type { Expense, ExpenseCategory } from '@shared/types'
-import { money, shortDate } from '@shared/format'
+import { money, shortDate, todayKey } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Modal } from '../components/ui/Modal'
@@ -126,7 +126,7 @@ export function Expenses(): React.JSX.Element {
 }
 
 function blankForm(cats: ExpenseCategory[]): Form {
-  return { id: null, category_id: cats[0]?.id ?? 0, amount_c: 0, expense_date: new Date().toISOString().slice(0, 10), description: '' }
+  return { id: null, category_id: cats[0]?.id ?? 0, amount_c: 0, expense_date: todayKey(), description: '' }
 }
 
 function ExpenseModal({ form, cats, onSave, onClose }: { form: Form; cats: ExpenseCategory[]; onSave: (f: Form) => void; onClose: () => void }): React.JSX.Element {

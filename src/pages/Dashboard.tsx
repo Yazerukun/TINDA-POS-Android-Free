@@ -3,7 +3,7 @@ import { TrendingUp, Banknote, Wallet, Receipt, ShoppingCart, AlertTriangle } fr
 import { PageHeader } from '../components/ui/PageHeader'
 import { SectionCard, StatusBadge, EmptyState } from '../components/ui/EmptyState'
 import type { Product, Sale, ReportSummary } from '@shared/types'
-import { money, moneyShort, shortDateTime } from '@shared/format'
+import { money, moneyShort, shortDateTime, todayKey } from '@shared/format'
 
 function StatCard({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: React.ReactNode }): React.JSX.Element {
   return (
@@ -33,8 +33,7 @@ export function Dashboard(): React.JSX.Element | null {
     const load = async () => {
       const request = ++generation
       try {
-        const now = new Date()
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        const today = todayKey()
         const [sales, prods, u, tx] = await Promise.all([
           window.api.reports.sales({ from: today, to: today }),
           window.api.products.search('', { status: 'ACTIVE', limit: 1000 }),

@@ -1,4 +1,4 @@
-# TINDA POS Android Free v1.0.18
+# TINDA POS Android Free v1.0.19
 
 Free, offline-first TINDA POS for Android phones and tablets — a separate APK
 build of the free TINDA POS feature set. The Windows/Electron release remains
@@ -36,12 +36,30 @@ v1.0.18 adds a native updater plugin (`TindaUpdaterPlugin`) that downloads the
 official APK in the background and hands it to Android's installer, plus the
 one-time `REQUEST_INSTALL_PACKAGES` grant flow that Android requires.
 
+## Local data (new in v1.0.19)
+
+Everything you set up now stays on the device — the app no longer returns to the
+setup wizard on every launch. Storage is **Dexie/IndexedDB**, which is pure
+JavaScript: no native plugin, no extra rebuild step, and it will carry over to
+the planned iPad/PWA build.
+
+Persisted: store settings, users and the signed-in session, categories,
+products with their selling units, stock movements, receiving records, batches,
+customers and utang ledgers, sales with items and payments, refunds, voids, held
+carts, shifts, cash movements, cash counts, X/Z reads, expenses, suppliers, CSV
+import/export and backups.
+
+Verified on a physical device: finish setup, create a product, ring up a sale,
+then force-stop and relaunch — store details, the product, the sale, the stock
+movement and the audit trail are all still there.
+
 ## Status
 
 - Screens, navigation, and the software-update pipeline are complete and tested
   on a physical device (v1.0.16 → v1.0.17 → v1.0.18 self-updates verified).
-- The local data layer (persisting products, sales, shifts, utang, and reports
-  on the device) is the next milestone; see [`PLAN.md`](PLAN.md) for phases.
+- Local device persistence is implemented and verified (v1.0.19).
+- Known gaps: native printing is not available on Android yet (receipts are
+  shown on screen instead) and supplier purchase history is not recorded yet.
 - Cloud sync, multi-branch support, subscriptions, and premium gating are out of
   scope for the free build.
 
