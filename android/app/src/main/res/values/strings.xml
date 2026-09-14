@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TINDA POS Free</string>
+    <string name="title_activity_main">TINDA POS Free</string>
+    <string name="package_name">com.tindapos.free</string>
+    <string name="custom_url_scheme">com.tindapos.free</string>
+</resources>

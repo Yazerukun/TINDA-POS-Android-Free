@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-950 text-slate-200 antialiased;
+    user-select: none;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-ink-700;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-750;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-card active:scale-[.98];
+  }
+  .btn-secondary {
+    @apply btn bg-ink-700 text-slate-100 hover:bg-ink-750 border border-ink-line;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-300 hover:bg-ink-800 hover:text-white;
+  }
+  .btn-ghost-2 {
+    @apply btn bg-ink-800 text-slate-300 hover:bg-ink-700 hover:text-white border border-ink-line;
+  }
+  .btn-danger {
+    @apply btn bg-danger-600 text-white hover:bg-danger-500 active:scale-[.98];
+  }
+  .btn-gold {
+    @apply btn bg-gold-500 text-ink-950 hover:bg-gold-400 active:scale-[.98];
+  }
+  .card {
+    @apply rounded-xl bg-ink-850 border border-ink-line shadow-card;
+  }
+  .input {
+    @apply w-full rounded-lg border border-ink-line bg-ink-900 px-3 py-2 text-sm text-slate-100
+      placeholder-slate-500 focus:border-brand-500/70 focus:ring-2 focus:ring-brand-500/25
+      focus:outline-none disabled:opacity-50;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium tracking-wide text-slate-400;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold;
+  }
+  .table-th {
+    @apply px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+  .table-td {
+    @apply px-3 py-2.5 text-sm text-slate-200;
+  }
+  .table-row {
+    @apply border-t border-ink-line transition-colors hover:bg-ink-800/50;
+  }
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm;
+  }
+  .modal-panel {
+    @apply card max-h-[90vh] w-full overflow-y-auto p-6 shadow-pop;
+  }
+  .kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-ink-line bg-ink-800 px-1 text-[10px] font-semibold text-slate-400;
+  }
+  .developer-card {
+    @apply relative overflow-hidden bg-gradient-to-br from-brand-600/20 via-ink-900 to-ink-950;
+  }
+  .developer-card::before,
+  .developer-card::after {
+    content: '';
+    @apply pointer-events-none absolute rounded-full blur-3xl;
+    animation: ambient-drift 7s ease-in-out infinite alternate;
+  }
+  .developer-card::before {
+    @apply -right-16 -top-20 h-48 w-48 bg-brand-500/15;
+  }
+  .developer-card::after {
+    @apply -bottom-24 -left-16 h-52 w-52 bg-gold-500/10;
+    animation-delay: -3s;
+  }
+  .dev-signature {
+    font-family: 'Segoe Print', 'Bradley Hand', 'Brush Script MT', Georgia, cursive;
+    letter-spacing: 0.025em;
+  }
+  .signature-reveal {
+    animation: signature-reveal 650ms cubic-bezier(.2,.8,.2,1) both;
+  }
+  .coffee-float {
+    animation: coffee-float 3.2s ease-in-out infinite;
+  }
+  .donation-card {
+    @apply relative border border-brand-500/30 bg-brand-500/10 shadow-card transition duration-300 hover:-translate-y-0.5 hover:border-brand-400/60 hover:bg-brand-500/15 hover:shadow-glow active:translate-y-0 active:scale-[.985];
+    overflow: hidden;
+  }
+  .donation-card::after {
+    content: '';
+    position: absolute;
+    inset: -80% -35%;
+    width: 28%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+    transform: rotate(18deg) translateX(-500%);
+    animation: donation-shimmer 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .maya-logo-shell {
+    position: relative;
+    z-index: 1;
+    animation: maya-glow 3.2s ease-in-out infinite;
+    transition: transform 300ms cubic-bezier(.2,.8,.2,1);
+  }
+  .donation-card:hover .maya-logo-shell {
+    transform: translateY(-2px) rotate(-1deg) scale(1.04);
+  }
+  .maya-mark {
+    transform-origin: center;
+    animation: maya-mark 2.8s ease-in-out infinite;
+  }
+  .maya-spark {
+    transform-origin: center;
+    animation: maya-spark 2.8s ease-in-out infinite;
+  }
+  .connection-pulse {
+    animation: connection-pulse 2s ease-in-out infinite;
+  }
+  .table {
+    @apply w-full border-collapse text-left;
+  }
+  .table thead tr {
+    @apply border-b border-ink-line;
+  }
+  .table thead th {
+    @apply px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+  .table tbody tr {
+    @apply border-b border-ink-line transition-colors last:border-0 hover:bg-ink-800/50;
+  }
+  .table tbody td {
+    @apply px-3 py-2.5 text-sm text-slate-200;
+  }
+}
+
+@keyframes signature-reveal {
+  from { opacity: 0; transform: translateY(8px); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes coffee-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-5px) rotate(2deg); }
+}
+@keyframes ambient-drift {
+  from { transform: translate3d(-6px, 3px, 0) scale(.96); opacity: .65; }
+  to { transform: translate3d(8px, -5px, 0) scale(1.06); opacity: 1; }
+}
+@keyframes connection-pulse {
+  0%, 100% { opacity: .65; transform: scale(.9); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+@keyframes donation-shimmer {
+  0%, 68% { transform: rotate(18deg) translateX(-500%); }
+  88%, 100% { transform: rotate(18deg) translateX(650%); }
+}
+@keyframes maya-mark {
+  0%, 100% { opacity: .82; }
+  50% { opacity: 1; }
+}
+@keyframes maya-spark {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-1px) rotate(-3deg) scale(1.06); }
+}
+@keyframes maya-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,168,107,.08), 0 8px 20px rgba(0,0,0,.18); }
+  50% { box-shadow: 0 0 0 5px rgba(0,168,107,.08), 0 10px 26px rgba(0,168,107,.20); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .developer-card::before,
+  .developer-card::after,
+  .signature-reveal,
+  .coffee-float,
+  .connection-pulse,
+  .donation-card::after,
+  .maya-logo-shell,
+  .maya-mark,
+  .maya-spark {
+    animation: none !important;
+  }
+}

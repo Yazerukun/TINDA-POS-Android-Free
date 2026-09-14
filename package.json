@@ -1,0 +1,40 @@
+{
+  "name": "tinda-pos-android-free-v1.0.10",
+  "version": "1.0.12",
+  "description": "Planning workspace for a separate Android APK build of the free TINDA POS feature set.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@hookform/resolvers": "^5.9.1",
+    "autoprefixer": "^10.6.0",
+    "lucide-react": "^1.45.0",
+    "postcss": "^8.5.28",
+    "react-hook-form": "^7.88.0",
+    "recharts": "^3.10.1",
+    "tailwindcss": "^3.4.19",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@vitejs/plugin-react": "^6.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}
