@@ -1,3 +1,133 @@
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core'
+import { githubReleasesApiUrl, planUpdateCheck, type UpdateCheckPlan, type UpdateStatusEvent } from '../shared/update'
+
+/**
+ * Native Android updater bridge (see android/app/src/main/java/com/tindapos/free/TindaUpdaterPlugin.java).
+ *
+ * The WebView cannot do either half of an Android update by itself: GitHub
+ * release assets are served without CORS headers, and only a native intent can
+ * start the package installer. So the download and the install both happen
+ * natively and report progress back through plugin events.
+ */
+interface NativeUpdateProgress {
+  downloaded: number
+  total: number
+  percent: number
+}
+
+interface TindaUpdaterNative {
+  getVersion(): Promise<{ versionName: string; versionCode: number; packageName: string }>
+  download(options: { url: string; fileName: string }): Promise<{ fileName: string; path: string; bytes: number }>
+  install(options: { fileName: string }): Promise<{ launched: boolean; needsPermission: boolean }>
+  canInstall(): Promise<{ granted: boolean }>
+  openInstallSettings(): Promise<void>
+  addListener(eventName: 'progress', listener: (progress: NativeUpdateProgress) => void): Promise<PluginListenerHandle>
+}
+
+const TindaUpdater = registerPlugin<TindaUpdaterNative>('TindaUpdater')
+const ANDROID_UPDATER = Capacitor.getPlatform() === 'android'
+
+let installedVersion = '0.0.0'
+let versionRequest: Promise<string> | null = null
+let downloadedApkName: string | null = null
+
+const updateListeners = new Set<(event: UpdateStatusEvent) => void>()
+
+let lastUpdateEvent: UpdateStatusEvent = {
+  status: 'IDLE',
+  installedVersion,
+  portable: false,
+  available: null,
+  progress: null,
+  message: null,
+  lastCheckedAt: null,
+}
+
+function emitUpdateEvent(partial: Partial<UpdateStatusEvent>): UpdateStatusEvent {
+  const event: UpdateStatusEvent = { ...lastUpdateEvent, installedVersion, ...partial }
+  lastUpdateEvent = event
+  for (const listener of updateListeners) {
+    try {
+      listener(event)
+    } catch {
+      /* a broken listener must never stop an update */
+    }
+  }
+  return event
+}
+
+function errorText(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  return message.replace(/^Error:\s*/, '')
+}
+
+/** Real installed version, read from the Android package manager. */
+async function loadInstalledVersion(force = false): Promise<string> {
+  if (ANDROID_UPDATER && (force || !versionRequest)) {
+    versionRequest = (async () => {
+      try {
+        const info = await TindaUpdater.getVersion()
+        if (info?.versionName) installedVersion = info.versionName
+      } catch {
+        /* keep the last known version */
+      }
+      return installedVersion
+    })()
+  }
+  if (versionRequest) return versionRequest
+  return installedVersion
+}
+
+async function runOfficialUpdateCheck(): Promise<UpdateCheckPlan> {
+  const current = await loadInstalledVersion(true)
+  try {
+    const response = await fetch(githubReleasesApiUrl(), {
+      headers: { Accept: 'application/vnd.github+json' },
+      cache: 'no-store',
+    })
+    if (!response.ok) {
+      return { ok: false, code: 'INVALID_RESPONSE', current, latest: null, apk: null, reason: `Update server returned HTTP ${response.status}.` }
+    }
+    return planUpdateCheck(await response.json(), current)
+  } catch {
+    return { ok: false, code: 'INVALID_RESPONSE', current, latest: null, apk: null, reason: 'Cannot reach the update server. Check your internet connection.' }
+  }
+}
+
+async function downloadReleaseApk(plan: UpdateCheckPlan): Promise<{ fileName: string; bytes: number }> {
+  const apk = plan.apk
+  if (!apk) throw new Error('The release has no APK asset.')
+  let handle: PluginListenerHandle | null = null
+  try {
+    handle = await TindaUpdater.addListener('progress', (progress) => {
+      emitUpdateEvent({
+        status: 'DOWNLOADING',
+        available: plan.latest,
+        progress,
+        message: `Downloading v${plan.latest?.version ?? ''}…`,
+      })
+    })
+    const result = await TindaUpdater.download({ url: apk.url, fileName: apk.name })
+    return { fileName: result?.fileName ?? apk.name, bytes: Number(result?.bytes ?? apk.size) }
+  } finally {
+    if (handle) await handle.remove().catch(() => undefined)
+  }
+}
+
+async function launchInstaller(fileName: string): Promise<{ launched: boolean; message: string }> {
+  try {
+    const result = await TindaUpdater.install({ fileName })
+    if (result?.launched) return { launched: true, message: 'Android will now ask you to confirm the install.' }
+    if (result?.needsPermission) {
+      await TindaUpdater.openInstallSettings().catch(() => undefined)
+      return { launched: false, message: 'Allow TINDA POS to install unknown apps, then tap Install Update.' }
+    }
+    return { launched: false, message: 'Android blocked the install prompt. Tap Install Update to try again.' }
+  } catch (error) {
+    return { launched: false, message: errorText(error) }
+  }
+}
+
 function makeCallable(): any {
   const target: any = () => makeCallable()
   const p = Promise.resolve(null)
@@ -72,7 +202,7 @@ api.auth.login = async (u: string) => ({ user: { ...adminUser, username: u }, fi
 api.auth.loginPin = async () => ({ user: adminUser, firstRun: false, shiftOpen: false })
 api.auth.logout = async () => {}
 api.auth.adminResetPin = async () => {}
-api.app.info = async () => ({ version: '1.0.12-dev', platform: 'android', isElectron: false })
+api.app.info = async () => ({ version: await loadInstalledVersion(), platform: 'android', isElectron: false })
 api.app.isOnline = async () => true
 api.app.dataDir = async () => '/data'
 // ---- settings / users ----
@@ -174,30 +304,92 @@ api.backup.useSharedAppData = async () => {}
 // ---- audit / update ----
 api.audit.list = async () => []
 api.update = {
-  state: async () => ({ state: 'idle', installedVersion: appVersion, available: null, portable: false, events: [] }),
+  state: async () => {
+    // Read the real installed version first so the panel never shows a placeholder.
+    await loadInstalledVersion()
+    return { ...lastUpdateEvent, installedVersion }
+  },
   check: async (manual = false) => {
-    const result = await runOfficialUpdateCheck()
-    if (result.status !== 'idle') {
-      const ev: UpdateStatusEvent = {
-        id: `upd-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        status: result.status,
-        manual,
-        installedVersion: appVersion,
-        available: result.available ?? null,
-        message: result.message ?? null,
-      }
-      emitUpdateStatus(ev)
+    emitUpdateEvent({ status: 'CHECKING', message: 'Checking for updates…' })
+    const plan = await runOfficialUpdateCheck()
+    const lastCheckedAt = new Date().toISOString()
+    if (!plan.ok) {
+      return emitUpdateEvent({
+        status: plan.code === 'UP_TO_DATE' ? 'UP_TO_DATE' : 'UNABLE_TO_CHECK',
+        available: plan.latest,
+        progress: null,
+        message: plan.reason,
+        lastCheckedAt,
+      })
     }
-    return result
+    return emitUpdateEvent({
+      status: 'UPDATE_AVAILABLE',
+      available: plan.latest,
+      progress: null,
+      message: plan.reason,
+      lastCheckedAt,
+    })
   },
-      emitUpdateStatus(ev)
+  download: async () => {
+    if (!ANDROID_UPDATER) {
+      return emitUpdateEvent({ status: 'ERROR', message: 'In-app updates are only available in the installed Android app.' })
     }
-    return result
+    // Android needs a one-time "install unknown apps" grant before it will ever
+    // show the install prompt, so ask for it before spending the download.
+    const permission = await TindaUpdater.canInstall().catch(() => null)
+    if (permission && !permission.granted) {
+      await TindaUpdater.openInstallSettings().catch(() => undefined)
+      return emitUpdateEvent({
+        status: 'UPDATE_AVAILABLE',
+        message: 'Allow TINDA POS to install unknown apps, then tap Download Update again.',
+      })
+    }
+    const plan = await runOfficialUpdateCheck()
+    if (!plan.ok || !plan.apk) {
+      return emitUpdateEvent({
+        status: plan.code === 'UP_TO_DATE' ? 'UP_TO_DATE' : 'ERROR',
+        available: plan.latest,
+        progress: null,
+        message: plan.reason,
+      })
+    }
+    const version = plan.latest?.version ?? ''
+    emitUpdateEvent({
+      status: 'DOWNLOADING',
+      available: plan.latest,
+      progress: { downloaded: 0, total: plan.apk.size, percent: 0 },
+      message: `Downloading v${version}…`,
+    })
+    let downloaded: { fileName: string; bytes: number }
+    try {
+      downloaded = await downloadReleaseApk(plan)
+    } catch (error) {
+      return emitUpdateEvent({
+        status: 'ERROR',
+        available: plan.latest,
+        progress: null,
+        message: `Download failed: ${errorText(error)}`,
+      })
+    }
+    downloadedApkName = downloaded.fileName
+    const done = { downloaded: downloaded.bytes, total: downloaded.bytes, percent: 100 }
+    emitUpdateEvent({ status: 'DOWNLOADED', available: plan.latest, progress: done, message: `Downloaded v${version}.` })
+    const install = await launchInstaller(downloaded.fileName)
+    return emitUpdateEvent({
+      status: install.launched ? 'READY_TO_INSTALL' : 'DOWNLOADED',
+      available: plan.latest,
+      progress: done,
+      message: install.message,
+    })
   },
-  download: async () => ({ status: 'idle', installedVersion: appVersion, available: null, message: 'Download not available on this platform yet (native bridge pending).' }),
-  install: async () => {},
-  dismiss: async () => emitUpdateStatus({ id: `upd-${Date.now()}`, timestamp: new Date().toISOString(), status: 'dismissed', manual: false, installedVersion: appVersion, available: null, message: null }),
+  install: async () => {
+    if (!downloadedApkName) {
+      return emitUpdateEvent({ status: 'ERROR', message: 'No downloaded update found. Download the update again.' })
+    }
+    const install = await launchInstaller(downloadedApkName)
+    return emitUpdateEvent({ status: install.launched ? 'READY_TO_INSTALL' : 'DOWNLOADED', message: install.message })
+  },
+  dismiss: async () => emitUpdateEvent({ status: 'DISMISSED', progress: null, message: null }),
   onEvent: (cb: (e: UpdateStatusEvent) => void) => {
     updateListeners.add(cb)
     return () => updateListeners.delete(cb)

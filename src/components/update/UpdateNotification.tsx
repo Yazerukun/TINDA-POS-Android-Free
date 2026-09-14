@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { Download, X, FolderOpen, RotateCcw, Sparkles, Loader2 } from 'lucide-react'
 import type { UpdateStatusEvent } from '@shared/update'
 import { useUpdate } from '../../stores/update'
+
+const IS_ANDROID = Capacitor.getPlatform() === 'android'
 
 /**
  * Non-intrusive update notification. Appears only when action is actually
@@ -40,9 +43,11 @@ export function UpdateNotification(): React.JSX.Element | null {
           {s === 'READY_TO_INSTALL' && <>Update ready to install · v{version}</>}
         </p>
         <p className="mt-0.5 text-slate-300">
-          {event.portable
-            ? 'TINDA POS runs from this folder, so it cannot replace itself. Download the new version and run it from its own folder.'
-            : 'Your store data stays safe in AppData and is backed up before updating.'}
+          {IS_ANDROID
+            ? 'Your sales data stays on this device — the update installs over the current app.'
+            : event.portable
+              ? 'TINDA POS runs from this folder, so it cannot replace itself. Download the new version and run it from its own folder.'
+              : 'Your store data stays safe in AppData and is backed up before updating.'}
         </p>
         {s === 'DOWNLOADING' && event.progress && (
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
@@ -86,15 +91,15 @@ export function UpdateNotification(): React.JSX.Element | null {
     )
   } else if (s === 'DOWNLOADED') {
     actions.push(
-      <button key="folder" onClick={() => { void install() }} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
-        <FolderOpen className="h-3.5 w-3.5" /> Show in folder
+      <button key="install" onClick={() => { void install() }} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
+        {IS_ANDROID ? <Download className="h-3.5 w-3.5" /> : <FolderOpen className="h-3.5 w-3.5" />} {IS_ANDROID ? 'Install Update' : 'Show in folder'}
       </button>,
       <button key="done" onClick={() => void dismiss()} className="btn-ghost px-3 py-1.5 text-xs">Done</button>
     )
   } else if (s === 'READY_TO_INSTALL') {
     actions.push(
       <button key="restart" onClick={() => { setInstallError(null); setBusy(true); void install().catch(() => { setInstallError('Please finish the current operation before installing the update.') }).finally(() => setBusy(false)) }} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs" disabled={busy}>
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} Restart &amp; Install
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} {IS_ANDROID ? 'Install Update' : 'Restart & Install'}
       </button>,
       <button key="later" onClick={() => void dismiss()} className="btn-ghost px-3 py-1.5 text-xs">Install Later</button>
     )

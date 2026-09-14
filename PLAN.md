@@ -2,6 +2,16 @@
 
 ## Current progress
 
+- **v1.0.18 (2026-09-15):** in-app updater finished and verified on a physical
+  device (v1.0.16 → v1.0.17 → v1.0.18 self-updates). Added
+  `TindaUpdaterPlugin` (native download + package-installer intent),
+  `REQUEST_INSTALL_PACKAGES`, a CSP `connect-src` allowance for `api.github.com`,
+  launch-time update check (24h throttle), and an Android-specific update card.
+  Root causes fixed: the WebView CSP blocked every network call, releases were
+  packaged from a stale web bundle, and `install()` was a no-op.
+- **Blocking gap:** the API layer is still a stub — nothing is persisted, so the
+  setup wizard returns on every launch and the POS screens run on demo data. The
+  real local data layer (device persistence) is the next milestone.
 - Phase 1 audit started: Electron IPC, `better-sqlite3`, updater, filesystem, and printer boundaries are identified in the desktop source.
 - Phase 2 shell created: Capacitor Android project, React/Vite entry point, and Android sync are working.
 - Toolchain ready (drive D:, `toolchain/`): JDK 21 Temurin, Android SDK 36 (platform-tools, platforms;android-36, build-tools;36.0.0), Gradle 8.14.3. `source toolchain/env.sh` before any build. Capacitor 8 requires Java 21. Gradle/tmp pinned to D: (avoid /tmp EDQUOT).

@@ -204,7 +204,7 @@ function AboutTab(): React.JSX.Element {
 }
 
 function SoftwareUpdatePanel(): React.JSX.Element | null {
-  const { event, check, download, dismiss } = useUpdate()
+  const { event, check, download, install, dismiss } = useUpdate()
   const [busy, setBusy] = useState(false)
   const [showNotes, setShowNotes] = useState(true)
   if (!event) return null
@@ -251,6 +251,11 @@ function SoftwareUpdatePanel(): React.JSX.Element | null {
         {event.status === 'ERROR' && event.available && (
           <button onClick={() => { setBusy(true); void download().finally(() => setBusy(false)) }} disabled={busy} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
             <Download className="h-3.5 w-3.5" /> Retry Download
+          </button>
+        )}
+        {(event.status === 'DOWNLOADED' || event.status === 'READY_TO_INSTALL') && (
+          <button onClick={() => { setBusy(true); void install().finally(() => setBusy(false)) }} disabled={busy} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
+            <Download className="h-3.5 w-3.5" /> Install Update
           </button>
         )}
         {event.status === 'UPDATE_AVAILABLE' && (
