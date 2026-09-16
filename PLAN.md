@@ -2,6 +2,20 @@
 
 ## Current progress
 
+- **v1.0.21 (2026-09-16):** Native printing landed! TINDA POS Android Free is now
+  ready for production receipt printing:
+  - Added native `TindaPrinterPlugin` supporting direct **Bluetooth Thermal Receipt
+    Printers (58mm / 80mm ESC/POS)** via standard SPP RFCOMM (`UUID 00001101-0000-1000-8000-00805F9B34FB`)
+    with reflection fallback for stubborn devices.
+  - Added **Android System Print (`PrintManager`)** support for WiFi/Mopria/PDF printers.
+  - Added native **Receipt Sharing** via Android Share sheet (`ACTION_SEND`) to easily
+    send digital receipts over Messenger, SMS, or Viber.
+  - Added **Bluetooth pairing shortcut** in Settings opening device Bluetooth settings.
+  - Wired live checkout auto-print, POS completed modal retry/reprint/share,
+    Transactions receipt print/share, Cash Count print, X-Read print, and Z-Read print.
+  - Added Android Bluetooth permissions (`BLUETOOTH`, `BLUETOOTH_CONNECT`, `BLUETOOTH_SCAN`).
+  - Unit tests updated and all 80 vitest tests PASS.
+- **v1.0.20 (2026-09-15):** Catchy flat cash-register + coin green launcher icon.
 - **v1.0.19 (2026-09-15):** the local data layer landed — TINDA POS now keeps its
   data on the device instead of resetting to the setup wizard. Storage is
   **Dexie/IndexedDB** (pure JS, no native plugin or rebuild), with the whole
@@ -36,11 +50,8 @@
   launch-time update check (24h throttle), and an Android-specific update card.
   Root causes fixed: the WebView CSP blocked every network call, releases were
   packaged from a stale web bundle, and `install()` was a no-op.
-- **Resolved in v1.0.19:** the API layer was a stub, so the setup wizard returned
-  on every launch and nothing was persisted. That gap is closed by the Dexie data
-  layer above. Remaining known gaps: native printing is still unavailable on
-  Android (receipts render on screen), and supplier purchase history is not
-  recorded yet.
+- **Resolved in v1.0.19 & v1.0.21:** the data layer and native printing are fully
+  implemented. Remaining known gaps: supplier purchase history is not recorded yet.
 - Phase 1 audit started: Electron IPC, `better-sqlite3`, updater, filesystem, and printer boundaries are identified in the desktop source.
 - Phase 2 shell created: Capacitor Android project, React/Vite entry point, and Android sync are working.
 - Toolchain ready (drive D:, `toolchain/`): JDK 21 Temurin, Android SDK 36 (platform-tools, platforms;android-36, build-tools;36.0.0), Gradle 8.14.3. `source toolchain/env.sh` before any build. Capacitor 8 requires Java 21. Gradle/tmp pinned to D: (avoid /tmp EDQUOT).

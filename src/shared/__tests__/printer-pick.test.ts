@@ -50,4 +50,19 @@ describe('printerPick', () => {
     expect(printerStatusLabel('UNAVAILABLE')).toBe('Unavailable')
     expect(printerStatusLabel('NOT_CONFIGURED')).toBe('Not configured')
   })
+
+  it('recognizes Android System Print as READY when selected', () => {
+    const androidList = [
+      { name: 'SYSTEM_PRINT', displayName: 'Android System Print (WiFi, Mopria, Save as PDF)', isDefault: true },
+      { name: 'BT:DC:0D:30:11:22:33', displayName: 'Bluetooth: MPT-II (DC:0D:30:11:22:33)', isDefault: false }
+    ]
+    const pickSystem = printerPick(androidList, 'SYSTEM_PRINT')
+    expect(pickSystem).toEqual({ name: 'SYSTEM_PRINT', status: 'READY' })
+
+    const pickBt = printerPick(androidList, 'BT:DC:0D:30:11:22:33')
+    expect(pickBt).toEqual({ name: 'BT:DC:0D:30:11:22:33', status: 'READY' })
+
+    const pickMissing = printerPick(androidList, 'BT:AA:BB:CC:DD:EE:FF')
+    expect(pickMissing).toEqual({ name: 'BT:AA:BB:CC:DD:EE:FF', status: 'UNAVAILABLE' })
+  })
 })

@@ -11,6 +11,7 @@ import * as people from '../data/people'
 import * as sales from '../data/sales'
 import * as accounting from '../data/accounting'
 import * as system from '../data/system'
+import * as printerService from '../data/printerService'
 import { onInventoryChanged } from '../data/util'
 
 interface NativeUpdateProgress {
@@ -300,8 +301,10 @@ const api = {
   printer: {
     list: system.printerList,
     save: system.printerSave,
-    testPrint: async () => system.printerUnavailable(),
-    printReceipt: async () => system.printerUnavailable()
+    testPrint: system.testPrint,
+    printReceipt: sales.printSaleReceipt,
+    shareReceipt: printerService.shareReceipt,
+    openBluetoothSettings: printerService.openBluetoothSettings
   },
   transactions: {
     list: sales.listTransactions,
@@ -329,7 +332,7 @@ const api = {
     cashCount: accounting.saveCashCount,
     cashCounts: accounting.listCashCounts,
     cashCountExpected: accounting.cashCountExpected,
-    cashCountPrint: async () => system.printerUnavailable(),
+    cashCountPrint: accounting.cashCountPrint,
     sales: accounting.salesReport,
     inventory: accounting.inventoryReport,
     utang: people.utangReport,
@@ -337,10 +340,10 @@ const api = {
     shifts: accounting.shiftsReport,
     exportCsv: accounting.exportCsv,
     xRead: accounting.xRead,
-    printXRead: async () => ({ ...system.printerUnavailable(), report: await accounting.xRead() }),
+    printXRead: accounting.printXRead,
     finalizeZ: accounting.finalizeZ,
     zHistory: accounting.zHistory,
-    printZRead: async () => system.printerUnavailable()
+    printZRead: accounting.printZRead
   },
   backup: {
     list: system.listBackups,

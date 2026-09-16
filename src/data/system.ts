@@ -24,8 +24,9 @@ import {
 import { createCategory, createProduct, createSupplier, stockStatus } from './catalog'
 import { createCustomer } from './people'
 import { NO_PRINTER } from './sales'
+import { listPrinters, testPrint as runTestPrint } from './printerService'
 
-export const APP_VERSION = '1.0.19'
+export const APP_VERSION = '1.0.21'
 
 const ROLE_NAMES: RoleName[] = ['ADMIN', 'MANAGER', 'CASHIER']
 
@@ -439,7 +440,7 @@ export async function useSharedAppData(): Promise<void> {
 // ---------------------------------------------------------------- printer / app
 
 export async function printerList(): Promise<{ name: string; displayName: string; isDefault: boolean }[]> {
-  return []
+  return listPrinters()
 }
 
 export async function printerSave(input: { name: string; autoPrint: boolean; paperWidth: '58mm' | '80mm'; copies: number }): Promise<StoreSettings> {
@@ -449,6 +450,10 @@ export async function printerSave(input: { name: string; autoPrint: boolean; pap
     receipt_paper_width: input.paperWidth,
     receipt_copies: num(input.copies, 1)
   })
+}
+
+export async function testPrint(): Promise<PrintResult> {
+  return runTestPrint()
 }
 
 export function printerUnavailable(): PrintResult {

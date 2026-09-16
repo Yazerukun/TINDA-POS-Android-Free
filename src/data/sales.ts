@@ -8,11 +8,12 @@ import { deductBatches, restoreStock } from './stock'
 import { applyCreditEntry } from './people'
 import { getSettings } from './system'
 import { audit, cents, currentSessionUser, dayEndIso, dayStartIso, emitInventoryChanged, insertRow, localDateKey, money, matches, nextSequence, nowIso, num, plainMoney, requireSessionUser, text } from './util'
+import { autoPrintAfterCheckout, printSaleReceipt } from './printerService'
 
 const NO_PRINTER: PrintResult = {
   ok: false,
   code: 'NO_PRINTER',
-  message: 'Printing is not available on Android yet — the receipt is shown on screen instead.'
+  message: 'No receipt printer is configured.'
 }
 
 export async function transactionNo(): Promise<string> {
@@ -197,7 +198,8 @@ export async function checkout(payload: CheckoutPayload): Promise<{ sale: Sale; 
   const finished = (await db.sales.get(saleId))!
   const receipt = await buildReceiptLines(finished)
   await audit({ action: 'SALE_CHECKOUT', entity_type: 'sale', entity_id: saleId, new_value: `${finished.transaction_no} ${total}` })
-  return { sale: finished, receipt, print: { ...NO_PRINTER, message: 'Sale saved on this device. ' + NO_PRINTER.message } }
+  const print = await autoPrintAfterCheckout(settings, finished, receipt)
+  return { sale: finished, receipt, print }
 }
 
 async function heldItems(payload: CheckoutPayload): Promise<HeldSaleItem[]> {
@@ -460,4 +462,4 @@ export async function currentCashier(): Promise<string | null> {
   return session?.full_name ?? null
 }
 
-export { NO_PRINTER }
+export { NO_PRINTER, printSaleReceipt }

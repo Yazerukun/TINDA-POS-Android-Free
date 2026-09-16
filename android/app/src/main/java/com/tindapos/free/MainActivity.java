@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Registered before super.onCreate so the plugin is part of the initial bridge.
         registerPlugin(TindaUpdaterPlugin.class);
+        registerPlugin(TindaPrinterPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

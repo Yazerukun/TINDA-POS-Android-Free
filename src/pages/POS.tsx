@@ -14,7 +14,9 @@ import {
   Pause,
   Loader2,
   ChevronDown,
-  X
+  X,
+  Share2,
+  Printer
 } from 'lucide-react'
 import type { Product, Customer, Sale, Category, HeldSale } from '@shared/types'
 import { money } from '@shared/format'
@@ -586,7 +588,7 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
   }
 
   if (done) {
-    const retryPrint = async () => {
+    const print = async () => {
       setPrinting(true)
       try {
         const result = await window.api.printer.printReceipt(done.sale.id)
@@ -595,13 +597,21 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
         else toastError('Receipt printing failed', result.message)
       } catch (e) { toastError('Receipt printing failed', String((e as Error)?.message || e)) } finally { setPrinting(false) }
     }
+
+    const share = async () => {
+      try {
+        await window.api.printer.shareReceipt?.(done.receipt, `Receipt ${done.sale.transaction_no}`)
+      } catch (e) { toastError('Share failed', String((e as Error)?.message || e)) }
+    }
+
     return (
       <Modal open onClose={onClose} title="Sale Complete" footer={
-        <>
-          {!done.print.ok && done.print.code !== 'DISABLED' && <button onClick={() => void retryPrint()} disabled={printing} className="btn-ghost">Retry Print</button>}
-          {(done.print.code === 'NO_PRINTER' || done.print.code === 'UNAVAILABLE') && <button onClick={() => { onClose(); setPage('settings') }} className="btn-ghost">Configure Printer</button>}
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+          <button onClick={() => void share()} type="button" className="btn-ghost flex items-center gap-1.5"><Share2 className="h-4 w-4" /> Share</button>
+          <button onClick={() => void print()} disabled={printing} type="button" className="btn-ghost flex items-center gap-1.5"><Printer className="h-4 w-4" /> {done.print.ok ? 'Print Again' : 'Print Receipt'}</button>
+          {(done.print.code === 'NO_PRINTER' || done.print.code === 'UNAVAILABLE') && <button onClick={() => { onClose(); setPage('settings') }} className="btn-ghost">Configure</button>}
           <button onClick={onClose} className="btn-primary">Done</button>
-        </>
+        </div>
       }>
         <div className="mb-3 text-center">
           <Check className="mx-auto mb-2 h-12 w-12 text-emerald-400" />

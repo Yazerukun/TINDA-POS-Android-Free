@@ -13,11 +13,15 @@ import type {
   Shift,
   ZRead
 } from '@shared/types'
-import { CASH_COUNT_DENOMINATION_CENTS, actualCashCent, cashCountStatusText } from '@shared/cashCount'
+import type { PrintResult } from '@shared/ipc'
+import { CASH_COUNT_DENOMINATION_CENTS, actualCashCent, cashCountLines, cashCountStatusText } from '@shared/cashCount'
+import { readReportLines } from '@shared/readReport'
 import { db } from './db'
 import { hydrateProduct } from './catalog'
 import { utangReport } from './people'
 import { NO_PRINTER } from './sales'
+import { getSettings } from './system'
+import { printReceipt } from './printerService'
 import { audit, cents, dayEndIso, dayStartIso, insertRow, localDateKey, money, nowIso, num, requireSessionUser, text } from './util'
 
 async function openShiftRow(): Promise<Shift | undefined> {
@@ -476,6 +480,35 @@ export async function exportCsv(kind: 'SALES' | 'INVENTORY' | 'EXPENSES' | 'UTAN
   const filename = `tinda-pos-${kind.toLowerCase()}-${localDateKey()}.csv`
   triggerDownload(filename, content)
   return { path: filename, rows: lines.length }
+}
+
+export async function cashCountPrint(countId: number): Promise<PrintResult> {
+  const count = await db.cashCounts.get(countId)
+  if (!count) return { ok: false, code: 'UNAVAILABLE', message: `Cash count #${countId} not found.` }
+  const settings = await getSettings()
+  const lines = cashCountLines({ ...count, store_name: settings.store_name })
+  return printReceipt(lines, 'Cash Count', settings)
+}
+
+export async function printXRead(): Promise<PrintResult & { report: ReadReport }> {
+  const report = await xRead()
+  const settings = await getSettings()
+  const lines = readReportLines(report, undefined, undefined, settings.store_name)
+  const result = await printReceipt(lines, 'X-Read Report', settings)
+  return { ...result, report }
+}
+
+export async function printZRead(reportId: number): Promise<PrintResult> {
+  const record = await db.zReads.get(reportId)
+  if (!record) return { ok: false, code: 'UNAVAILABLE', message: `Z-Read record #${reportId} not found.` }
+  const settings = await getSettings()
+  const lines = readReportLines(
+    record.snapshot,
+    record.report_no,
+    { actual_cash_c: record.snapshot.actual_cash_c, finalized_at: record.finalized_at },
+    settings.store_name
+  )
+  return printReceipt(lines, `Z-Read ${record.report_no}`, settings)
 }
 
 export const PRINT_UNAVAILABLE = NO_PRINTER

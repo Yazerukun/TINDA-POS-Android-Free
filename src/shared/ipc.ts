@@ -255,6 +255,8 @@ export interface TindaApi {
     save: (input: { name: string; autoPrint: boolean; paperWidth: '58mm' | '80mm'; copies: number }) => Promise<StoreSettings>
     testPrint: () => Promise<PrintResult>
     printReceipt: (saleId: number) => Promise<PrintResult>
+    shareReceipt?: (lines: string[], title?: string) => Promise<void>
+    openBluetoothSettings?: () => Promise<void>
   }
 
   transactions: {

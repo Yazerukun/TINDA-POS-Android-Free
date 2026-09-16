@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, Eye, RotateCcw, Ban, ListOrdered, ReceiptText, Printer } from 'lucide-react'
+import { Search, Eye, RotateCcw, Ban, ListOrdered, ReceiptText, Printer, Share2 } from 'lucide-react'
 import type { Sale } from '@shared/types'
 import { money, shortDateTime } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -157,7 +157,11 @@ function ViewSale({ sale, onClose }: { sale: Sale; onClose: () => void }): React
       </Modal>
       {receiptLines && (
         <Modal open onClose={() => setReceiptLines(null)} title={`Receipt — ${sale.transaction_no}`} maxWidth="max-w-lg" footer={
-          <button onClick={() => setReceiptLines(null)} className="btn-primary">Close</button>
+          <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+            <button onClick={() => void window.api.printer.shareReceipt?.(receiptLines, `Receipt ${sale.transaction_no}`)} className="btn-ghost flex items-center gap-1.5"><Share2 className="h-4 w-4" /> Share</button>
+            <button onClick={() => void print()} className="btn-primary flex items-center gap-1.5"><Printer className="h-4 w-4" /> Print Receipt</button>
+            <button onClick={() => setReceiptLines(null)} className="btn-ghost">Close</button>
+          </div>
         }>
           <ReceiptPaper lines={receiptLines} />
         </Modal>
