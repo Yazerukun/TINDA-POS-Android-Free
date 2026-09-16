@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CalendarClock, Pencil, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle2, Pencil, RefreshCw } from 'lucide-react'
 import type { ExpirationEntry, Product } from '@shared/types'
 import { expirationStatus } from '@shared/expiration'
 import { Modal } from './ui/Modal'
