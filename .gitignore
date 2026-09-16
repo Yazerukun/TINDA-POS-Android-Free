@@ -6,4 +6,5 @@ android/app/build/
 android/build/
 android/local.properties
 *.log
+*.apk
 .DS_Store
