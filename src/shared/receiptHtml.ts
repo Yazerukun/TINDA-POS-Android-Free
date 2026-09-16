@@ -43,7 +43,23 @@ function isItemDetail(raw: string): { qty: string; unitPrice: string; amount: st
   return { qty: m[1]!, unitPrice: m[2]!, amount: m[3]! }
 }
 
-const fmt = (raw: string) => (Number(raw.replaceAll(',', '')) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: raw.includes(',') })
+const fmt = (raw: string) => {
+  const clean = raw.replaceAll(',', '')
+  const n = Number(clean) || 0
+  return Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: raw.includes(',') })
+}
+
+function fmtSigned(raw: string, symbol: string): string {
+  const clean = raw.replaceAll(',', '')
+  const n = Number(clean) || 0
+  const formatted = Math.abs(n).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: raw.includes(',')
+  })
+  if (n < 0) return `-${symbol}${formatted}`
+  return `${symbol}${formatted}`
+}
 
 function rowsToHtml(lines: string[], currency: string): string {
   const symbol = currencySymbol(currency)
@@ -58,7 +74,18 @@ function rowsToHtml(lines: string[], currency: string): string {
 
     const denomination = trimmed.match(/^(₱[\d,.]+)\s+(\d+)\s+x\s+([\d,.]+)\s+=\s+([\d,.]+)$/)
     if (denomination) {
-      pushRow(`<div class="tp-sum"><span class="tp-lbl">${escapeHtml(denomination[1]!)} x ${denomination[2]}</span><span class="tp-amt">${symbol}${fmt(denomination[4]!)}</span></div>`)
+      const denomRaw = denomination[1]!
+      const denomNum = Number(denomRaw.replace(/[^\d.]/g, ''))
+      const denomLabel = denomRaw.startsWith('₱') && !Number.isNaN(denomNum)
+        ? `₱${denomNum.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+        : denomRaw
+      pushRow(
+        `<div class="tp-denomline">` +
+        `<span class="tp-denom">${escapeHtml(denomLabel)}</span>` +
+        `<span class="tp-qty">&times;&nbsp;${escapeHtml(denomination[2]!)}</span>` +
+        `<span class="tp-amt">${symbol}${fmt(denomination[4]!)}</span>` +
+        `</div>`
+      )
       continue
     }
 
@@ -87,8 +114,31 @@ function rowsToHtml(lines: string[], currency: string): string {
       const cls = money.label === 'SUKLI' ? 'tp-sukli' : /^(TOTAL|NET SALES|Actual Cash)$/i.test(money.label) ? 'tp-total' : 'tp-sum'
       const label = money.label === 'SUKLI' ? 'Change / SUKLI' : money.label === 'Cash' ? 'Cash' : money.label
       pushRow(
-        `<div class="${cls}"><span class="tp-lbl">${escapeHtml(label)}</span><span class="tp-amt">${symbol}${fmt(money.amount)}</span></div>`
+        `<div class="${cls}"><span class="tp-lbl">${escapeHtml(label)}</span><span class="tp-amt">${fmtSigned(money.amount, symbol)}</span></div>`
       )
+      continue
+    }
+
+    const statusMatch = trimmed.match(/^Status[:\s]+(BALANCED|OVER|SHORT)$/i)
+    if (statusMatch) {
+      const statusText = statusMatch[1]!.toUpperCase()
+      pushRow(
+        `<div class="tp-sum tp-status" data-status="${escapeHtml(statusText)}"><!-- ${escapeHtml(raw)} --><span class="tp-lbl">Status</span><span class="tp-amt tp-badge-status tp-status-${statusText.toLowerCase()}">${escapeHtml(statusText)}</span></div>`
+      )
+      continue
+    }
+
+    const countMatch = trimmed.match(/^(Transactions|Items)\s*[:\s]\s*(\d+)$/i)
+    if (countMatch) {
+      pushRow(
+        `<div class="tp-sum"><span class="tp-lbl">${escapeHtml(countMatch[1]!)}</span><span class="tp-amt">${escapeHtml(countMatch[2]!)}</span></div>`
+      )
+      continue
+    }
+
+    if (/^(DENOMINATION BREAKDOWN|BILLS:|COINS:|SALES SUMMARY|PAYMENT BREAKDOWN|CASH RECONCILIATION)$/i.test(trimmed)) {
+      const isSub = /^(BILLS:|COINS:)$/i.test(trimmed)
+      pushRow(`<div class="tp-section-head${isSub ? ' tp-sub' : ''}">${escapeHtml(trimmed)}</div>`)
       continue
     }
 
@@ -112,9 +162,11 @@ const baseCss = `
   .tp-row { font-size: 1em; }
   .tp-center { text-align: center; }
   .tp-heading { font-size: 1.3em; font-weight: 800; }
-  .tp-item, .tp-sum, .tp-total, .tp-sukli { break-inside: avoid; }
+  .tp-item, .tp-sum, .tp-total, .tp-sukli, .tp-denomline { break-inside: avoid; }
   .tp-gap { height: 0.5em; }
   .tp-sep { border-top: 1px dashed black; margin: 0.35em 0; }
+  .tp-section-head { font-size: 1em; font-weight: 800; text-transform: uppercase; margin-top: 0.3em; letter-spacing: 0.03em; }
+  .tp-section-head.tp-sub { font-size: 0.9em; font-weight: 700; margin-top: 0.2em; color: #222; }
   .tp-item .tp-name { font-size: 1em; font-weight: 700; }
   .tp-itemline { display: table; width: 100%; table-layout: auto; }
   .tp-itemline > span { display: table-cell; }
@@ -129,8 +181,15 @@ const baseCss = `
   .tp-sukli { font-size: 1.1em; font-weight: 900; margin-top: 0.12em; padding: 0.1em 0; }
   .tp-sukli .tp-lbl, .tp-sukli .tp-amt { font-weight: 900; display: table-cell; }
   .tp-sukli .tp-amt { text-align: right; }
+  .tp-denomline { display: table; width: 100%; table-layout: fixed; font-size: 0.95em; line-height: 1.35; }
+  .tp-denom { display: table-cell; text-align: left; width: 34%; white-space: nowrap; font-weight: 600; }
+  .tp-denomline .tp-qty { display: table-cell; text-align: center; width: 26%; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .tp-denomline .tp-amt { display: table-cell; text-align: right; width: 40%; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .tp-badge-status { font-weight: 800; letter-spacing: 0.05em; }
+  .tp-status-balanced { color: #000; }
+  .tp-status-over { color: #000; }
+  .tp-status-short { color: #000; }
 `
-
 export function receiptCss(width: ReceiptWidth): string {
   const paperWidth = width === '80mm' ? '80mm' : '58mm'
   const contentWidth = width === '80mm' ? '72mm' : '48mm'

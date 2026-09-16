@@ -21,8 +21,8 @@ export function ReceiptPaper({ lines, width }: ReceiptPaperProps): React.JSX.Ele
   const body = useMemo(() => receiptBodyHtml(lines, paper, settings?.currency), [lines, paper, settings?.currency])
 
   return (
-    <div className="flex justify-center bg-ink-950 p-6 rounded-lg overflow-x-auto shadow-inner min-h-[40vh] max-h-[60vh] overflow-y-auto">
-      <div className="shadow-xl rounded-sm">
+    <div className="flex justify-center bg-ink-950 px-2 py-4 sm:p-6 rounded-lg overflow-x-auto shadow-inner min-h-[40vh] max-h-[60vh] overflow-y-auto">
+      <div className="shadow-xl rounded-sm max-w-full">
         <style>{css}</style>
         {/* Receipt HTML is fully escaped in shared/receiptHtml.ts — no raw user HTML. */}
         <div dangerouslySetInnerHTML={{ __html: body }} className="bg-white rounded-sm overflow-hidden" />
