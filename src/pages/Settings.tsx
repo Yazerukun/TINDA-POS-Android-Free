@@ -12,21 +12,32 @@ import { ReceiptPaper } from '../components/ReceiptPaper'
 
 type Tab = 'HOME' | 'RECEIPT' | 'USERS' | 'DATA' | 'ABOUT'
 
-export function Settings(): React.JSX.Element {
+export function Settings({ defaultTab = 'HOME' }: { defaultTab?: Tab }): React.JSX.Element {
   const { load } = useSettings()
-  const [tab, setTab] = useState<Tab>('HOME')
+  const [tab, setTab] = useState<Tab>(defaultTab)
 
   useEffect(() => { void load() }, [load])
 
   return (
     <div className="p-6">
       <PageHeader title="Settings" />
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button onClick={() => setTab('HOME')} className={`btn-ghost flex items-center gap-2 ${tab === 'HOME' ? '!border-brand-500 !text-brand-400' : ''}`}><Store className="h-4 w-4" /> Store</button>
-        <button onClick={() => setTab('RECEIPT')} className={`btn-ghost flex items-center gap-2 ${tab === 'RECEIPT' ? '!border-brand-500 !text-brand-400' : ''}`}><Receipt className="h-4 w-4" /> Receipt</button>
-        <button onClick={() => setTab('USERS')} className={`btn-ghost flex items-center gap-2 ${tab === 'USERS' ? '!border-brand-500 !text-brand-400' : ''}`}><Users className="h-4 w-4" /> Users</button>
-        <button onClick={() => setTab('DATA')} className={`btn-ghost flex items-center gap-2 ${tab === 'DATA' ? '!border-brand-500 !text-brand-400' : ''}`}><DatabaseZap className="h-4 w-4" /> Data</button>
-        <button onClick={() => setTab('ABOUT')} className={`btn-ghost flex items-center gap-2 ${tab === 'ABOUT' ? '!border-brand-500 !text-brand-400' : ''}`}><Heart className="h-4 w-4" /> About</button>
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {[
+          { id: 'HOME', icon: Store, label: 'Store' },
+          { id: 'RECEIPT', icon: Receipt, label: 'Receipt' },
+          { id: 'USERS', icon: Users, label: 'Users' },
+          { id: 'DATA', icon: DatabaseZap, label: 'Data' },
+          { id: 'ABOUT', icon: Heart, label: 'About' }
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id as Tab)}
+            className={`shrink-0 flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition ${tab === t.id ? 'border-brand-500/50 bg-brand-600/20 text-brand-300' : 'border-ink-line bg-ink-850 text-slate-300 hover:bg-ink-800 hover:text-white'}`}
+          >
+            <t.icon className="h-4 w-4" />
+            {t.label}
+          </button>
+        ))}
       </div>
       {tab === 'HOME' && <StoreSettingsTab />}
       {tab === 'RECEIPT' && <ReceiptSettingsTab />}
@@ -49,6 +60,8 @@ function DataTab(): React.JSX.Element {
   const [backups, setBackups] = useState<BackupInfo[] | null>(null)
   const [location, setLocation] = useState<DataLocationStatus | null>(null)
 
+  const [confirmOp, setConfirmOp] = useState<{ title: string; desc: string; action: () => Promise<void> } | null>(null)
+
   useEffect(() => {
     void Promise.all([window.api.app.databaseFile(), window.api.backup.dir(), window.api.backup.locationStatus()]).then(([database, backup, status]) => {
       setDatabaseFile(database)
@@ -67,10 +80,15 @@ function DataTab(): React.JSX.Element {
     catch (e) { toastError('Could not load backups', String((e as Error)?.message || e)) }
   }
 
-  const restore = async (backup: BackupInfo) => {
-    if (!window.confirm(`Restore ${backup.filename}? Current data will be safety-backed up first.`)) return
-    try { await window.api.backup.restore(backup.filename); toastSuccess('Backup restored', 'TINDA POS is restarting...') }
-    catch (e) { toastError('Restore failed', String((e as Error)?.message || e)) }
+  const restore = (backup: BackupInfo) => {
+    setConfirmOp({
+      title: 'Restore Backup',
+      desc: `Restore ${backup.filename}? Current data will be safety-backed up first.`,
+      action: async () => {
+        try { await window.api.backup.restore(backup.filename); toastSuccess('Backup restored', 'TINDA POS is restarting...') }
+        catch (e) { toastError('Restore failed', String((e as Error)?.message || e)) }
+      }
+    })
   }
 
   const reset = async () => {
@@ -91,18 +109,28 @@ function DataTab(): React.JSX.Element {
     catch (e) { toastError('Start New Store failed', String((e as Error)?.message || e)); setResetting(false) }
   }
 
-  const switchToPortable = async (choice: 'FRESH' | 'COPY') => {
-    if (!window.confirm(`${choice === 'COPY' ? 'Copy the current store into' : 'Start a fresh store in'} Portable Data? A verified safety backup is created first. The Shared AppData database remains unchanged.`)) return
-    setResetting(true)
-    try { await window.api.backup.usePortableData(choice) }
-    catch (e) { toastError('Portable Data activation failed', String((e as Error)?.message || e)); setResetting(false) }
+  const switchToPortable = (choice: 'FRESH' | 'COPY') => {
+    setConfirmOp({
+      title: 'Use Portable Data',
+      desc: `${choice === 'COPY' ? 'Copy the current store into' : 'Start a fresh store in'} Portable Data? A verified safety backup is created first. The Shared AppData database remains unchanged.`,
+      action: async () => {
+        setResetting(true)
+        try { await window.api.backup.usePortableData(choice) }
+        catch (e) { toastError('Portable Data activation failed', String((e as Error)?.message || e)); setResetting(false); setConfirmOp(null) }
+      }
+    })
   }
 
-  const switchToShared = async () => {
-    if (!window.confirm(`Switch to the existing Shared AppData database at ${location?.sharedRoot}? Neither database will be overwritten.`)) return
-    setResetting(true)
-    try { await window.api.backup.useSharedAppData() }
-    catch (e) { toastError('Data mode switch failed', String((e as Error)?.message || e)); setResetting(false) }
+  const switchToShared = () => {
+    setConfirmOp({
+      title: 'Use Shared AppData',
+      desc: `Switch to the existing Shared AppData database at ${location?.sharedRoot}? Neither database will be overwritten.`,
+      action: async () => {
+        setResetting(true)
+        try { await window.api.backup.useSharedAppData() }
+        catch (e) { toastError('Data mode switch failed', String((e as Error)?.message || e)); setResetting(false); setConfirmOp(null) }
+      }
+    })
   }
 
   return (
@@ -168,6 +196,15 @@ function DataTab(): React.JSX.Element {
           {backups.length === 0 && <p className="py-5 text-center text-sm text-slate-500">No backups available.</p>}
           {backups.map((backup) => <button key={backup.filename} onClick={() => void restore(backup)} className="flex w-full items-center justify-between rounded-lg border border-ink-line p-3 text-left hover:border-brand-500/50"><span className="font-mono text-xs text-slate-300">{backup.filename}</span><RotateCcw className="h-4 w-4 text-brand-400" /></button>)}
         </div>
+      </Modal>}
+
+      {confirmOp && <Modal open onClose={() => { if (!resetting) setConfirmOp(null) }} title={confirmOp.title} maxWidth="max-w-md" footer={
+        <>
+          <button onClick={() => setConfirmOp(null)} disabled={resetting} className="btn-ghost">Cancel</button>
+          <button onClick={() => void confirmOp.action()} disabled={resetting} className="btn-danger">{resetting ? 'Processing...' : 'Confirm'}</button>
+        </>
+      }>
+        <p className="text-sm text-slate-300">{confirmOp.desc}</p>
       </Modal>}
     </div>
   )
@@ -334,16 +371,14 @@ function StoreSettingsTab(): React.JSX.Element {
   return (
     <div className="card max-w-xl p-5">
       <div className="space-y-3">
-        <div><label className="label">Store Name *</label><input value={f.store_name} onChange={(e) => set({ store_name: e.target.value })} className="input w-full" /></div>
-        <div><label className="label">Owner Name</label><input value={f.owner_name} onChange={(e) => set({ owner_name: e.target.value })} className="input w-full" /></div>
-        <div><label className="label">Address</label><input value={f.address} onChange={(e) => set({ address: e.target.value })} className="input w-full" /></div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2"><label className="label">Store Name *</label><input value={f.store_name} onChange={(e) => set({ store_name: e.target.value })} className="input w-full" /></div>
+          <div><label className="label">Owner Name</label><input value={f.owner_name} onChange={(e) => set({ owner_name: e.target.value })} className="input w-full" /></div>
           <div><label className="label">Phone</label><input value={f.phone} onChange={(e) => set({ phone: e.target.value })} className="input w-full" /></div>
+          <div className="sm:col-span-2"><label className="label">Address</label><input value={f.address} onChange={(e) => set({ address: e.target.value })} className="input w-full" /></div>
           <div><label className="label">TIN</label><input value={f.tin} onChange={(e) => set({ tin: e.target.value })} className="input w-full" /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Default Low Stock Alert</label><input type="number" min={0} value={f.default_low_stock} onChange={(e) => set({ default_low_stock: parseInt(e.target.value || '0', 10) })} className="input w-full" /></div>
           <div><label className="label">Default Tax (₱)</label><input type="number" min={0} value={f.default_tax_c / 100} onChange={(e) => set({ default_tax_c: Math.round(parseFloat(e.target.value || '0') * 100) })} className="input w-full" /></div>
+          <div className="sm:col-span-2"><label className="label">Default Low Stock Alert</label><input type="number" min={0} value={f.default_low_stock} onChange={(e) => set({ default_low_stock: parseInt(e.target.value || '0', 10) })} className="input w-full" /></div>
         </div>
         <div className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2">
           <div>
@@ -423,7 +458,36 @@ function ReceiptSettingsTab(): React.JSX.Element {
         <div><label className="label">Receipt Title</label><input value={f.receipt_title} onChange={e=>set({receipt_title:e.target.value})} placeholder="JUAN STORE" className="input w-full"/></div>
         <div><label className="label">Receipt Header (shown on top)</label><textarea value={f.receipt_header} onChange={(e) => set({ receipt_header: e.target.value })} rows={2} className="input w-full" /></div>
         <div><label className="label">Receipt Footer (message at bottom)</label><textarea value={f.receipt_footer} onChange={(e) => set({ receipt_footer: e.target.value })} rows={2} className="input w-full" /></div>
-        <div><label className="label">Printer</label><select value={f.receipt_printer} onChange={(e) => set({ receipt_printer: e.target.value })} className="input w-full"><option value="">No receipt printer configured</option>{printers.map((printer) => <option key={printer.name} value={printer.name}>{printer.displayName}{printer.isDefault ? ' (Default)' : ''}</option>)}{pick.status === 'UNAVAILABLE' && <option value={pick.name}>{pick.name} (unavailable)</option>}</select></div>
+        <div>
+          <label className="label">Printer</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto mb-2 pr-1">
+            <button
+               type="button"
+               onClick={() => set({ receipt_printer: '' })}
+               className={`flex text-left flex-col items-start rounded-lg border p-3 transition ${!f.receipt_printer ? 'border-brand-500 bg-brand-500/10' : 'border-ink-line bg-ink-850 hover:bg-ink-800'}`}
+            >
+              <span className={`font-semibold ${!f.receipt_printer ? 'text-brand-300' : 'text-slate-300'}`}>None</span>
+              <span className="text-xs text-slate-500 mt-0.5">Disable receipt printing</span>
+            </button>
+            {printers.map(p => (
+               <button
+                 key={p.name}
+                 type="button"
+                 onClick={() => set({ receipt_printer: p.name })}
+                 className={`flex text-left flex-col items-start rounded-lg border p-3 transition ${f.receipt_printer === p.name ? 'border-brand-500 bg-brand-500/10' : 'border-ink-line bg-ink-850 hover:bg-ink-800'}`}
+               >
+                 <span className={`font-semibold line-clamp-1 ${f.receipt_printer === p.name ? 'text-brand-300' : 'text-slate-300'}`}>{p.displayName}</span>
+                 <span className="text-xs text-slate-500 mt-0.5">{p.isDefault ? 'System Default' : p.name}</span>
+               </button>
+            ))}
+            {pick.status === 'UNAVAILABLE' && (
+               <button type="button" className="flex text-left flex-col items-start rounded-lg border border-brand-500 bg-brand-500/10 p-3">
+                 <span className="font-semibold text-brand-300 line-clamp-1">{pick.name}</span>
+                 <span className="text-xs text-amber-400 mt-0.5">Currently unavailable</span>
+               </button>
+            )}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink-line px-3 py-2">
           <div>
             <p className="text-sm text-slate-200">Status: <span className={`font-semibold ${pick.status === 'READY' ? 'text-emerald-400' : pick.status === 'UNAVAILABLE' ? 'text-amber-400' : 'text-slate-400'}`}>{printerStatusLabel(pick.status)}</span></p>
@@ -483,9 +547,27 @@ function UsersTab(): React.JSX.Element {
         <p className="text-sm text-slate-400">{users.length} users</p>
         <button onClick={() => setEditing({ id: null, username: '', password: '', pin: '', full_name: '', roles: ['CASHIER'] })} className="btn-primary flex items-center gap-2"><UserPlus className="h-4 w-4" /> New User</button>
       </div>
-      <div className="card overflow-hidden">
+      <div className="grid grid-cols-1 gap-3 md:hidden">
+         {users.map(u => (
+            <div key={u.id} className="card p-4 flex flex-col gap-2">
+               <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-bold text-white">{u.full_name}</p>
+                    <p className="text-sm text-slate-400">@{u.username}</p>
+                  </div>
+                  <div><span className={`badge ${u.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></div>
+               </div>
+               <p className="text-xs text-slate-500 uppercase tracking-wide">{u.roles.join(', ')}</p>
+               <div className="flex justify-end gap-2 mt-2">
+                  <button onClick={() => setEditing({ id: u.id, username: u.username, password: '', pin: '', full_name: u.full_name, roles: u.roles })} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="Edit"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => setResetPin({ id: u.id, full_name: u.full_name })} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="Reset PIN"><KeyRound className="h-4 w-4" /></button>
+               </div>
+            </div>
+         ))}
+      </div>
+      <div className="hidden md:block card overflow-hidden">
         <table className="table">
-          <thead><tr><th>User</th><th>Username</th><th>Roles</th><th>Status</th><th className="w-28">Actions</th></tr></thead>
+          <thead><tr><th>User</th><th>Username</th><th>Roles</th><th>Status</th><th className="w-28 text-right">Actions</th></tr></thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
@@ -493,10 +575,10 @@ function UsersTab(): React.JSX.Element {
                 <td className="text-slate-400">{u.username}</td>
                 <td className="text-slate-300">{u.roles.join(', ')}</td>
                 <td><span className={`badge ${u.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
-                <td>
-                  <div className="flex gap-1">
-                    <button onClick={() => setEditing({ id: u.id, username: u.username, password: '', pin: '', full_name: u.full_name, roles: u.roles })} className="btn-ghost-2 rounded-lg p-2" title="Edit"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => setResetPin({ id: u.id, full_name: u.full_name })} className="btn-ghost-2 rounded-lg p-2" title="Reset PIN"><KeyRound className="h-4 w-4" /></button>
+                <td className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => setEditing({ id: u.id, username: u.username, password: '', pin: '', full_name: u.full_name, roles: u.roles })} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg" title="Edit"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => setResetPin({ id: u.id, full_name: u.full_name })} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg" title="Reset PIN"><KeyRound className="h-4 w-4" /></button>
                   </div>
                 </td>
               </tr>

@@ -13,12 +13,14 @@ const SUBTITLES: Partial<Record<PageKey, string>> = {
   suppliers: 'Manage suppliers & purchases',
   transactions: 'View sales and receipt history',
   backup: 'Back up, restore & sync your data',
-  settings: 'Store, receipt & printer options'
+  settings: 'Store, users & data options',
+  printer: 'Receipt printer configuration',
+  update: 'Software update & about'
 }
 
 const GROUPS: { title: string; keys: PageKey[] }[] = [
   { title: 'Sales & Money', keys: ['customers', 'utang', 'expenses', 'suppliers', 'transactions'] },
-  { title: 'System', keys: ['backup', 'settings'] }
+  { title: 'System', keys: ['backup', 'settings', 'printer', 'update'] }
 ]
 
 export function More(): React.JSX.Element {

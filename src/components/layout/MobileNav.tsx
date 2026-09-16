@@ -19,19 +19,19 @@ export function MobileTopBar(): React.JSX.Element {
   const { user, logout } = useAuth()
   const { settings } = useSettings()
   return (
-    <div className="flex shrink-0 items-center gap-2.5 border-b border-ink-line bg-ink-900 px-4 py-2.5 md:hidden">
+    <div className="flex shrink-0 items-center gap-2.5 border-b border-ink-line bg-ink-900 px-4 py-2.5 sm:hidden">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-black text-white">TP</div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold leading-tight text-white">TINDA POS</p>
-        <p className="truncate text-[11px] text-slate-500">{settings?.store_name ?? 'Sari-Sari Store'}</p>
+        <p className="truncate text-xs text-slate-500">{settings?.store_name ?? 'Sari-Sari Store'}</p>
       </div>
-      <ConnectionStatus className="hidden sm:flex" />
+      <ConnectionStatus />
       <button
         aria-label="Logout"
         onClick={logout}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-ink-800 hover:text-danger-400"
+        className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-400 hover:bg-ink-800 hover:text-danger-400 active:scale-[.98]"
       >
-        <LogOut className="h-4 w-4" />
+        <LogOut className="h-5 w-5" />
       </button>
     </div>
   )
@@ -42,7 +42,7 @@ export function MobileBottomNav(): React.JSX.Element {
   const { user } = useAuth()
   const items = ITEMS.filter((n) => !n.permission || (user ? hasPermission(user.roles, n.permission as never) : false))
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 shrink-0 items-stretch justify-around border-t border-ink-line bg-ink-900/95 backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex shrink-0 items-stretch justify-around border-t border-ink-line bg-ink-900/95 backdrop-blur safe-pb sm:hidden">
       {items.map((n) => {
         const active = page === n.key || (n.key === 'more' && SECONDARY.includes(page))
         return (
@@ -50,11 +50,13 @@ export function MobileBottomNav(): React.JSX.Element {
             key={n.key}
             onClick={() => setPage(n.key)}
             aria-label={n.label}
-            className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition ${
+            className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-xs font-medium transition ${
               active ? 'text-brand-400' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
-            {n.icon}
+            <div className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${active ? 'bg-brand-500/15 animate-tab-active' : ''}`}>
+              {n.icon}
+            </div>
             <span className="truncate px-0.5">{n.label}</span>
           </button>
         )

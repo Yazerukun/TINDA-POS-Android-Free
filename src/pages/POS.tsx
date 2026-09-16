@@ -180,65 +180,36 @@ export function POS(): React.JSX.Element {
   return (
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[160px] flex-1">
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="relative w-full">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               value={q}
               onChange={(e) => { setQ(e.target.value); void search(e.target.value, catFilter === 'ALL' ? null : catFilter) }}
               placeholder="Search product by name or barcode…"
-              className="input h-11 w-full pl-9 !text-base"
-              autoFocus
+              className="input h-12 w-full pl-9 !text-base"
             />
           </div>
-          <div ref={categoryMenuRef} className="relative w-44 shrink-0">
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
-              type="button"
-              onClick={() => setCategoryMenuOpen((open) => !open)}
-              className="input flex min-h-11 w-full items-center justify-between gap-2 text-left !text-base"
-              aria-haspopup="listbox"
-              aria-expanded={categoryMenuOpen}
+              onClick={() => chooseCategory('ALL')}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${catFilter === 'ALL' ? 'bg-brand-600 text-white' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
             >
-              <span className="truncate">{selectedCategory}</span>
-              <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${categoryMenuOpen ? 'rotate-180' : ''}`} />
+              All
             </button>
-            {categoryMenuOpen && (
-              <div className="absolute left-0 top-full z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-ink-line bg-ink-850 p-1 shadow-pop" role="listbox">
-                <button
-                  type="button"
-                  onClick={() => chooseCategory('ALL')}
-                  className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-ink-700 ${catFilter === 'ALL' ? 'text-brand-300' : 'text-slate-200'}`}
-                  role="option"
-                  aria-selected={catFilter === 'ALL'}
-                >
-                  <span>All categories</span>
-                  {catFilter === 'ALL' && <Check className="h-4 w-4" />}
-                </button>
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => chooseCategory(category.id)}
-                    className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-ink-700 ${catFilter === category.id ? 'text-brand-300' : 'text-slate-200'}`}
-                    role="option"
-                    aria-selected={catFilter === category.id}
-                  >
-                    <span className="truncate">{category.name}</span>
-                    {catFilter === category.id && <Check className="h-4 w-4 shrink-0" />}
-                  </button>
-                ))}
-                {categories.length === 0 && <p className="px-3 py-2 text-xs text-slate-500">No categories yet.</p>}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-1 text-xs text-slate-500">
-            <Plus className="h-3.5 w-3.5" /> add
-            <span className="text-slate-600">·</span>
-            <span>F2 qty</span>
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => chooseCategory(c.id)}
+                className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${catFilter === c.id ? 'bg-brand-600 text-white' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+              >
+                {c.name}
+              </button>
+            ))}
           </div>
         </div>
         {error && <p className="mb-3 text-sm text-danger-400">{error}</p>}
-        <div className="grid min-h-0 flex-1 auto-rows-[160px] grid-cols-[repeat(auto-fill,minmax(min(100%,180px),1fr))] content-start gap-3 overflow-y-auto pb-24 md:pb-2">
+        <div className="grid min-h-0 flex-1 auto-rows-[160px] grid-cols-[repeat(auto-fill,minmax(min(100%,160px),1fr))] content-start gap-3 overflow-y-auto pb-24 md:pb-2">
           {loading && Array.from({ length: 12 }).map((_, i) => <div key={i} className="card h-28 animate-pulse" />)}
           {!loading && products.length === 0 && (
             <div className="col-span-full py-12 text-center text-sm text-slate-500">No products found.</div>
@@ -375,15 +346,19 @@ function CartPanel(): React.JSX.Element {
 
   return (
     <>
-    <aside className={`min-h-0 shrink-0 flex-col border-ink-line bg-ink-900 ${
+    <aside className={`min-h-0 shrink-0 flex-col bg-ink-900 transition-transform ${
       mobileOpen
-        ? 'fixed inset-x-0 bottom-0 top-0 z-50 flex w-full border-t md:static md:z-auto md:h-auto md:w-[23rem] md:border-l md:border-t-0 xl:w-[26rem]'
-        : 'hidden md:flex md:w-[23rem] md:border-l md:border-t-0 xl:w-[26rem]'
+        ? 'fixed inset-x-0 bottom-0 top-12 z-50 flex w-full rounded-t-2xl border-t border-ink-line shadow-[0_-8px_30px_rgba(0,0,0,0.5)] animate-bottom-sheet md:static md:z-auto md:h-auto md:w-[40%] md:max-w-[26rem] md:rounded-none md:border-l md:border-t-0 md:shadow-none xl:w-[26rem]'
+        : 'hidden md:flex md:w-[40%] md:max-w-[26rem] md:border-l md:border-t-0 xl:w-[26rem]'
     }`}>
-      <div className="flex items-center justify-between border-b border-ink-line px-4 py-3">
+      {/* drag handle on mobile */}
+      <div className="flex h-6 w-full items-center justify-center md:hidden" onClick={() => setMobileOpen(false)}>
+        <div className="h-1.5 w-12 rounded-full bg-ink-700" />
+      </div>
+      <div className="flex items-center justify-between border-b border-ink-line px-4 pb-3 pt-1 md:pt-3">
         <h2 className="flex items-center gap-2 text-lg font-bold text-slate-200">
           <ShoppingCart className="h-4 w-4" /> Cart
-          {items.length > 0 && <span className="badge bg-brand-600/20 text-brand-300">{items.length}</span>}
+          {items.length > 0 && <span key={items.length} className="badge bg-brand-600/20 text-brand-300 animate-pop">{items.length}</span>}
         </h2>
         <div className="flex items-center gap-1">
           <button onClick={() => setHeldOpen(true)} className="btn-ghost-2 rounded-lg px-2 py-1 text-xs" title="Resume held sales">
@@ -511,10 +486,10 @@ function CartPanel(): React.JSX.Element {
       )}
     </aside>
     {items.length > 0 && !mobileOpen && (
-      <button onClick={() => setMobileOpen(true)} className="fixed inset-x-0 bottom-14 z-30 flex items-center justify-between gap-3 border-t border-ink-line bg-brand-600 px-4 py-2.5 text-left text-white shadow-pop md:hidden">
+      <button onClick={() => setMobileOpen(true)} className="fixed inset-x-0 bottom-[calc(3.5rem+var(--saib))] z-30 flex items-center justify-between gap-3 border-t border-ink-line bg-brand-600 px-4 py-2.5 text-left text-white shadow-pop sm:bottom-0 md:hidden">
         <span className="flex min-w-0 items-center gap-2 text-sm font-bold">
           <ShoppingCart className="h-4 w-4 shrink-0" />
-          <span className="rounded-full bg-white/20 px-1.5 text-xs tabular-nums">{items.length}</span>
+          <span key={items.length} className="rounded-full bg-white/20 px-1.5 text-xs tabular-nums animate-pop">{items.length}</span>
           <span className="truncate">View Cart</span>
         </span>
         <span className="shrink-0 text-base font-extrabold tabular-nums">{money(total)}</span>
@@ -610,12 +585,12 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
           <button onClick={() => void share()} type="button" className="btn-ghost flex items-center gap-1.5"><Share2 className="h-4 w-4" /> Share</button>
           <button onClick={() => void print()} disabled={printing} type="button" className="btn-ghost flex items-center gap-1.5"><Printer className="h-4 w-4" /> {done.print.ok ? 'Print Again' : 'Print Receipt'}</button>
           {(done.print.code === 'NO_PRINTER' || done.print.code === 'UNAVAILABLE') && <button onClick={() => { onClose(); setPage('settings') }} className="btn-ghost">Configure</button>}
-          <button onClick={onClose} className="btn-primary">Done</button>
+          <button onClick={onClose} className="btn-primary min-h-12 w-full sm:w-auto sm:min-w-32">Done</button>
         </div>
       }>
         <div className="mb-3 text-center">
-          <Check className="mx-auto mb-2 h-12 w-12 text-emerald-400" />
-          <p className="text-lg font-bold text-white">{money(done.sale.total_c)}</p>
+          <Check className="mx-auto mb-2 h-16 w-16 text-emerald-400 animate-pop" />
+          <p className="text-2xl font-bold text-white tabular-nums">{money(done.sale.total_c)}</p>
           <p className="text-sm text-slate-400">{done.sale.transaction_no}</p>
         </div>
         <p className={`mb-3 rounded-lg border p-2 text-xs ${done.print.ok ? 'border-emerald-500/30 text-emerald-300' : 'border-amber-500/30 text-amber-300'}`}>{done.print.message}</p>
@@ -630,21 +605,23 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
     { key: 'MAYA', label: 'Maya', icon: <Smartphone className="h-4 w-4" /> },
     { key: 'UTANG', label: 'Utang', icon: <Wallet className="h-4 w-4" /> }
   ]
+  
+  const fastCash = [total / 100, 20, 50, 100, 200, 500, 1000].filter((v, i, a) => v >= total / 100 && a.indexOf(v) === i)
 
   return (
     <Modal open onClose={onClose} title="Checkout" maxWidth="max-w-md" footer={
-      <>
-        <button onClick={onClose} className="btn-ghost">Cancel</button>
-        <button onClick={doCheckout} disabled={submitting} className="btn-primary flex items-center gap-2">
+      <div className="flex gap-2 w-full sm:w-auto">
+        <button onClick={onClose} className="btn-ghost flex-1 sm:flex-none">Cancel</button>
+        <button onClick={doCheckout} disabled={submitting} className="btn-primary flex-1 sm:flex-none items-center justify-center gap-2">
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           Charge {money(total)}
         </button>
-      </>
+      </div>
     }>
       <div className="space-y-4">
         <div className="rounded-lg border border-ink-line bg-ink-950 p-3 text-center">
           <p className="text-xs text-slate-500">TOTAL</p>
-          <p className="text-3xl font-black text-white">{money(total)}</p>
+          <p className="text-4xl font-black text-white tabular-nums">{money(total)}</p>
           <p className="mt-1 text-xs text-slate-500">Subtotal {money(subtotal)} · Discount {money(discount_pesos)}</p>
         </div>
 
@@ -668,12 +645,23 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
               type="number"
               value={cash}
               onChange={(e) => setCash(e.target.value)}
-              className="input w-full text-lg font-bold"
+              className="input w-full text-2xl font-bold tabular-nums"
               autoFocus
             />
-            <div className="mt-1 flex justify-between text-xs">
-              <span className="text-slate-500">Change (sukli)</span>
-              <span className={change >= 0 ? 'font-bold text-emerald-400' : 'font-bold text-danger-400'}>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {fastCash.slice(0, 5).map((amount) => (
+                <button
+                  key={amount}
+                  onClick={() => setCash(amount.toString())}
+                  className="btn-ghost-2 px-3 py-1.5 text-xs font-semibold tabular-nums hover:border-brand-500/50 hover:text-brand-400"
+                >
+                  {amount === total / 100 ? 'Exact' : `₱${amount}`}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 flex justify-between rounded-lg bg-ink-900 px-3 py-2 text-sm">
+              <span className="text-slate-400">Change (sukli)</span>
+              <span className={`tabular-nums ${change >= 0 ? 'font-bold text-brand-400 text-lg' : 'font-bold text-danger-400'}`}>
                 {money(Math.max(0, change))}
               </span>
             </div>

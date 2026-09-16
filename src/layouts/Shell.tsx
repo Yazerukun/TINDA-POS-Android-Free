@@ -32,10 +32,10 @@ export function Shell(): React.JSX.Element {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-ink-950">
       <Sidebar />
-      <main className="flex min-w-0 flex-1 flex-col pb-14 md:pb-0">
+      <main className="flex min-w-0 flex-1 flex-col pb-[calc(3.5rem+var(--saib))] sm:pb-0">
         <MobileTopBar />
         {user && <ExpirationAlerts key={user.id} remind />}
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div key={page} className="min-h-0 flex-1 overflow-y-auto animate-page-fade">
         {user && page === 'dashboard' && <Dashboard />}
         {user && page === 'pos' && <POS />}
         {user && page === 'inventory' && <Inventory />}
@@ -46,7 +46,9 @@ export function Shell(): React.JSX.Element {
         {user && page === 'transactions' && <Transactions />}
         {user && page === 'reports' && <Reports />}
         {user && page === 'backup' && <Backup />}
-        {user && page === 'settings' && <Settings />}
+        {user && page === 'settings' && <Settings defaultTab="HOME" />}
+        {user && page === 'printer' && <Settings defaultTab="RECEIPT" />}
+        {user && page === 'update' && <Settings defaultTab="ABOUT" />}
         {user && page === 'more' && <More />}
         </div>
       </main>

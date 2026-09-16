@@ -94,7 +94,7 @@ export function Dashboard(): React.JSX.Element | null {
   return (
     <div className="p-6">
       <PageHeader title="Dashboard" subtitle="Sales Overview" />
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Today's Net Sales" value={money(summary.sales_total_c - summary.refunds_c)} sub={`${summary.transactions} transactions · Refunds: ${money(summary.refunds_c)}`} icon={<TrendingUp className="h-5 w-5" />} />
         <StatCard label="Estimated Profit" value={money(summary.profit_c)} sub={`${summary.items_sold} items sold`} icon={<Banknote className="h-5 w-5" />} />
         <StatCard label="Outstanding Utang" value={money(utang)} sub="customer credit" icon={<Wallet className="h-5 w-5" />} />

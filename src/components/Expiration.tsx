@@ -111,8 +111,20 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
   }, [remind])
   const expired = rows.filter((r) => expirationStatus(r.expiration_date) === 'EXPIRED').length
   const unknown = rows.filter((r) => expirationStatus(r.expiration_date) === 'UNKNOWN').length
+  
+  if (!loading && !error && rows.length === 0) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 border-b border-ink-line px-4 sm:px-6 py-2 text-sm bg-emerald-500/5">
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+        <span className="flex-1 text-emerald-400 font-medium">All expiration dates are healthy</span>
+        <button onClick={() => setOpen(true)} className="btn-ghost flex items-center gap-2"><CalendarClock className="h-4 w-4" /> Expiration Dates</button>
+        {open && <ExpirationList onClose={() => setOpen(false)} />}
+      </div>
+    )
+  }
+
   return <>
-    <div className="flex flex-wrap items-center gap-3 border-b border-ink-line px-6 py-2 text-sm">
+    <div className="flex flex-wrap items-center gap-3 border-b border-ink-line px-4 sm:px-6 py-2 text-sm">
       <AlertTriangle className={`h-4 w-4 shrink-0 ${expired ? 'text-red-400' : 'text-amber-400'}`} />
       <span className="flex-1">{loading ? 'Checking expiration dates...' : error ? 'Expiration alerts unavailable' : `${expired} expired / ${rows.length - expired - unknown} expiring soon / ${unknown} need date review`}</span>
       <button onClick={() => setOpen(true)} className="btn-ghost flex items-center gap-2"><CalendarClock className="h-4 w-4" /> Expiration Dates</button>

@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --sait: env(safe-area-inset-top, 0px);
+    --saib: env(safe-area-inset-bottom, 0px);
+    --sail: env(safe-area-inset-left, 0px);
+    --sair: env(safe-area-inset-right, 0px);
+  }
+  
   html,
   body,
   #root {
@@ -26,11 +33,11 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 min-h-[44px] text-sm font-semibold transition
+      active:scale-[.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-card active:scale-[.98];
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-card;
   }
   .btn-secondary {
     @apply btn bg-ink-700 text-slate-100 hover:bg-ink-750 border border-ink-line;
@@ -42,16 +49,16 @@
     @apply btn bg-ink-800 text-slate-300 hover:bg-ink-700 hover:text-white border border-ink-line;
   }
   .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-500 active:scale-[.98];
+    @apply btn bg-danger-600 text-white hover:bg-danger-500;
   }
   .btn-gold {
-    @apply btn bg-gold-500 text-ink-950 hover:bg-gold-400 active:scale-[.98];
+    @apply btn bg-gold-500 text-ink-950 hover:bg-gold-400;
   }
   .card {
     @apply rounded-xl bg-ink-850 border border-ink-line shadow-card;
   }
   .input {
-    @apply w-full rounded-lg border border-ink-line bg-ink-900 px-3 py-2 text-sm text-slate-100
+    @apply w-full rounded-lg border border-ink-line bg-ink-900 px-3 py-2 min-h-[44px] text-sm text-slate-100
       placeholder-slate-500 focus:border-brand-500/70 focus:ring-2 focus:ring-brand-500/25
       focus:outline-none disabled:opacity-50;
   }
@@ -74,7 +81,7 @@
     @apply fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm;
   }
   .modal-panel {
-    @apply card max-h-[90vh] w-full overflow-y-auto p-6 shadow-pop;
+    @apply card max-h-[90vh] w-full overflow-y-auto p-6 shadow-pop animate-pop;
   }
   .kbd {
     @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-ink-line bg-ink-800 px-1 text-[10px] font-semibold text-slate-400;

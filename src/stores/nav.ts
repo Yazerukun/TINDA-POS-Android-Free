@@ -11,6 +11,8 @@ export type PageKey =
   | 'reports'
   | 'backup'
   | 'settings'
+  | 'printer'
+  | 'update'
   | 'customers'
   | 'more'
 

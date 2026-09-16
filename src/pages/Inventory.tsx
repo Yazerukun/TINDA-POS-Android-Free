@@ -109,7 +109,7 @@ export function Inventory(): React.JSX.Element {
   }
 
   return (
-    <div className="p-6">
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
       <PageHeader
         title="Inventory"
         subtitle={`${products.length} active products`}
@@ -126,25 +126,28 @@ export function Inventory(): React.JSX.Element {
         </div>}
       />
 
-      <div className="mb-3 grid grid-cols-3 gap-2">
+      <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
         <div className="card p-3"><p className="text-[11px] text-slate-500">Products</p><p className="text-lg font-bold tabular-nums text-white">{products.length}</p></div>
         <div className="card p-3"><p className="text-[11px] text-slate-500">Stock Value</p><p className="truncate text-lg font-bold tabular-nums text-brand-400">{money(totalValue)}</p></div>
         <div className="card p-3"><p className="text-[11px] text-slate-500">Low / Out</p><p className="text-lg font-bold tabular-nums text-white">{lowCount} / {outCount}</p></div>
+        <button
+          onClick={() => setCatFilter(alertCount ? 'LOW' : 'ALL')}
+          className={`card p-3 text-left transition hover:brightness-110 flex flex-col justify-center ${alertCount ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}
+        >
+          <div className="flex items-center gap-1.5">
+            {alertCount ? <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> : <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
+            <span className="text-[11px] font-medium text-slate-500">{alertCount ? 'Alerts' : 'Status'}</span>
+          </div>
+          <p className="mt-0.5 text-sm font-bold leading-tight truncate">{alertCount ? `${alertCount} need attention` : 'Healthy'}</p>
+        </button>
       </div>
 
-      <button
-        onClick={() => setCatFilter(alertCount ? 'LOW' : 'ALL')}
-        className={`mb-3 flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm font-medium ${alertCount ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}
-      >
-        {alertCount ? <AlertTriangle className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
-        <span className="truncate">{alertCount ? `${alertCount} product${alertCount > 1 ? 's' : ''} need attention` : 'No inventory alerts'}</span>
-        {alertCount > 0 && <span className="ml-auto shrink-0 text-xs opacity-80">{lowCount} low · {outCount} out</span>}
-      </button>
-
-      <div className="mb-3 flex gap-2 md:hidden">
-        <button onClick={() => setEditing(newProductForm(defaultThreshold))} className="btn-primary flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs"><Plus className="h-4 w-4" /> New</button>
-        <button onClick={() => setRestocking(true)} className="btn-secondary flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs"><PackagePlus className="h-4 w-4" /> Restock</button>
-        <button onClick={() => setWithdrawing(true)} className="btn-secondary flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs"><PackageMinus className="h-4 w-4" /> Withdraw</button>
+      <div className="mb-3 flex flex-col gap-2 md:hidden">
+        <button onClick={() => setEditing(newProductForm(defaultThreshold))} className="btn-primary w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-bold"><Plus className="h-4 w-4" /> New Product</button>
+        <div className="flex gap-2">
+          <button onClick={() => setRestocking(true)} className="btn-secondary flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs"><PackagePlus className="h-4 w-4" /> Restock</button>
+          <button onClick={() => setWithdrawing(true)} className="btn-secondary flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs"><PackageMinus className="h-4 w-4" /> Withdraw</button>
+        </div>
       </div>
 
       <div className="mb-3 grid grid-cols-2 gap-2 md:hidden">
@@ -159,7 +162,7 @@ export function Inventory(): React.JSX.Element {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products…" className="input h-12 w-full pl-9" />
       </div>
 
-      <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         {([
           { value: 'ALL' as const, label: 'All' },
           ...categories.map((category) => ({ value: category.id, label: category.name })),
@@ -170,7 +173,7 @@ export function Inventory(): React.JSX.Element {
             key={String(item.value)}
             type="button"
             onClick={() => chooseFilter(item.value)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition ${catFilter === item.value ? 'border-brand-500/50 bg-brand-600/20 text-brand-300' : 'border-ink-line bg-ink-850 text-slate-300 hover:text-white'}`}
+            className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${catFilter === item.value ? 'border-brand-500/50 bg-brand-600/20 text-brand-300' : 'border-ink-line bg-ink-850 text-slate-300 hover:text-white hover:bg-ink-800'}`}
           >
             {item.label}
           </button>
@@ -183,13 +186,14 @@ export function Inventory(): React.JSX.Element {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:hidden">
           {Array.from({ length: 8 }).map((_, i) => <div key={i} className="card h-28 animate-pulse" />)}
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState title="No products" message="Add your first product to start tracking stock." action={<button onClick={() => setEditing(newProductForm(defaultThreshold))} className="btn-primary">New Product</button>} icon={<Boxes className="h-7 w-7" />} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <>
+        <div className="grid grid-cols-1 gap-3 md:hidden">
           {filtered.map((p) => (
             <div key={p.id} className="card p-4">
               <div className="flex items-start justify-between gap-2">
@@ -214,6 +218,44 @@ export function Inventory(): React.JSX.Element {
             </div>
           ))}
         </div>
+        
+        <div className="hidden md:block overflow-x-auto rounded-xl border border-ink-line bg-ink-900 shadow-card">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-ink-line bg-ink-850">
+                <th className="p-4 text-xs font-semibold text-slate-400">Product</th>
+                <th className="p-4 text-xs font-semibold text-slate-400">Status</th>
+                <th className="p-4 text-xs font-semibold text-slate-400">Stock</th>
+                <th className="p-4 text-xs font-semibold text-slate-400">Cost</th>
+                <th className="p-4 text-xs font-semibold text-slate-400 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink-line">
+              {filtered.map(p => (
+                <tr key={p.id} className="hover:bg-ink-800 transition-colors">
+                  <td className="p-4">
+                    <p className="font-semibold text-white">{p.name}</p>
+                    <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                  </td>
+                  <td className="p-4"><StockBadge status={p.stock_status} /></td>
+                  <td className="p-4">
+                    <p className="font-bold tabular-nums text-white">{p.stock} <span className="text-xs font-medium text-slate-500">{p.base_unit}</span></p>
+                    <ProductExpiry product={p} />
+                  </td>
+                  <td className="p-4 tabular-nums text-slate-300">{money(p.purchase_cost_c)}</td>
+                  <td className="p-4 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => setRestocking(p)} className="btn-ghost-2 flex h-9 w-9 items-center justify-center rounded-lg text-brand-400" title="Restock"><PackagePlus className="h-4 w-4" /></button>
+                      <button onClick={() => setEditing(editProductForm(p))} className="btn-ghost-2 flex h-9 w-9 items-center justify-center rounded-lg" title="Edit"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => void archive(p.id)} className="btn-ghost-2 flex h-9 w-9 items-center justify-center rounded-lg text-danger-400" title="Archive"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        </>
       )}
 
       {editing && <ProductModal form={editing} categories={categories} onSave={saveProduct} onClose={() => setEditing(null)} />}

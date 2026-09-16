@@ -74,26 +74,66 @@ export function Transactions(): React.JSX.Element {
       ) : rows.length === 0 ? (
         <EmptyState title="No transactions" message="Sales will appear here." icon={<ListOrdered className="h-7 w-7" />} />
       ) : (
-        <div className="card overflow-hidden">
-          <table className="table">
-            <thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Customer</th><th className="text-right">Total</th><th>Status</th><th className="w-36">Actions</th></tr></thead>
-            <tbody>
-              {rows.map((s) => (
-                <tr key={s.id}>
-                  <td className="font-medium text-brand-400">{s.transaction_no}</td>
-                  <td className="whitespace-nowrap text-slate-400">{shortDateTime(s.created_at)}</td>
-                  <td className="text-slate-300">{s.cashier_name}</td>
-                  <td className="text-slate-400">{s.customer_name ?? ''}</td>
-                  <td className="text-right font-bold text-white">{money(s.total_c)}</td>
-                  <td><StatusBadge status={s.status} /></td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button onClick={() => setView(s)} className="btn-ghost-2 rounded-lg p-2" title="View"><Eye className="h-4 w-4" /></button>
+        <>
+        <div className="grid grid-cols-1 gap-3 md:hidden">
+          {rows.map(s => (
+             <div key={s.id} className="card p-4">
+                <div className="flex justify-between items-start mb-2">
+                   <div>
+                      <p className="font-bold text-brand-400">{s.transaction_no}</p>
+                      <p className="text-xs text-slate-400">{shortDateTime(s.created_at)}</p>
+                   </div>
+                   <p className="font-bold tabular-nums text-white">{money(s.total_c)}</p>
+                </div>
+                <div className="flex justify-between items-end mt-3">
+                   <div>
+                      <p className="text-xs text-slate-500 mb-1.5">{s.cashier_name} {s.customer_name ? `· ${s.customer_name}` : ''}</p>
+                      <div><StatusBadge status={s.status} /></div>
+                   </div>
+                   <div className="flex gap-1">
+                      <button onClick={() => setView(s)} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="View"><Eye className="h-4 w-4" /></button>
                       {(s.status === 'COMPLETED' || s.status === 'PARTIALLY_REFUNDED') && (
-                        <button onClick={() => setRefund(s)} className="btn-ghost-2 rounded-lg p-2" title="Refund"><RotateCcw className="h-4 w-4" /></button>
+                        <button onClick={() => setRefund(s)} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="Refund"><RotateCcw className="h-4 w-4" /></button>
                       )}
                       {s.status === 'COMPLETED' && (
-                        <button onClick={() => setVoider(s)} className="btn-ghost-2 rounded-lg p-2 text-danger-400" title="Void"><Ban className="h-4 w-4" /></button>
+                        <button onClick={() => setVoider(s)} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-danger-400" title="Void"><Ban className="h-4 w-4" /></button>
+                      )}
+                   </div>
+                </div>
+             </div>
+          ))}
+        </div>
+        
+        <div className="hidden md:block overflow-x-auto rounded-xl border border-ink-line bg-ink-900 shadow-card">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-ink-line bg-ink-850">
+                <th className="p-4 text-xs font-semibold text-slate-400">Receipt</th>
+                <th className="p-4 text-xs font-semibold text-slate-400">Date</th>
+                <th className="p-4 text-xs font-semibold text-slate-400">Cashier</th>
+                <th className="p-4 text-xs font-semibold text-slate-400">Customer</th>
+                <th className="p-4 text-xs font-semibold text-slate-400 text-right">Total</th>
+                <th className="p-4 text-xs font-semibold text-slate-400">Status</th>
+                <th className="p-4 text-xs font-semibold text-slate-400 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink-line">
+              {rows.map((s) => (
+                <tr key={s.id} className="hover:bg-ink-800 transition-colors">
+                  <td className="p-4 font-bold text-brand-400">{s.transaction_no}</td>
+                  <td className="p-4 whitespace-nowrap text-slate-400">{shortDateTime(s.created_at)}</td>
+                  <td className="p-4 text-slate-300">{s.cashier_name}</td>
+                  <td className="p-4 text-slate-400">{s.customer_name ?? '—'}</td>
+                  <td className="p-4 text-right font-bold text-white tabular-nums">{money(s.total_c)}</td>
+                  <td className="p-4"><StatusBadge status={s.status} /></td>
+                  <td className="p-4 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => setView(s)} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg" title="View"><Eye className="h-4 w-4" /></button>
+                      {(s.status === 'COMPLETED' || s.status === 'PARTIALLY_REFUNDED') && (
+                        <button onClick={() => setRefund(s)} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg" title="Refund"><RotateCcw className="h-4 w-4" /></button>
+                      )}
+                      {s.status === 'COMPLETED' && (
+                        <button onClick={() => setVoider(s)} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg text-danger-400" title="Void"><Ban className="h-4 w-4" /></button>
                       )}
                     </div>
                   </td>
@@ -102,6 +142,7 @@ export function Transactions(): React.JSX.Element {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {view && <ViewSale sale={view} onClose={() => setView(null)} />}
