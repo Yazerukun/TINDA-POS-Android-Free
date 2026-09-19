@@ -4,15 +4,15 @@
 
 **Free, 100% offline point-of-sale and inventory system for Philippine sari-sari stores, minimarts, and small businesses on Android phones and tablets.**
 
-### v1.0.21 Stable
+### v1.0.23 Stable
 
 [![Android Version](https://img.shields.io/badge/Android-7.0%2B-green?logo=android&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
-[![Version](https://img.shields.io/badge/Release-v1.0.21%20Stable-blue)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
+[![Version](https://img.shields.io/badge/Release-v1.0.23%20Stable-blue)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
 [![License](https://img.shields.io/badge/License-Free%20for%20Small%20Business-emerald)](#license)
 [![Offline First](https://img.shields.io/badge/Storage-100%25%20Offline%20(Dexie)-orange)](#your-data-and-privacy)
-[![Tests](https://img.shields.io/badge/Tests-80%2F80%20Vitest%20Pass-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/Tests-93%2F93%20Vitest%20Pass-brightgreen)](#development)
 
-[Download APK (v1.0.21)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest) · [User Manual (Bisaya & English)](release-docs/USERMANUAL.md) · [Report an Issue](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
+[Download APK (v1.0.23)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest) · [User Manual (Bisaya & English)](release-docs/USERMANUAL.md) · [Report an Issue](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
 
 ---
 
@@ -26,18 +26,16 @@ Your store database stays 100% offline on your device — no cloud accounts, no 
 
 ---
 
-## ✨ What's New in v1.0.21
+## ✨ What's New in v1.0.23
 
 | Feature / Improvement | What it means at the counter |
 | --- | --- |
-| 🎨 **Professional Responsive UI/UX Redesign** | Completely rebuilt with a modern touch-first design system: 44px ergonomic tap targets, smooth page animations, universal button press feedback, and notch/safe-area support. |
-| ⚡ **Fast Cash Denominations** | 1-tap cash shortcuts during checkout (**Exact, ₱20, ₱50, ₱100, ₱200, ₱500, ₱1000**) with an oversized change (*sukli*) readout. |
-| 🛒 **Bottom Sheet Mobile Cart** | Mobile cart now slides smoothly from the bottom with drag-to-dismiss handle and animated badge counts. |
-| 📱 **Fluid Tablet & Split-Screen View** | Full 60/40 split-screen POS catalog on tablets, 4-column KPI dashboards, and responsive card-to-table transitions. |
-| 🧭 **Zero Navigation Dead Zones** | Navigation automatically adapts: bottom bar on mobile (<640px), compact icon rail on small tablets (640–767px), and full sidebar on desktop/tablets (≥768px). |
-| 🖨️ **Native Bluetooth Thermal Printing** | Direct ESC/POS printing to portable Bluetooth thermal receipt printers (58mm & 80mm) via standard SPP RFCOMM. |
-| 📄 **Android System Print & PDF** | Support for Wi-Fi and Mopria printers via Android PrintManager, plus Save as PDF. |
-| 💬 **Instant Receipt Sharing** | Share digital receipts directly through the Android Share sheet to Messenger, SMS, Viber, or WhatsApp. |
+| 🐛 **Refund amount fix** | Refunds for multi-quantity sale lines now record the full amount (e.g. 5×₱32 refunds ₱160, not ₱32). Net Sales and Estimated Profit reverse correctly. |
+| 🔄 **Universal `.tinda-backup` exchange** | Back up on Android and restore on Windows — or the other way around. Products, stock, sales, utang, and settings travel in one file. |
+| 📝 **Withdrawal notes in Stock History** | The note you add when withdrawing stock is now visible in that product's Stock History. |
+| 🛡️ **Reset Database safety gate** | Reset now requires typing **RESET** to confirm, keeps automatic backups first, and reloads into a clean first-run state. |
+| 🧾 **Receipt layout aligned** | 58mm and 80mm output matches the on-screen preview, with receipt HTML byte-identical to the Windows app. |
+| 💾 **Default per-device database** | Fresh installs start with a clean per-device database and safe migration for existing stores. |
 
 ---
 
@@ -47,7 +45,7 @@ Get the official release package from the [Releases page](https://github.com/Yaz
 
 | File | Size | Purpose |
 | --- | --- | --- |
-| [**`TindaPOS-Free-1.0.21.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.21/TindaPOS-Free-1.0.21.apk) | ~3.4 MB | **Recommended**. Official signed release APK for Android phones and tablets. |
+| [**`TindaPOS-Free-1.0.23.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.23/TindaPOS-Free-1.0.23.apk) | ~3.4 MB | **Recommended**. Official signed release APK for Android phones and tablets. |
 
 > [!NOTE]
 > **Data Preservation on Upgrades:** Installing a newer APK over an existing version **preserves all your store records, sales, inventory, and settings**. All official releases are signed with the same persistent key (`CN=TINDA POS Free`).
@@ -127,7 +125,7 @@ flowchart LR
 
 - **100% Local Storage:** All store records, transactions, customer utang, and settings are stored locally in the device's persistent IndexedDB storage using [Dexie.js](https://dexie.com/).
 - **Zero Telemetry / Zero Cloud:** No personal or commercial data is ever transmitted to external servers.
-- **Backups:** Create regular backups under **More → Settings → Backup / Restore**. You can export your store database as a JSON file and store it on an SD card or cloud drive (Google Drive, OneDrive).
+- **Backups:** Create regular backups under **More → Settings → Backup / Restore**. You can export a universal `.tinda-backup` file and store it on an SD card or cloud drive — it can also be restored on the Windows app, and vice-versa.
 
 ---
 
@@ -147,7 +145,7 @@ The Android Free app is built with **React 18**, **TypeScript**, **Tailwind CSS*
 # 1. Install dependencies
 npm install
 
-# 2. Run test suite (80 unit & integration tests)
+# 2. Run test suite (93 unit & integration tests)
 npm test
 
 # 3. Build web bundle

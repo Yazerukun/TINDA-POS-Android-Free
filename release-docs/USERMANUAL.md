@@ -57,3 +57,42 @@ Bisaya / English. This manual covers everyday use of TINDA POS Free on Android.
 
 All sales data is stored **on your device**. TINDA POS Free does not upload your
 sales to any server.
+
+## 9. Backup, restore & moving to another device
+
+1. Open **More → Backup**.
+2. Tap **Back Up Now** to save a backup on the device.
+3. Tap **Export Universal** to create a **`.tinda-backup`** file you can copy to an SD card, Google Drive, or send to another phone.
+4. To restore, tap **Import** and choose a `.tinda-backup` file.
+5. The same `.tinda-backup` file can be restored on the **Windows** version of TINDA POS — and a Windows export can be imported here.
+
+> Back up before big changes. The universal file carries your products, stock, sales, utang, and settings.
+
+## 10. Refunds (and why profit stays correct)
+
+1. Open **More → Transactions** and find the sale.
+2. Tap **Refund**.
+3. Tick the item(s) to refund, enter a **reason**, then tap **Refund ₱…**.
+4. The sale is marked **REFUNDED** and stock is returned.
+5. Refunds reduce **Net Sales** and reverse **Estimated Profit** on the Dashboard and Reports — even for multi-quantity lines (e.g. 5×₱32 refunds the full ₱160).
+
+## 11. Stock History & withdrawal notes
+
+1. Open **Inventory** and tap a product.
+2. Open the **History** tab to see every stock movement (sales, restocks, withdrawals).
+3. When you use **Withdraw**, add a **note** — it appears in that product's Stock History so you know why stock left.
+
+## 12. Resetting the store database
+
+1. Open **More → Settings → Data**.
+2. Tap **Reset Database**.
+3. Type **RESET** to enable the button — it stays disabled otherwise.
+4. Tap **Reset and Restart**. A backup is saved first and the app starts fresh.
+
+> The RESET gate prevents accidental wipes. Your old backups are kept.
+
+## 13. Receipt layout (58mm & 80mm)
+
+1. In **Settings → Printer**, choose **58mm** or **80mm**.
+2. The on-screen **preview matches the printed receipt**, including the footer.
+3. Tap **Test Print** to confirm alignment before selling.
