@@ -300,7 +300,18 @@ export async function zHistory(): Promise<ZRead[]> {
 }
 
 function saleProfit(sale: Sale): number {
-  return sale.items.reduce((sum, item) => sum + num(item.subtotal_c) - item.qty_base * num(item.cost_base_c), 0)
+  const cost = sale.items.reduce((sum, item) => sum + item.qty_base * num(item.cost_base_c), 0)
+  return num(sale.total_c) - cost
+}
+
+async function refundedCostOf(refunds: Refund[]): Promise<number> {
+  const costById = new Map<number, number>()
+  for (const sale of await db.sales.toArray())
+    for (const item of sale.items) costById.set(item.id, num(item.cost_base_c))
+  return refunds.reduce(
+    (sum, refund) => sum + refund.items.reduce((acc, item) => acc + item.qty_base * (costById.get(item.sale_item_id) ?? 0), 0),
+    0
+  )
 }
 
 function groupKey(iso: string, groupBy: 'DAILY' | 'WEEKLY' | 'MONTHLY'): string {
@@ -343,14 +354,19 @@ export async function salesReport(opts: { from: string; to: string; groupBy?: 'D
     status: sale.status
   }))
 
+  const salesTotal = active.reduce((sum, sale) => sum + num(sale.total_c), 0)
+  const cost = active.reduce((sum, sale) => sum + sale.items.reduce((total, item) => total + item.qty_base * num(item.cost_base_c), 0), 0)
+  const refundTotal = refunds.reduce((sum, refund) => sum + num(refund.total_c), 0)
+  const refundedCost = await refundedCostOf(refunds)
+
   const summary: ReportSummary = {
-    sales_total_c: active.reduce((sum, sale) => sum + num(sale.total_c), 0),
-    profit_c: active.reduce((sum, sale) => sum + saleProfit(sale), 0),
+    sales_total_c: salesTotal,
+    profit_c: Math.round((salesTotal - refundTotal) - (cost - refundedCost)),
     items_sold: active.reduce((sum, sale) => sum + sale.items.reduce((count, item) => count + num(item.qty), 0), 0),
     transactions: active.length,
-    cost_c: active.reduce((sum, sale) => sum + sale.items.reduce((total, item) => total + item.qty_base * num(item.cost_base_c), 0), 0),
+    cost_c: Math.round(cost),
     discount_c: active.reduce((sum, sale) => sum + num(sale.discount_c), 0),
-    refunds_c: refunds.reduce((sum, refund) => sum + num(refund.total_c), 0),
+    refunds_c: refundTotal,
     expenses_c: expenses.reduce((sum, expense) => sum + num(expense.amount_c), 0)
   }
 
@@ -398,16 +414,20 @@ export async function cashierReport(opts: { from?: string; to?: string; cashier_
     .filter((sale) => (opts.cashier_id ? sale.user_id === opts.cashier_id : true))
   const active = rows.filter((sale) => sale.status !== 'VOIDED')
   const refunds = (await db.refunds.toArray()).filter((refund) => refund.created_at >= from && refund.created_at <= to)
+  const salesTotal = active.reduce((sum, sale) => sum + num(sale.total_c), 0)
+  const cost = active.reduce((sum, sale) => sum + sale.items.reduce((total, item) => total + item.qty_base * num(item.cost_base_c), 0), 0)
+  const refundTotal = refunds.reduce((sum, refund) => sum + num(refund.total_c), 0)
+  const refundedCost = await refundedCostOf(refunds)
   return {
     rows,
     summary: {
-      sales_total_c: active.reduce((sum, sale) => sum + num(sale.total_c), 0),
-      profit_c: active.reduce((sum, sale) => sum + saleProfit(sale), 0),
+      sales_total_c: salesTotal,
+      profit_c: Math.round((salesTotal - refundTotal) - (cost - refundedCost)),
       items_sold: active.reduce((sum, sale) => sum + sale.items.reduce((count, item) => count + num(item.qty), 0), 0),
       transactions: active.length,
-      cost_c: active.reduce((sum, sale) => sum + sale.items.reduce((total, item) => total + item.qty_base * num(item.cost_base_c), 0), 0),
+      cost_c: Math.round(cost),
       discount_c: active.reduce((sum, sale) => sum + num(sale.discount_c), 0),
-      refunds_c: refunds.reduce((sum, refund) => sum + num(refund.total_c), 0),
+      refunds_c: refundTotal,
       expenses_c: 0
     }
   }

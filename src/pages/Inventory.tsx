@@ -424,7 +424,7 @@ function StockHistoryView({ products, onClose }: { products: Product[]; onClose:
             <td><span className={`badge border ${row.movement_type === 'WITHDRAWAL' ? 'border-danger-500/30 bg-danger-500/10 text-danger-300' : 'border-slate-500/30 bg-slate-500/10 text-slate-300'}`}>{typeLabels[row.movement_type] ?? row.movement_type}</span></td>
             <td className={row.quantity_change < 0 ? 'text-danger-400' : 'text-emerald-400'}>{row.quantity_change > 0 ? '+' : ''}{row.quantity_change} {row.unit}</td>
             <td>{row.quantity_after} {row.unit}</td>
-            <td className="max-w-[280px] truncate" title={row.reason ?? ''}>{row.reason || '—'}</td>
+            <td className="max-w-[280px] truncate" title={row.reason ? `${row.reason}${row.reference ? ` — ${row.reference}` : ''}` : undefined}>{row.reason || '—'}{row.reference ? <span className="text-slate-500"> — {row.reference}</span> : null}</td>
             <td>{(row as InventoryMovement & { user_name?: string }).user_name || '—'}</td>
           </tr>)}</tbody></table>
         {!loading && rows.length === 0 && <p className="py-10 text-center text-sm text-slate-500">No stock movements match these filters.</p>}

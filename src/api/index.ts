@@ -11,6 +11,7 @@ import * as people from '../data/people'
 import * as sales from '../data/sales'
 import * as accounting from '../data/accounting'
 import * as system from '../data/system'
+import * as tindaBackup from '../data/tindaBackupAndroid'
 import * as printerService from '../data/printerService'
 import { onInventoryChanged } from '../data/util'
 
@@ -349,6 +350,8 @@ const api = {
     list: system.listBackups,
     create: system.createBackup,
     restore: system.restoreBackup,
+    exportTinda: tindaBackup.exportUniversalBackup,
+    importTinda: tindaBackup.importUniversalBackup,
     openFolder: system.openFolder,
     selectSyncFolder: system.selectSyncFolder,
     openSyncFolder: system.openFolder,

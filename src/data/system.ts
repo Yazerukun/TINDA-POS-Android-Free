@@ -26,7 +26,7 @@ import { createCustomer } from './people'
 import { NO_PRINTER } from './sales'
 import { listPrinters, testPrint as runTestPrint } from './printerService'
 
-export const APP_VERSION = '1.0.21'
+export const APP_VERSION = '1.0.22'
 
 const ROLE_NAMES: RoleName[] = ['ADMIN', 'MANAGER', 'CASHIER']
 
@@ -383,10 +383,9 @@ export async function restoreBackup(filename: string): Promise<void> {
 }
 
 export async function resetDatabase(confirmation: string): Promise<void> {
-  if (text(confirmation).toUpperCase() !== 'DELETE') throw new Error('Type DELETE to confirm a full reset.')
+  if (confirmation !== 'RESET') throw new Error('Type RESET exactly to confirm.')
   await createBackup('before reset')
   await wipeData()
-  await db.backups.clear()
   await saveSettings(defaultSettings())
   await setSessionUser(null)
   await writeMeta(META_SETUP_DONE, '0')

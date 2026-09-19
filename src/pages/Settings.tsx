@@ -96,17 +96,21 @@ function DataTab(): React.JSX.Element {
     setResetting(true)
     try {
       await window.api.backup.resetDatabase(confirmation)
+      toastSuccess('Database reset complete. Backups preserved.')
+      window.location.reload()
     } catch (e) {
       toastError('Database reset failed', String((e as Error)?.message || e))
       setResetting(false)
     }
   }
-
-  const startNewStore = async () => {
+const startNewStore = async () => {
     if (newStoreConfirmation !== 'NEW STORE') return
     setResetting(true)
-    try { await window.api.backup.startNewStore(newStoreConfirmation) }
-    catch (e) { toastError('Start New Store failed', String((e as Error)?.message || e)); setResetting(false) }
+    try {
+      await window.api.backup.startNewStore(newStoreConfirmation)
+      toastSuccess('New store started. Safety backup preserved.')
+      window.location.reload()
+    } catch (e) { toastError('Start New Store failed', String((e as Error)?.message || e)); setResetting(false) }
   }
 
   const switchToPortable = (choice: 'FRESH' | 'COPY') => {

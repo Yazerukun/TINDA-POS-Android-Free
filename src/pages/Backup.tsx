@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, RotateCcw, FolderOpen, HardDriveDownload, Cloud, Save } from 'lucide-react'
+import { Plus, RotateCcw, FolderOpen, HardDriveDownload, Cloud, Save, Download } from 'lucide-react'
 import type { BackupInfo, StoreSettings } from '@shared/types'
 import { shortDateTime } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -62,13 +62,52 @@ export function Backup(): React.JSX.Element {
     } catch (e) { toastError('Save failed', String((e as Error)?.message || e)) } finally { setBusy(false) }
   }
 
+  const exportUniversal = async () => {
+    setBusy(true)
+    try {
+      const text = await window.api.backup.exportTinda()
+      const blob = new Blob([text], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `tinda-pos-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.tinda-backup`
+      anchor.style.display = 'none'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 2000)
+      toastSuccess('Universal backup exported', 'Move this file to the other device and Import it there.')
+    } catch (e) { toastError('Export failed', String((e as Error)?.message || e)) } finally { setBusy(false) }
+  }
+
+  const importUniversal = async (text: string, filename: string) => {
+    if (!window.confirm(`Import ${filename}? The store data is replaced by the backup (a safety device backup is saved first).`)) return
+    setBusy(true)
+    try {
+      const { counts } = (await window.api.backup.importTinda(text)) as { counts: Record<string, number> }
+      toastSuccess('Universal backup imported', `Restored ${Object.values(counts).reduce((a, b) => a + b, 0)} rows.`)
+      void load()
+    } catch (e) { toastError('Import failed', String((e as Error)?.message || e)) } finally { setBusy(false) }
+  }
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    void file.text().then((text) => importUniversal(text, file.name)).catch((e) => toastError('Import failed', String(e)))
+  }
+
   return (
     <div className="p-6">
       <PageHeader
         title="Backup & Restore"
         subtitle="Your data is stored offline on this computer."
         actions={
-          <button onClick={() => void create()} disabled={busy} className="btn-primary flex items-center gap-2"><Plus className="h-4 w-4" /> Back Up Now</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => void create()} disabled={busy} className="btn-primary flex items-center gap-2"><Plus className="h-4 w-4" /> Back Up Now</button>
+            <button onClick={() => void exportUniversal()} disabled={busy} className="btn-ghost flex items-center gap-2"><Download className="h-4 w-4" /> Export Universal</button>
+            <label className="btn-ghost flex cursor-pointer items-center gap-2"><Save className="h-4 w-4" /> Import Universal<input type="file" accept=".tinda-backup,application/json" className="hidden" onChange={onPickFile} /></label>
+          </div>
         }
       />
 
