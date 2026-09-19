@@ -26,7 +26,7 @@ import { createCustomer } from './people'
 import { NO_PRINTER } from './sales'
 import { listPrinters, testPrint as runTestPrint } from './printerService'
 
-export const APP_VERSION = '1.0.22'
+export const APP_VERSION = '1.0.23'
 
 const ROLE_NAMES: RoleName[] = ['ADMIN', 'MANAGER', 'CASHIER']
 
