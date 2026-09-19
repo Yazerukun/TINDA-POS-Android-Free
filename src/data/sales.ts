@@ -304,7 +304,7 @@ export async function refundSale(payload: RefundPayload): Promise<Refund> {
     const qtyBase = Math.round(num(requested.qty_base))
     if (qtyBase <= 0) throw new Error('Refund quantity must be greater than zero.')
     if (qtyBase > remaining) throw new Error(`${target.product_name}: only ${remaining} can still be refunded.`)
-    const amount = Math.round((target.unit_price_c * qtyBase) / (num(target.qty_base) || 1))
+    const amount = Math.round((num(target.subtotal_c) * qtyBase) / (num(target.qty_base) || 1))
     target.refunded_qty_base = num(target.refunded_qty_base) + qtyBase
     refundTotal += amount
     const unitRatio = num(target.qty_base) > 0 ? num(target.qty) / num(target.qty_base) : 1
