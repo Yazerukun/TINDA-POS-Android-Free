@@ -13,6 +13,7 @@ import * as accounting from '../data/accounting'
 import * as system from '../data/system'
 import * as tindaBackup from '../data/tindaBackupAndroid'
 import * as printerService from '../data/printerService'
+import * as priceReferences from '../data/priceReferences'
 import { onInventoryChanged } from '../data/util'
 
 interface NativeUpdateProgress {
@@ -364,6 +365,19 @@ const api = {
   },
   audit: {
     list: system.auditList
+  },
+  priceReferences: {
+    search: priceReferences.searchPriceReferences,
+    get: priceReferences.getPriceReference,
+    getByProduct: priceReferences.getPriceReferenceByProductId,
+    getByBarcode: priceReferences.getPriceReferenceByBarcode,
+    matchForProduct: priceReferences.matchForProduct,
+    link: priceReferences.linkPriceReference,
+    unlink: priceReferences.unlinkPriceReference,
+    sync: priceReferences.syncPriceReferences,
+    status: priceReferences.getPriceReferenceStatus,
+    compare: async (retailPriceC: number, reference: import('../shared/types').PriceReference | null) =>
+      priceReferences.comparePrice(retailPriceC, reference)
   }
 } as unknown as TindaApi
 

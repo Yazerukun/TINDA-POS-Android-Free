@@ -544,3 +544,66 @@ export interface ExportResult {
   path: string
   rows: number
 }
+
+export type PriceSourceType = 'official' | 'market' | 'reference' | 'test'
+
+export type PriceComparisonStatus =
+  | 'WITHIN_RANGE'
+  | 'BELOW_RANGE'
+  | 'ABOVE_RANGE'
+  | 'NO_REFERENCE'
+
+export interface PriceReference {
+  id: number
+  product_id: number | null
+  barcode: string | null
+  product_name: string
+  brand: string | null
+  variant: string | null
+  unit: string | null
+  image_path: string | null
+  image_url: string | null
+  market_price_c: number | null
+  min_price_c: number | null
+  max_price_c: number | null
+  currency: string
+  source_name: string
+  source_type: PriceSourceType
+  source_url: string | null
+  location: string | null
+  effective_date: string | null
+  retrieved_at: string
+  last_synced_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface PriceReferenceInput {
+  product_id?: number | null
+  barcode?: string | null
+  product_name: string
+  brand?: string | null
+  variant?: string | null
+  unit?: string | null
+  image_path?: string | null
+  image_url?: string | null
+  market_price_c?: number | null
+  min_price_c?: number | null
+  max_price_c?: number | null
+  currency?: string
+  source_name: string
+  source_type?: PriceSourceType
+  source_url?: string | null
+  location?: string | null
+  effective_date?: string | null
+}
+
+export interface PriceSyncResult {
+  success: boolean
+  synced_count: number
+  rejected_count: number
+  errors: string[]
+  last_synced_at: string
+  message: string
+  is_offline?: boolean
+}

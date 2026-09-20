@@ -12,6 +12,11 @@ import type {
   HeldSale,
   InventoryMovement,
   InventoryMovementType,
+  PaymentInput,
+  PriceComparisonStatus,
+  PriceReference,
+  PriceSourceType,
+  PriceSyncResult,
   Product,
   ProductInput,
   Purchase,
@@ -343,6 +348,31 @@ export interface TindaApi {
 
   audit: {
     list: (opts?: { limit?: number; offset?: number; action?: string }) => Promise<{ rows: AuditLog[]; total: number }>
+  }
+
+  priceReferences: {
+    search: (opts?: {
+      query?: string
+      sourceType?: PriceSourceType
+      linkedOnly?: boolean
+      unlinkedOnly?: boolean
+      limit?: number
+      offset?: number
+    }) => Promise<{ rows: PriceReference[]; references: PriceReference[]; total: number }>
+    get: (id: number) => Promise<PriceReference | undefined>
+    getByProduct: (productId: number) => Promise<PriceReference | undefined>
+    getByBarcode: (barcode: string) => Promise<PriceReference | undefined>
+    matchForProduct: (product: { id: number; name: string; barcode?: string | null }) => Promise<PriceReference | null>
+    link: (referenceId: number, productId: number) => Promise<PriceReference>
+    unlink: (referenceId: number) => Promise<PriceReference>
+    sync: (opts?: { force?: boolean; remoteUrl?: string }) => Promise<PriceSyncResult>
+    status: () => Promise<{
+      total: number
+      last_synced_at: string | null
+      is_stale: boolean
+      sources: { source_name: string; count: number }[]
+    }>
+    compare: (retailPriceC: number, reference: PriceReference | null) => Promise<PriceComparisonStatus>
   }
 }
 

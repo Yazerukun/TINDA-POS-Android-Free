@@ -4,15 +4,15 @@
 
 **Free, 100% offline point-of-sale and inventory system for Philippine sari-sari stores, minimarts, and small businesses on Android phones and tablets.**
 
-### v1.0.23 Stable
+### v1.0.27 Stable · TINDA BANTAY Edition
 
 [![Android Version](https://img.shields.io/badge/Android-7.0%2B-green?logo=android&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
-[![Version](https://img.shields.io/badge/Release-v1.0.23%20Stable-blue)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
+[![Version](https://img.shields.io/badge/Release-v1.0.27%20Stable-blue)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
 [![License](https://img.shields.io/badge/License-Free%20for%20Small%20Business-emerald)](#license)
 [![Offline First](https://img.shields.io/badge/Storage-100%25%20Offline%20(Dexie)-orange)](#your-data-and-privacy)
-[![Tests](https://img.shields.io/badge/Tests-93%2F93%20Vitest%20Pass-brightgreen)](#development)
+[![Tests](https://img.shields.io/badge/Tests-100%2F100%20Vitest%20Pass-brightgreen)](#development)
 
-[Download APK (v1.0.23)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest) · [User Manual (Bisaya & English)](release-docs/USERMANUAL.md) · [Report an Issue](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
+[Download APK (v1.0.27)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest) · [User Manual (Bisaya & English)](release-docs/USERMANUAL.md) · [Report an Issue](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
 
 ---
 
@@ -26,16 +26,17 @@ Your store database stays 100% offline on your device — no cloud accounts, no 
 
 ---
 
-## ✨ What's New in v1.0.23
+## ✨ What's New in v1.0.27 (TINDA BANTAY)
 
 | Feature / Improvement | What it means at the counter |
 | --- | --- |
-| 🐛 **Refund amount fix** | Refunds for multi-quantity sale lines now record the full amount (e.g. 5×₱32 refunds ₱160, not ₱32). Net Sales and Estimated Profit reverse correctly. |
-| 🔄 **Universal `.tinda-backup` exchange** | Back up on Android and restore on Windows — or the other way around. Products, stock, sales, utang, and settings travel in one file. |
-| 📝 **Withdrawal notes in Stock History** | The note you add when withdrawing stock is now visible in that product's Stock History. |
-| 🛡️ **Reset Database safety gate** | Reset now requires typing **RESET** to confirm, keeps automatic backups first, and reloads into a clean first-run state. |
-| 🧾 **Receipt layout aligned** | 58mm and 80mm output matches the on-screen preview, with receipt HTML byte-identical to the Windows app. |
-| 💾 **Default per-device database** | Fresh installs start with a clean per-device database and safe migration for existing stores. |
+| 🟢 **TINDA BANTAY (172-Item Market Price Catalog)** | Access a comprehensive 172-item reference catalog of Philippine commodities (Lucky Me, Bear Brand, San Miguel, Datu Puti, Colgate, etc.) complete with official DTI SRP ranges and prevailing market prices. |
+| 📦 **100% Offline Pre-bundled Seed** | All 172 commodity records are compiled directly into the application (`seedPriceReferences.ts`). Even on brand-new offline installations with zero internet, you have full access out-of-the-box. |
+| ⚡ **Automatic Real-Time Live Sync** | When online, TINDA POS automatically syncs market prices in the background on launch and network reconnection, with a pulsing 🟢 **LIVE** indicator badge. |
+| 💡 **1-Tap "Adopt Price"** | When adding or editing inventory, the app automatically suggests official DTI SRP and market prices. Tap **Adopt Price** to instantly apply the recommended selling price. |
+| 🔄 **Universal `.tinda-backup` (100% Windows Parity)** | Seamless bidirectional backup exchange between Android (Dexie IndexedDB) and Windows (SQLite). Back up on your phone and restore on your PC, or vice versa with zero data loss. |
+| 📲 **Native In-App APK Updater** | Automatically checks for updates from GitHub releases, downloads `TindaPOS-Free-1.0.27.apk` with progress tracking, and triggers the native Android installer. |
+| 🧪 **100/100 Automated Vitest Tests** | Expanded test coverage verifying price comparisons, fuzzy product matching, offline fallbacks, and Dexie v3 schema migrations. |
 
 ---
 
@@ -45,7 +46,7 @@ Get the official release package from the [Releases page](https://github.com/Yaz
 
 | File | Size | Purpose |
 | --- | --- | --- |
-| [**`TindaPOS-Free-1.0.23.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.23/TindaPOS-Free-1.0.23.apk) | ~3.4 MB | **Recommended**. Official signed release APK for Android phones and tablets. |
+| [**`TindaPOS-Free-1.0.27.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.27/TindaPOS-Free-1.0.27.apk) | ~3.5 MB | **Recommended**. Official signed release APK for Android phones and tablets. |
 
 > [!NOTE]
 > **Data Preservation on Upgrades:** Installing a newer APK over an existing version **preserves all your store records, sales, inventory, and settings**. All official releases are signed with the same persistent key (`CN=TINDA POS Free`).

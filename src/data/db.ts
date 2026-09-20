@@ -18,6 +18,7 @@ import type {
   ExpenseCategory,
   HeldSale,
   InventoryMovement,
+  PriceReference,
   Product,
   Refund,
   Sale,
@@ -81,6 +82,7 @@ class TindaDatabase extends Dexie {
   zReads!: Table<ZRead, number>
   audit!: Table<AuditLog, number>
   backups!: Table<BackupRow, string>
+  priceReferences!: Table<PriceReference, number>
 
   constructor() {
     super('tinda-pos-free')
@@ -113,6 +115,10 @@ class TindaDatabase extends Dexie {
     // a schema version bump — Dexie rebuilds/products the index on upgrade.
     this.version(2).stores({
       products: '++id, name, sku, barcode, category_id, status, updated_at, supplier_id'
+    })
+    // v3 adds the price references table for TINDA BANTAY market prices catalog.
+    this.version(3).stores({
+      priceReferences: '++id, product_id, barcode, product_name, brand, category, source_name, last_synced_at'
     })
   }
 }

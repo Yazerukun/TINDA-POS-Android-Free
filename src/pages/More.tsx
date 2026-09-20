@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { NAV } from '../components/layout/Sidebar'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -5,6 +6,8 @@ import { useNav, type PageKey } from '../stores/nav'
 import { useAuth } from '../stores/auth'
 import { useSettings } from '../stores/settings'
 import { hasPermission } from '@shared/roles'
+import type { Product } from '@shared/types'
+import { PriceGuideModal } from '../components/PriceGuideModal'
 
 const SUBTITLES: Partial<Record<PageKey, string>> = {
   customers: 'Customer credit, contacts & balances',
@@ -27,6 +30,12 @@ export function More(): React.JSX.Element {
   const { setPage } = useNav()
   const { user } = useAuth()
   const { settings } = useSettings()
+  const [priceGuideOpen, setPriceGuideOpen] = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+
+  useEffect(() => {
+    window.api.products.search('', { limit: 1000 }).then((res) => setProducts(res.rows)).catch(() => {})
+  }, [])
 
   const can = (k: PageKey) => {
     const item = NAV.find((n) => n.key === k)
@@ -36,6 +45,27 @@ export function More(): React.JSX.Element {
   return (
     <div className="p-6">
       <PageHeader title="More" subtitle={settings?.store_name ?? 'Sari-Sari Store'} />
+      <div className="card divide-y divide-ink-line overflow-hidden mb-4">
+        <button
+          onClick={() => setPriceGuideOpen(true)}
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-ink-800 active:bg-ink-800 bg-emerald-500/5"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></span>
+            </span>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <span className="block truncate text-sm font-bold text-emerald-300">TINDA BANTAY · Price Guide</span>
+              <span className="rounded-full bg-emerald-500/20 px-2 py-0.2 text-[10px] font-semibold text-emerald-300">LIVE</span>
+            </span>
+            <span className="block truncate text-xs text-slate-400">172-item real-time market price reference</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+        </button>
+      </div>
       {GROUPS.map((group) => {
         const keys = group.keys.filter(can)
         if (keys.length === 0) return null
@@ -64,6 +94,13 @@ export function More(): React.JSX.Element {
           </div>
         )
       })}
+      {priceGuideOpen && (
+        <PriceGuideModal
+          open={priceGuideOpen}
+          onClose={() => setPriceGuideOpen(false)}
+          products={products}
+        />
+      )}
     </div>
   )
 }
