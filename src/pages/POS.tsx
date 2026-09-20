@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { create } from 'zustand'
 import {
   Search,
@@ -16,12 +17,24 @@ import {
   ChevronDown,
   X,
   Share2,
-  Printer
+  Printer,
+  ScanLine
 } from 'lucide-react'
 import type { Product, Customer, Sale, Category, HeldSale } from '@shared/types'
 import { money } from '@shared/format'
 import { Modal } from '../components/ui/Modal'
 import { ReceiptPaper } from '../components/ReceiptPaper'
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal'
+import { TouchNumpad } from '../components/TouchNumpad'
+import {
+  playScanBeep,
+  playSuccessChime,
+  playErrorTone,
+  hapticTap,
+  hapticScan,
+  hapticSuccess,
+  hapticError
+} from '../lib/feedback'
 import { toastSuccess, toastError } from '../stores/toast'
 import type { PaymentInput } from '@shared/ipc'
 import type { PrintResult } from '@shared/ipc'
@@ -105,6 +118,34 @@ export function POS(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const categoryMenuRef = useRef<HTMLDivElement>(null)
   const cartItems = usePosCart((state) => state.items)
+  const [scannerOpen, setScannerOpen] = useState(false)
+
+  const handleBarcodeScan = async (code: string) => {
+    try {
+      const res = await window.api.products.search(code, { limit: 10, status: 'ACTIVE' })
+      const exact = res.rows.find((p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase()) || res.rows[0]
+      if (exact) {
+        const stock = saleStock(exact)
+        if (stock > 0) {
+          usePosCart.getState().add(exact)
+          playScanBeep()
+          hapticScan()
+          toastSuccess('Added to cart', `${exact.name} (${code})`)
+        } else {
+          playErrorTone()
+          hapticError()
+          toastError('Out of stock', `${exact.name} has 0 sellable stock.`)
+        }
+      } else {
+        setQ(code)
+        void search(code, catFilter === 'ALL' ? null : catFilter)
+        playErrorTone()
+        toastError('Barcode not found', `No product matching "${code}"`)
+      }
+    } catch (err) {
+      toastError('Scan error', String(err))
+    }
+  }
 
   useEffect(() => {
     let alive = true
@@ -181,14 +222,35 @@ export function POS(): React.JSX.Element {
     <div className="flex h-full min-h-0 flex-col md:flex-row">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4">
         <div className="mb-4 flex flex-col gap-3">
-          <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-            <input
-              value={q}
-              onChange={(e) => { setQ(e.target.value); void search(e.target.value, catFilter === 'ALL' ? null : catFilter) }}
-              placeholder="Search product by name or barcode…"
-              className="input h-12 w-full pl-9 !text-base"
-            />
+          <div className="flex gap-2 w-full">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                value={q}
+                onChange={(e) => { setQ(e.target.value); void search(e.target.value, catFilter === 'ALL' ? null : catFilter) }}
+                placeholder="Search product by name or barcode…"
+                className="input h-12 w-full pl-9 pr-9 !text-base"
+              />
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => { setQ(''); void search('', catFilter === 'ALL' ? null : catFilter) }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  title="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              className="btn-primary flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3.5 shadow-md active:scale-95 transition"
+              title="Scan barcode with camera"
+            >
+              <ScanLine className="h-5 w-5" />
+              <span className="hidden sm:inline text-sm font-bold">Scan</span>
+            </button>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
@@ -224,7 +286,17 @@ export function POS(): React.JSX.Element {
             return (
               <button
                 key={p.id}
-                onClick={() => out ? toastError(blocked > 0 ? 'Expired or undated stock is blocked' : 'Out of stock', `Available for sale: ${stock} ${p.base_unit}.`) : usePosCart.getState().add(p)}
+                onClick={() => {
+                  if (out) {
+                    playErrorTone()
+                    hapticError()
+                    toastError(blocked > 0 ? 'Expired or undated stock is blocked' : 'Out of stock', `Available for sale: ${stock} ${p.base_unit}.`)
+                  } else {
+                    playScanBeep()
+                    hapticTap()
+                    usePosCart.getState().add(p)
+                  }
+                }}
                 aria-disabled={out}
                 className="card group flex h-40 min-w-0 flex-col p-3 text-left transition hover:border-brand-500/50 aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
               >
@@ -244,6 +316,13 @@ export function POS(): React.JSX.Element {
       </div>
 
       <CartPanel />
+
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleBarcodeScan}
+        title="Scan Barcode to Add to Cart"
+      />
     </div>
   )
 }
@@ -346,124 +425,84 @@ function CartPanel(): React.JSX.Element {
 
   return (
     <>
-    <aside className={`min-h-0 shrink-0 flex-col bg-ink-900 transition-transform ${
-      mobileOpen
-        ? 'fixed inset-x-0 bottom-0 top-12 z-50 flex w-full rounded-t-2xl border-t border-ink-line shadow-[0_-8px_30px_rgba(0,0,0,0.5)] animate-bottom-sheet md:static md:z-auto md:h-auto md:w-[40%] md:max-w-[26rem] md:rounded-none md:border-l md:border-t-0 md:shadow-none xl:w-[26rem]'
-        : 'hidden md:flex md:w-[40%] md:max-w-[26rem] md:border-l md:border-t-0 xl:w-[26rem]'
-    }`}>
-      {/* drag handle on mobile */}
-      <div className="flex h-6 w-full items-center justify-center md:hidden" onClick={() => setMobileOpen(false)}>
-        <div className="h-1.5 w-12 rounded-full bg-ink-700" />
-      </div>
-      <div className="flex items-center justify-between border-b border-ink-line px-4 pb-3 pt-1 md:pt-3">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-slate-200">
-          <ShoppingCart className="h-4 w-4" /> Cart
-          {items.length > 0 && <span key={items.length} className="badge bg-brand-600/20 text-brand-300 animate-pop">{items.length}</span>}
-        </h2>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setHeldOpen(true)} className="btn-ghost-2 rounded-lg px-2 py-1 text-xs" title="Resume held sales">
-            Held {heldSales.length > 0 && `(${heldSales.length})`}
-          </button>
-        {items.length > 0 && (
-          <button onClick={() => usePosCart.getState().clear()} className="rounded-lg p-1.5 text-slate-500 hover:bg-ink-800 hover:text-danger-400" title="Clear cart">
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
-          <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-ink-800 md:hidden" aria-label="Close cart">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+      {/* Desktop Cart Sidebar */}
+      <aside className="hidden md:flex md:w-[40%] md:max-w-[26rem] md:border-l md:border-t-0 xl:w-[26rem] min-h-0 shrink-0 flex-col bg-ink-900">
+        <CartBody
+          isMobile={false}
+          items={items}
+          subtotal={subtotal}
+          total={total}
+          discount_pesos={discount_pesos}
+          stockConflict={stockConflict}
+          heldSalesCount={heldSales.length}
+          holdBusy={holdBusy}
+          onHold={() => void holdCurrentSale()}
+          onClear={() => usePosCart.getState().clear()}
+          onOpenHeld={() => setHeldOpen(true)}
+          onOpenCustomer={() => setCustomerOpen(true)}
+          onCheckout={() => setCheckoutOpen(true)}
+        />
+      </aside>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
-        {items.length === 0 && (
-          <p className="py-10 text-center text-sm leading-6 text-slate-500">
-            Cart is empty.
-            <br />
-            Tap a product to add it.
-          </p>
-        )}
-        {items.map((i) => (
-          <div key={i.product_id} className="rounded-lg border border-ink-line bg-ink-800/50 p-2.5">
-            <div className="flex items-start justify-between gap-2">
-              <p className="min-w-0 break-words text-base font-semibold leading-6 text-slate-200">{i.name}</p>
-              <button onClick={() => usePosCart.getState().remove(i.product_id)} className="shrink-0 text-slate-600 hover:text-danger-400" title="Remove">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+      {/* Mobile Floating Cart Bar */}
+      {items.length > 0 && !mobileOpen && (
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="fixed inset-x-4 bottom-[calc(4.25rem+var(--saib))] z-30 flex items-center justify-between gap-3 rounded-2xl border border-brand-400/40 bg-gradient-to-r from-brand-600 to-brand-700 px-4 py-3.5 text-left text-white shadow-[0_8px_25px_rgba(5,150,105,0.45)] active:scale-98 transition md:hidden"
+        >
+          <span className="flex min-w-0 items-center gap-2.5 text-base font-bold">
+            <ShoppingCart className="h-5 w-5 shrink-0" />
+            <span key={items.length} className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-black tabular-nums animate-pop">
+              {items.reduce((s, i) => s + i.qty, 0)}
+            </span>
+            <span className="truncate">View Cart</span>
+          </span>
+          <span className="shrink-0 text-lg font-black tabular-nums">{money(total)}</span>
+        </button>
+      )}
+
+      {/* Mobile Cart Bottom Sheet (Portaled to document.body to sit above MobileBottomNav & Safe Area) */}
+      {mobileOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex flex-col justify-end md:hidden">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity animate-fade"
+              onClick={() => setMobileOpen(false)}
+            />
+            {/* Bottom Sheet Drawer */}
+            <div className="relative z-10 flex max-h-[88vh] w-full flex-col rounded-t-2xl border-t border-ink-line bg-ink-900 shadow-[0_-8px_35px_rgba(0,0,0,0.7)] animate-bottom-sheet">
+              <CartBody
+                isMobile={true}
+                onClose={() => setMobileOpen(false)}
+                items={items}
+                subtotal={subtotal}
+                total={total}
+                discount_pesos={discount_pesos}
+                stockConflict={stockConflict}
+                heldSalesCount={heldSales.length}
+                holdBusy={holdBusy}
+                onHold={() => void holdCurrentSale()}
+                onClear={() => usePosCart.getState().clear()}
+                onOpenHeld={() => setHeldOpen(true)}
+                onOpenCustomer={() => setCustomerOpen(true)}
+                onCheckout={() => setCheckoutOpen(true)}
+              />
             </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1">
-                <button onClick={() => usePosCart.getState().setQty(i.product_id, i.qty - 1)} className="btn-ghost-2 h-10 w-10 rounded-lg" title="Decrease quantity"><Minus className="h-3.5 w-3.5" /></button>
-                <input
-                  value={i.qty}
-                  onChange={(e) => usePosCart.getState().setQty(i.product_id, parseInt(e.target.value || '0', 10))}
-                  aria-label={`Quantity for ${i.name}`} className="h-10 w-14 rounded-lg border border-ink-line bg-ink-950 py-1 text-center text-base font-bold text-white"
-                />
-                <button disabled={i.qty >= maxQuantity(i.stock_base, i.conversion_to_base)} onClick={() => usePosCart.getState().setQty(i.product_id, i.qty + 1)} className="btn-ghost-2 h-10 w-10 rounded-lg disabled:opacity-30" title={i.qty >= maxQuantity(i.stock_base, i.conversion_to_base) ? `Only ${maxQuantity(i.stock_base, i.conversion_to_base)} remaining` : 'Increase quantity'}><Plus className="h-3.5 w-3.5" /></button>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-white">{money(i.unit_price_c * i.qty)}</p>
-                <p className="text-sm text-slate-400">@{money(i.unit_price_c)} / {i.unit_name}</p>
-              </div>
-            </div>
-            <p className={`mt-1 text-xs ${reservedBase(i) > i.stock_base ? 'text-danger-400' : 'text-slate-500'}`}>Available: {availableBase(i.stock_base, i)} base units / {i.stock_base}</p>
-          </div>
-        ))}
-      </div>
+          </div>,
+          document.body
+        )}
 
-      {stockConflict && <div className="mx-4 mb-2 rounded-lg border border-danger-500/30 bg-danger-500/10 p-2 text-xs text-danger-300">Current stock changed. Please adjust the cart to the available quantity before checkout.</div>}
-
-      <div className="space-y-2 border-t border-ink-line px-4 py-3 text-base">
-        <div className="flex items-center justify-between text-slate-400">
-          <span>Customer</span>
-          <button onClick={() => setCustomerOpen(true)} className="flex items-center gap-1 text-brand-400 hover:text-brand-300">
-            <User className="h-3.5 w-3.5" /> Select (utang)
-          </button>
-        </div>
-        <div className="flex items-center justify-between text-slate-400">
-          <span>Subtotal</span><span className="text-slate-200">{money(subtotal)}</span>
-        </div>
-        <div className="flex items-center justify-between text-slate-400">
-          <span>Discount (₱)</span>
-          <input
-            type="number"
-            min={0}
-            value={discount_pesos}
-            onChange={(e) => usePosCart.getState().setDiscountPesos((parseFloat(e.target.value) || 0) * 100)}
-            className="w-24 rounded-lg border border-ink-line bg-ink-950 px-2 py-1 text-right text-sm text-slate-200"
-          />
-        </div>
-        <div className="flex justify-between border-t border-ink-line pt-1.5">
-          <span className="font-bold text-white">TOTAL</span>
-          <span className="text-2xl font-bold text-brand-400">{money(total)}</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 px-4 pb-4 pt-1">
-        <button
-          disabled={items.length === 0}
-          onClick={() => void holdCurrentSale()}
-          className="btn-ghost flex flex-col items-center gap-0.5 py-2 text-xs disabled:opacity-40"
-        >
-          {holdBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />} Hold
-        </button>
-        <button
-          disabled={items.length === 0}
-          onClick={() => usePosCart.getState().clear()}
-          className="btn-secondary col-span-1 py-2 text-xs disabled:opacity-40"
-        >
-          Clear
-        </button>
-        <button
-          disabled={items.length === 0 || stockConflict}
-          onClick={() => !items.length ? undefined : setCheckoutOpen(true)}
-          className="btn-primary col-span-2 min-h-12 py-3 !text-base disabled:opacity-40"
-        >
-          CHECKOUT
-        </button>
-      </div>
-
-      {checkoutOpen && <CheckoutModal subtotal={subtotal} total={total} onClose={() => setCheckoutOpen(false)} />}
+      {checkoutOpen && (
+        <CheckoutModal
+          subtotal={subtotal}
+          total={total}
+          onClose={() => {
+            setCheckoutOpen(false)
+            setMobileOpen(false)
+          }}
+        />
+      )}
       {customerOpen && <CustomerPicker onClose={() => setCustomerOpen(false)} />}
       {heldOpen && (
         <Modal open onClose={() => setHeldOpen(false)} title="Held Sales" maxWidth="max-w-lg">
@@ -484,17 +523,226 @@ function CartPanel(): React.JSX.Element {
           </div>
         </Modal>
       )}
-    </aside>
-    {items.length > 0 && !mobileOpen && (
-      <button onClick={() => setMobileOpen(true)} className="fixed inset-x-0 bottom-[calc(3.5rem+var(--saib))] z-30 flex items-center justify-between gap-3 border-t border-ink-line bg-brand-600 px-4 py-2.5 text-left text-white shadow-pop sm:bottom-0 md:hidden">
-        <span className="flex min-w-0 items-center gap-2 text-sm font-bold">
-          <ShoppingCart className="h-4 w-4 shrink-0" />
-          <span key={items.length} className="rounded-full bg-white/20 px-1.5 text-xs tabular-nums animate-pop">{items.length}</span>
-          <span className="truncate">View Cart</span>
-        </span>
-        <span className="shrink-0 text-base font-extrabold tabular-nums">{money(total)}</span>
-      </button>
-    )}
+    </>
+  )
+}
+
+interface CartBodyProps {
+  isMobile: boolean
+  onClose?: () => void
+  items: CartItem[]
+  subtotal: number
+  total: number
+  discount_pesos: number
+  stockConflict: boolean
+  heldSalesCount: number
+  holdBusy: boolean
+  onHold: () => void
+  onClear: () => void
+  onOpenHeld: () => void
+  onOpenCustomer: () => void
+  onCheckout: () => void
+}
+
+function CartBody({
+  isMobile,
+  onClose,
+  items,
+  subtotal,
+  total,
+  discount_pesos,
+  stockConflict,
+  heldSalesCount,
+  holdBusy,
+  onHold,
+  onClear,
+  onOpenHeld,
+  onOpenCustomer,
+  onCheckout
+}: CartBodyProps): React.JSX.Element {
+  return (
+    <>
+      {/* drag handle on mobile */}
+      {isMobile && (
+        <div
+          className="flex h-7 w-full shrink-0 cursor-pointer items-center justify-center pt-2 pb-1"
+          onClick={onClose}
+        >
+          <div className="h-1.5 w-12 rounded-full bg-ink-700 active:bg-ink-500" />
+        </div>
+      )}
+
+      {/* Cart Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-ink-line px-4 pb-3 pt-1 md:pt-3">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-slate-200">
+          <ShoppingCart className="h-4 w-4" /> Cart
+          {items.length > 0 && (
+            <span key={items.length} className="badge bg-brand-600/20 text-brand-300 animate-pop">
+              {items.length}
+            </span>
+          )}
+        </h2>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenHeld}
+            className="btn-ghost-2 rounded-lg px-2 py-1 text-xs"
+            title="Resume held sales"
+          >
+            Held {heldSalesCount > 0 && `(${heldSalesCount})`}
+          </button>
+          {items.length > 0 && (
+            <button
+              onClick={onClear}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-ink-800 hover:text-danger-400"
+              title="Clear cart"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          {isMobile && (
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-ink-800"
+              aria-label="Close cart"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Cart Items List */}
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
+        {items.length === 0 && (
+          <p className="py-10 text-center text-sm leading-6 text-slate-500">
+            Cart is empty.
+            <br />
+            Tap a product to add it.
+          </p>
+        )}
+        {items.map((i) => (
+          <div key={i.product_id} className="rounded-lg border border-ink-line bg-ink-800/50 p-2.5">
+            <div className="flex items-start justify-between gap-2">
+              <p className="min-w-0 break-words text-base font-semibold leading-6 text-slate-200">{i.name}</p>
+              <button
+                onClick={() => usePosCart.getState().remove(i.product_id)}
+                className="shrink-0 text-slate-600 hover:text-danger-400"
+                title="Remove"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    hapticTap()
+                    usePosCart.getState().setQty(i.product_id, i.qty - 1)
+                  }}
+                  className="btn-ghost-2 h-10 w-10 rounded-lg"
+                  title="Decrease quantity"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <input
+                  value={i.qty}
+                  onChange={(e) => usePosCart.getState().setQty(i.product_id, parseInt(e.target.value || '0', 10))}
+                  aria-label={`Quantity for ${i.name}`}
+                  className="h-10 w-14 rounded-lg border border-ink-line bg-ink-950 py-1 text-center text-base font-bold text-white"
+                />
+                <button
+                  disabled={i.qty >= maxQuantity(i.stock_base, i.conversion_to_base)}
+                  onClick={() => {
+                    hapticTap()
+                    usePosCart.getState().setQty(i.product_id, i.qty + 1)
+                  }}
+                  className="btn-ghost-2 h-10 w-10 rounded-lg disabled:opacity-30"
+                  title={
+                    i.qty >= maxQuantity(i.stock_base, i.conversion_to_base)
+                      ? `Only ${maxQuantity(i.stock_base, i.conversion_to_base)} remaining`
+                      : 'Increase quantity'
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-white">{money(i.unit_price_c * i.qty)}</p>
+                <p className="text-sm text-slate-400">@{money(i.unit_price_c)} / {i.unit_name}</p>
+              </div>
+            </div>
+            <p className={`mt-1 text-xs ${reservedBase(i) > i.stock_base ? 'text-danger-400' : 'text-slate-500'}`}>
+              Available: {availableBase(i.stock_base, i)} base units / {i.stock_base}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {stockConflict && (
+        <div className="mx-4 mb-2 shrink-0 rounded-lg border border-danger-500/30 bg-danger-500/10 p-2 text-xs text-danger-300">
+          Current stock changed. Please adjust the cart to the available quantity before checkout.
+        </div>
+      )}
+
+      {/* Totals & Utang Selector */}
+      <div className="shrink-0 space-y-2 border-t border-ink-line px-4 py-2.5 text-base bg-ink-900">
+        <div className="flex items-center justify-between text-slate-400">
+          <span>Customer</span>
+          <button
+            onClick={onOpenCustomer}
+            className="flex items-center gap-1 text-brand-400 hover:text-brand-300 font-medium"
+          >
+            <User className="h-3.5 w-3.5" /> Select (utang)
+          </button>
+        </div>
+        <div className="flex items-center justify-between text-slate-400">
+          <span>Subtotal</span>
+          <span className="text-slate-200">{money(subtotal)}</span>
+        </div>
+        <div className="flex items-center justify-between text-slate-400">
+          <span>Discount (₱)</span>
+          <input
+            type="number"
+            min={0}
+            value={discount_pesos}
+            onChange={(e) => usePosCart.getState().setDiscountPesos((parseFloat(e.target.value) || 0) * 100)}
+            className="w-24 rounded-lg border border-ink-line bg-ink-950 px-2 py-1 text-right text-sm text-slate-200"
+          />
+        </div>
+        <div className="flex justify-between border-t border-ink-line pt-1.5">
+          <span className="font-bold text-white">TOTAL</span>
+          <span className="text-2xl font-bold text-brand-400">{money(total)}</span>
+        </div>
+      </div>
+
+      {/* Action Buttons: Hold, Clear, CHECKOUT */}
+      <div className={`shrink-0 border-t border-ink-line bg-ink-900 px-4 pt-2.5 ${isMobile ? 'pb-[calc(1.25rem+var(--saib))]' : 'pb-4'}`}>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            disabled={items.length === 0}
+            onClick={onHold}
+            className="btn-ghost flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold disabled:opacity-40"
+          >
+            {holdBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />} Hold
+          </button>
+          <button
+            disabled={items.length === 0}
+            onClick={onClear}
+            className="btn-secondary py-2.5 text-sm font-semibold disabled:opacity-40"
+          >
+            Clear
+          </button>
+          <button
+            disabled={items.length === 0 || stockConflict}
+            onClick={onCheckout}
+            className="btn-primary col-span-2 min-h-13 py-3.5 !text-base font-bold shadow-lg flex items-center justify-center gap-2 active:scale-98 transition disabled:opacity-40"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            <span>CHECKOUT</span>
+            <span className="tabular-nums font-black">({money(total)})</span>
+          </button>
+        </div>
+      </div>
     </>
   )
 }
@@ -553,9 +801,13 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
       const res = await window.api.pos.checkout(payload)
       setDone(res)
       usePosCart.getState().clear()
+      playSuccessChime()
+      hapticSuccess()
       if (res.print.ok || res.print.code === 'DISABLED') toastSuccess('Sale completed successfully', res.sale.transaction_no)
       else toastError('Sale completed successfully', res.print.message)
     } catch (e) {
+      playErrorTone()
+      hapticError()
       toastError('Checkout failed', String((e as Error)?.message || e))
     } finally {
       setSubmitting(false)
@@ -605,8 +857,6 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
     { key: 'MAYA', label: 'Maya', icon: <Smartphone className="h-4 w-4" /> },
     { key: 'UTANG', label: 'Utang', icon: <Wallet className="h-4 w-4" /> }
   ]
-  
-  const fastCash = [total / 100, 20, 50, 100, 200, 500, 1000].filter((v, i, a) => v >= total / 100 && a.indexOf(v) === i)
 
   return (
     <Modal open onClose={onClose} title="Checkout" maxWidth="max-w-md" footer={
@@ -618,53 +868,58 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
         </button>
       </div>
     }>
-      <div className="space-y-4">
-        <div className="rounded-lg border border-ink-line bg-ink-950 p-3 text-center">
-          <p className="text-xs text-slate-500">TOTAL</p>
-          <p className="text-4xl font-black text-white tabular-nums">{money(total)}</p>
-          <p className="mt-1 text-xs text-slate-500">Subtotal {money(subtotal)} · Discount {money(discount_pesos)}</p>
+      <div className="space-y-3">
+        {/* Compact Total Due Header */}
+        <div className="flex items-center justify-between rounded-xl border border-ink-line bg-ink-950 px-4 py-2.5">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Due</span>
+            <p className="text-xs text-slate-400">Subtotal {money(subtotal)} {discount_pesos > 0 ? `· Disc -${money(discount_pesos)}` : ''}</p>
+          </div>
+          <p className="text-3xl font-black text-brand-400 tabular-nums">{money(total)}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {/* Sleek Segmented Payment Method Bar */}
+        <div className="grid grid-cols-4 gap-1 rounded-xl border border-ink-line bg-ink-950 p-1">
           {methods.map((m) => (
             <button
               key={m.key}
+              type="button"
               onClick={() => setMethod(m.key)}
-              className={`btn-ghost flex flex-col items-center gap-1 py-2 text-xs ${method === m.key ? '!border-brand-500 !text-brand-400' : ''}`}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-xs font-semibold transition active:scale-95 ${
+                method === m.key
+                  ? 'bg-brand-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:bg-ink-900 hover:text-white'
+              }`}
             >
               {m.icon}
-              {m.label}
+              <span className="text-[11px]">{m.label}</span>
             </button>
           ))}
         </div>
 
         {method === 'CASH' && (
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">Cash Received</label>
-            <input
-              type="number"
+          <div className="space-y-2">
+            {/* Side-by-Side Cash Received & Sukli */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-ink-line bg-ink-950 px-3 py-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cash Received</span>
+                <p className="text-xl font-black text-white tabular-nums">
+                  {cash ? `₱${cash}` : '₱0'}
+                </p>
+              </div>
+              <div className={`rounded-xl border px-3 py-1.5 ${change >= 0 ? 'border-brand-500/30 bg-brand-500/10' : 'border-danger-500/30 bg-danger-500/10'}`}>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Change (sukli)</span>
+                <p className={`tabular-nums ${change >= 0 ? 'text-xl font-black text-brand-300' : 'mt-0.5 text-xs font-bold text-danger-400'}`}>
+                  {change >= 0 ? money(change) : `Lacking ${money(Math.abs(change))}`}
+                </p>
+              </div>
+            </div>
+
+            <TouchNumpad
               value={cash}
-              onChange={(e) => setCash(e.target.value)}
-              className="input w-full text-2xl font-bold tabular-nums"
-              autoFocus
+              totalPesos={Math.round(total / 100)}
+              onChange={(next) => setCash(next)}
             />
-            <div className="mt-2 flex flex-wrap gap-2">
-              {fastCash.slice(0, 5).map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => setCash(amount.toString())}
-                  className="btn-ghost-2 px-3 py-1.5 text-xs font-semibold tabular-nums hover:border-brand-500/50 hover:text-brand-400"
-                >
-                  {amount === total / 100 ? 'Exact' : `₱${amount}`}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 flex justify-between rounded-lg bg-ink-900 px-3 py-2 text-sm">
-              <span className="text-slate-400">Change (sukli)</span>
-              <span className={`tabular-nums ${change >= 0 ? 'font-bold text-brand-400 text-lg' : 'font-bold text-danger-400'}`}>
-                {money(Math.max(0, change))}
-              </span>
-            </div>
           </div>
         )}
 

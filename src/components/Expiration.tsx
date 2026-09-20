@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CalendarClock, CheckCircle2, Pencil, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle2, Pencil, RefreshCw, X } from 'lucide-react'
 import type { ExpirationEntry, Product } from '@shared/types'
 import { expirationStatus } from '@shared/expiration'
 import { Modal } from './ui/Modal'
 import { toastError, toastSuccess } from '../stores/toast'
+import { useNav } from '../stores/nav'
 
 const labels = { EXPIRED: 'Expired', SOON: 'Expiring within 7 days', NEAR: 'Expiring within 30 days', UNKNOWN: 'Date review required', OK: 'Not near expiry' }
 const colors = { EXPIRED: 'text-red-400', SOON: 'text-orange-400', NEAR: 'text-yellow-400', UNKNOWN: 'text-amber-300', OK: 'text-slate-400' }
@@ -87,6 +88,9 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
   const [error, setError] = useState(false)
   const [open, setOpen] = useState(false)
   const [reminder, setReminder] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const { page } = useNav()
+
   useEffect(() => {
     let alive = true
     let first = true
@@ -109,29 +113,112 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
     const timer = window.setInterval(refresh, 15000)
     return () => { alive = false; unsubscribe(); window.removeEventListener('focus', refresh); window.clearInterval(timer) }
   }, [remind])
+
   const expired = rows.filter((r) => expirationStatus(r.expiration_date) === 'EXPIRED').length
   const unknown = rows.filter((r) => expirationStatus(r.expiration_date) === 'UNKNOWN').length
-  
+
+  // When all expiration dates are healthy, do not render a banner to keep the header clean and uncluttered
   if (!loading && !error && rows.length === 0) {
+    return open ? <ExpirationList onClose={() => setOpen(false)} /> : null
+  }
+
+  // Do not show sticky alerts on POS (checkout screen) or if user dismissed
+  if (dismissed || page === 'pos' || loading || error) {
     return (
-      <div className="flex flex-wrap items-center gap-3 border-b border-ink-line px-4 sm:px-6 py-2 text-sm bg-emerald-500/5">
-        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-        <span className="flex-1 text-emerald-400 font-medium">All expiration dates are healthy</span>
-        <button onClick={() => setOpen(true)} className="btn-ghost flex items-center gap-2"><CalendarClock className="h-4 w-4" /> Expiration Dates</button>
+      <>
+        {reminder && (
+          <Modal
+            open
+            onClose={() => setReminder(false)}
+            title="Paalala sa Expiration"
+            footer={
+              <>
+                <button className="btn-ghost" onClick={() => setReminder(false)}>
+                  Mamaya
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    setReminder(false)
+                    setOpen(true)
+                  }}
+                >
+                  Tingnan ang Items
+                </button>
+              </>
+            }
+          >
+            <p className="text-sm text-slate-300">
+              May {expired} item/batch na expired, {rows.length - expired - unknown} na malapit nang ma-expire, at {unknown} na kailangang lagyan ng expiration date.
+            </p>
+          </Modal>
+        )}
         {open && <ExpirationList onClose={() => setOpen(false)} />}
-      </div>
+      </>
     )
   }
 
-  return <>
-    <div className="flex flex-wrap items-center gap-3 border-b border-ink-line px-4 sm:px-6 py-2 text-sm">
-      <AlertTriangle className={`h-4 w-4 shrink-0 ${expired ? 'text-red-400' : 'text-amber-400'}`} />
-      <span className="flex-1">{loading ? 'Checking expiration dates...' : error ? 'Expiration alerts unavailable' : `${expired} expired / ${rows.length - expired - unknown} expiring soon / ${unknown} need date review`}</span>
-      <button onClick={() => setOpen(true)} className="btn-ghost flex items-center gap-2"><CalendarClock className="h-4 w-4" /> Expiration Dates</button>
-    </div>
-    {reminder && <Modal open onClose={() => setReminder(false)} title="Paalala sa Expiration" footer={<><button className="btn-ghost" onClick={() => setReminder(false)}>Mamaya</button><button className="btn-primary" onClick={() => { setReminder(false); setOpen(true) }}>Tingnan ang Items</button></>}>
-      <p>May {expired} item/batch na expired, {rows.length - expired - unknown} na malapit nang ma-expire, at {unknown} na kailangang lagyan ng expiration date.</p>
-    </Modal>}
-    {open && <ExpirationList onClose={() => setOpen(false)} />}
-  </>
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2 border-b border-amber-500/20 bg-amber-950/40 px-3.5 py-2 text-xs text-amber-200 backdrop-blur-sm">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <AlertTriangle className={`h-4 w-4 shrink-0 ${expired ? 'text-red-400' : 'text-amber-400'}`} />
+          <span className="truncate text-slate-200">
+            {expired > 0 ? <strong className="font-semibold text-red-400">{expired} expired</strong> : null}
+            {expired > 0 && rows.length - expired - unknown > 0 ? <span className="text-slate-500"> · </span> : null}
+            {rows.length - expired - unknown > 0 ? (
+              <span className="text-amber-300 font-medium">{rows.length - expired - unknown} expiring soon</span>
+            ) : null}
+            {unknown > 0 && expired === 0 && rows.length - expired - unknown === 0 ? (
+              <span className="text-amber-300 font-medium">{unknown} need date review</span>
+            ) : null}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            onClick={() => setOpen(true)}
+            className="rounded-lg bg-amber-500/20 px-2.5 py-1 text-[11px] font-bold text-amber-300 hover:bg-amber-500/30 active:scale-95 transition"
+          >
+            View
+          </button>
+          <button
+            onClick={() => setDismissed(true)}
+            className="rounded-lg p-1 text-slate-400 hover:bg-ink-800 hover:text-white active:scale-95 transition"
+            title="Dismiss alert"
+            aria-label="Dismiss alert"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      {reminder && (
+        <Modal
+          open
+          onClose={() => setReminder(false)}
+          title="Paalala sa Expiration"
+          footer={
+            <>
+              <button className="btn-ghost" onClick={() => setReminder(false)}>
+                Mamaya
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  setReminder(false)
+                  setOpen(true)
+                }}
+              >
+                Tingnan ang Items
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-300">
+            May {expired} item/batch na expired, {rows.length - expired - unknown} na malapit nang ma-expire, at {unknown} na kailangang lagyan ng expiration date.
+          </p>
+        </Modal>
+      )}
+      {open && <ExpirationList onClose={() => setOpen(false)} />}
+    </>
+  )
 }

@@ -25,6 +25,7 @@ import { createCategory, createProduct, createSupplier, stockStatus } from './ca
 import { createCustomer } from './people'
 import { NO_PRINTER } from './sales'
 import { listPrinters, testPrint as runTestPrint } from './printerService'
+import { exportUniversalBackup, importUniversalBackup } from './tindaBackupAndroid'
 
 export const APP_VERSION = '1.0.27'
 
@@ -325,9 +326,9 @@ async function snapshot(): Promise<string> {
 }
 
 export async function createBackup(reason?: string): Promise<BackupInfo> {
-  const payload = await snapshot()
+  const payload = await exportUniversalBackup()
   const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const filename = `tinda-pos-backup-${stamp}.json`
+  const filename = `tinda-pos-backup-${stamp}.tinda-backup`
   const row: BackupRow = {
     filename,
     created_at: nowIso(),
@@ -361,6 +362,11 @@ export async function listBackups(): Promise<BackupInfo[]> {
     .map((row) => ({ filename: row.filename, path: `device storage/${row.filename}`, size: row.size, created_at: row.created_at }))
 }
 
+export async function getBackupPayload(filename: string): Promise<string | null> {
+  const row = await db.backups.get(filename)
+  return row?.payload ?? null
+}
+
 async function wipeData(): Promise<void> {
   for (const table of DATA_TABLES) {
     await (db.table(table) as { clear: () => Promise<void> }).clear()
@@ -371,14 +377,18 @@ export async function restoreBackup(filename: string): Promise<void> {
   const row = await db.backups.get(filename)
   if (!row) throw new Error('Backup not found.')
   await createBackup('before restore')
-  const parsed = JSON.parse(row.payload) as { settings?: StoreSettings; tables?: { table: DataTableName; rows: unknown[] }[] }
-  await wipeData()
-  for (const entry of parsed.tables ?? []) {
-    const table = db.table(entry.table) as { bulkPut: (rows: unknown[]) => Promise<unknown> }
-    if (Array.isArray(entry.rows) && entry.rows.length) await table.bulkPut(entry.rows)
+  if (row.payload.includes('"format":"tinda-pos-backup"') || row.payload.includes('"tinda-pos-backup"')) {
+    await importUniversalBackup(row.payload)
+  } else {
+    const parsed = JSON.parse(row.payload) as { settings?: StoreSettings; tables?: { table: DataTableName; rows: unknown[] }[] }
+    await wipeData()
+    for (const entry of parsed.tables ?? []) {
+      const table = db.table(entry.table) as { bulkPut: (rows: unknown[]) => Promise<unknown> }
+      if (Array.isArray(entry.rows) && entry.rows.length) await table.bulkPut(entry.rows)
+    }
+    if (parsed.settings) await saveSettings({ ...defaultSettings(), ...parsed.settings })
+    await writeMeta(META_SETUP_DONE, '1')
   }
-  if (parsed.settings) await saveSettings({ ...defaultSettings(), ...parsed.settings })
-  await writeMeta(META_SETUP_DONE, '1')
   await audit({ action: 'BACKUP_RESTORE', entity_type: 'backup', new_value: filename })
 }
 

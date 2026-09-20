@@ -73,50 +73,62 @@ export function Expenses(): React.JSX.Element {
   }
 
   return (
-    <div className="p-6">
-      <PageHeader
-        title="Expenses"
-        subtitle={`${rows.length} records · total ${money(total)}`}
-        actions={<button onClick={() => setEditing(blankForm(cats))} className="btn-primary flex items-center gap-2"><Plus className="h-4 w-4" /> New Expense</button>}
-      />
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTimeout(() => void load(), 0) }} className="input w-44" />
-        <span className="text-slate-500">to</span>
-        <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setTimeout(() => void load(), 0) }} className="input w-44" />
+    <div className="px-4 pt-3 pb-8 max-w-lg mx-auto space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-black text-white">Expenses</h1>
+          <p className="text-xs text-slate-400">{rows.length} records · total <span className="font-bold text-danger-400">{money(total)}</span></p>
+        </div>
+        <button onClick={() => setEditing(blankForm(cats))} className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl">
+          <Plus className="h-4 w-4" /> New Expense
+        </button>
       </div>
 
-      <div className="mb-4 flex items-center gap-2">
-        <input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="Add expense category…" className="input w-56" />
-        <button onClick={() => void addCategory()} className="btn-ghost">Add</button>
-        <span className="ml-2 text-xs text-slate-500">{cats.length} categories</span>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">From</label>
+          <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5" />
+        </div>
+        <div>
+          <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">To</label>
+          <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input value={newCat} onChange={(e) => setNewCat(e.target.value)} placeholder="Add expense category…" className="input flex-1 text-sm py-1.5" />
+        <button onClick={() => void addCategory()} className="btn-ghost shrink-0 text-sm py-1.5 px-3">Add</button>
+        <span className="text-[11px] text-slate-500 whitespace-nowrap">{cats.length} cats</span>
       </div>
 
       {loading ? (
-        <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="card h-12 animate-pulse" />)}</div>
+        <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="card h-16 animate-pulse" />)}</div>
       ) : rows.length === 0 ? (
         <EmptyState title="No expenses" message="Expenses you record will appear here." icon={<Receipt className="h-7 w-7" />} />
       ) : (
-        <div className="card overflow-hidden">
-          <table className="table">
-            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th className="text-right">Amount</th><th className="w-16"></th></tr></thead>
-            <tbody>
-              {rows.map((e) => (
-                <tr key={e.id}>
-                  <td className="whitespace-nowrap text-slate-400">{shortDate(e.expense_date)}</td>
-                  <td><span className="badge bg-ink-700 text-slate-300">{e.category_name}</span></td>
-                  <td className="text-slate-300">{e.description ?? '—'}</td>
-                  <td className="text-right font-bold text-danger-400">{money(e.amount_c)}</td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button onClick={() => setEditing({ id: e.id, category_id: e.category_id, amount_c: e.amount_c, expense_date: e.expense_date, description: e.description ?? '' })} className="btn-ghost-2 rounded-lg p-2"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => void remove(e.id)} className="btn-ghost-2 rounded-lg p-2 text-danger-400"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-2.5">
+          {rows.map((e) => (
+            <div key={e.id} className="card p-3.5 flex items-center justify-between gap-3 hover:border-ink-600 transition-colors">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="badge bg-ink-700 text-slate-300 text-xs px-2 py-0.5 rounded-full font-medium">{e.category_name}</span>
+                  <span className="text-xs text-slate-400">{shortDate(e.expense_date)}</span>
+                </div>
+                <p className="text-sm font-medium text-slate-200 truncate">{e.description || '—'}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-base font-bold text-danger-400 tabular-nums">{money(e.amount_c)}</div>
+                <div className="flex justify-end gap-1 mt-1">
+                  <button onClick={() => setEditing({ id: e.id, category_id: e.category_id, amount_c: e.amount_c, expense_date: e.expense_date, description: e.description ?? '' })} className="btn-ghost-2 p-1.5 rounded-lg text-slate-400 hover:text-white" title="Edit">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => void remove(e.id)} className="btn-ghost-2 p-1.5 rounded-lg text-danger-400 hover:text-danger-300" title="Delete">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

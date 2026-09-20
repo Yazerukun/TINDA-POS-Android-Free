@@ -111,4 +111,76 @@ describe('tinda-backup android adapter', () => {
     file.data.tables.find((t) => t.name === 'categories')!.rows[0]!.name = 'Hacked'
     await expect(importUniversalBackup(JSON.stringify(file))).rejects.toThrow(/checksum mismatch/i)
   })
+
+  it('handles cross-platform user_roles and z_reads snapshots from Windows SQLite', async () => {
+    const file = await buildBackupFile(
+      {
+        settings: { store_name: 'Windows Store' },
+        tables: [
+          { name: 'users', rows: [{ id: 1, username: 'admin', full_name: 'Admin User', is_active: 1 }] },
+          { name: 'user_roles', rows: [{ user_id: 1, role_name: 'admin' }, { user_id: 1, role_name: 'cashier' }] },
+          {
+            name: 'z_reads',
+            rows: [
+              {
+                id: 1,
+                z_counter: 1,
+                created_at: '2026-01-01T12:00:00Z',
+                snapshot: JSON.stringify({ gross_c: 10000, net_c: 10000, tax_c: 0 })
+              }
+            ]
+          }
+        ]
+      },
+      { platform: 'windows', appVersion: '1.0.18', schemaVersion: 1 }
+    )
+
+    await importUniversalBackup(JSON.stringify(file))
+
+    const users = await db.users.toArray()
+    expect(users).toHaveLength(1)
+    expect(users[0].username).toBe('admin')
+    expect(users[0].roles).toEqual(['admin', 'cashier'])
+    expect(users[0].is_active).toBe(true)
+
+    const zreads = await db.zReads.toArray()
+    expect(zreads).toHaveLength(1)
+    expect(typeof zreads[0].snapshot).toBe('object')
+    expect((zreads[0].snapshot as { gross_c: number }).gross_c).toBe(10000)
+  })
+
+  it('restores legacy Android JSON backups seamlessly', async () => {
+    const legacyBackup = {
+      schema: 1,
+      timestamp: '2026-01-01T00:00:00Z',
+      settings: { store_name: 'Legacy Sari-Sari Store' },
+      tables: [
+        {
+          table: 'categories',
+          rows: [{ id: 99, name: 'Sari-Sari Items' }]
+        },
+        {
+          table: 'products',
+          rows: [
+            {
+              id: 88,
+              name: 'Candy',
+              sku: 'CND-1',
+              category_id: 99,
+              base_unit: 'pc',
+              default_price_c: 100,
+              units: [{ id: 1, name: 'pc', conversion_to_base: 1, selling_price_c: 100, is_default: true }]
+            }
+          ]
+        }
+      ]
+    }
+
+    const { counts } = await importUniversalBackup(JSON.stringify(legacyBackup))
+    expect(counts.categories).toBe(1)
+    expect(counts.products).toBe(1)
+
+    const restoredCats = await db.categories.toArray()
+    expect(restoredCats.some((c) => c.name === 'Sari-Sari Items')).toBe(true)
+  })
 })

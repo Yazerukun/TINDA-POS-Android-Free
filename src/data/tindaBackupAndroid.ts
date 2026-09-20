@@ -69,8 +69,17 @@ async function snapshotCanonical(): Promise<TindaBackupData> {
   const products = rows.map((p) => {
     const embedded = (p.units as Record<string, unknown>[] | undefined) ?? []
     delete p.units
-    for (const u of embedded) units.push({ ...u, product_id: p.id })
-    return p
+    for (const u of embedded) {
+      units.push({
+        ...u,
+        product_id: p.id,
+        is_default: u.is_default ? 1 : 0
+      })
+    }
+    return {
+      ...p,
+      is_active: p.is_active === false || p.is_active === 0 ? 0 : 1
+    }
   })
   push('products', products)
   push('product_units', units)
@@ -97,9 +106,53 @@ async function snapshotCanonical(): Promise<TindaBackupData> {
   push('refunds', refunds)
   push('refund_items', refundItems)
 
+  // Users and user_roles extraction for Windows SQLite compatibility
+  const usersRaw = await toArray('users')
+  const userRoles: Record<string, unknown>[] = []
+  const rolesSet = new Set<string>()
+  const users = usersRaw.map((u) => {
+    const roles = (u.roles as string[] | undefined) ?? ['CASHIER']
+    for (const r of roles) {
+      userRoles.push({ user_id: u.id, role_name: r })
+      rolesSet.add(r)
+    }
+    const copy = { ...u }
+    delete copy.roles
+    copy.is_active = u.is_active === false || u.is_active === 0 ? 0 : 1
+    return copy
+  })
+  push('roles', Array.from(rolesSet).map((name) => ({ name })))
+  push('users', users)
+  push('user_roles', userRoles)
+
+  // z_reads stringifying snapshot for SQLite compatibility
+  const zReadsRaw = await toArray('zReads')
+  const zReads = zReadsRaw.map((z) => ({
+    ...z,
+    snapshot: typeof z.snapshot === 'string' ? z.snapshot : JSON.stringify(z.snapshot)
+  }))
+  push('z_reads', zReads)
+
+  // cash_counts stringifying denominations for SQLite compatibility
+  const cashCountsRaw = await toArray('cashCounts')
+  const cashCounts = cashCountsRaw.map((c) => ({
+    ...c,
+    denominations: typeof c.denominations === 'string' ? c.denominations : JSON.stringify(c.denominations)
+  }))
+  push('cash_counts', cashCounts)
+
+  const EXCLUDED_CANONICAL_FROM_LOOP = new Set([
+    'products',
+    'sales',
+    'refunds',
+    'users',
+    'z_reads',
+    'cash_counts'
+  ])
+
   for (const dexie of DATA_TABLES) {
     const canonical = DEXIE_TO_CANONICAL[dexie]
-    if (!canonical || SKIPPED[dexie] || canonical === 'products' || canonical === 'sales' || canonical === 'refunds') continue
+    if (!canonical || SKIPPED[dexie] || EXCLUDED_CANONICAL_FROM_LOOP.has(canonical)) continue
     push(canonical, await toArray(dexie))
   }
   return { settings: settings as unknown as Record<string, unknown>, tables }
@@ -151,7 +204,31 @@ export async function importUniversalBackup(text: string): Promise<{
   unsupported: ReturnType<typeof unsupportedFieldsReport>
   restarted: boolean
 }> {
-  const file = JSON.parse(text) as TindaBackupFile
+  const parsed = JSON.parse(text)
+
+  // Legacy Android Dexie backup support ({ schema: 1, tables: [...] })
+  if (parsed && typeof parsed === 'object' && !('manifest' in parsed) && Array.isArray(parsed.tables)) {
+    for (const dexie of DATA_TABLES) {
+      await (db.table(dexie) as { clear: () => Promise<void> }).clear()
+    }
+    const counts: Record<string, number> = {}
+    for (const entry of parsed.tables) {
+      if (DATA_TABLES.includes(entry.table) && Array.isArray(entry.rows) && entry.rows.length > 0) {
+        await (db.table(entry.table) as { bulkPut: (rows: unknown[]) => Promise<unknown> }).bulkPut(entry.rows)
+        counts[entry.table] = entry.rows.length
+      }
+    }
+    if (parsed.settings) {
+      await updateSettings(safeSettings(parsed.settings))
+    }
+    return {
+      counts,
+      unsupported: { unsupportedTables: [], summary: 'Legacy Android backup restored successfully.' },
+      restarted: false
+    }
+  }
+
+  const file = parsed as TindaBackupFile
   const validated = validateBackupFile(file)
   if (!validated.ok) {
     throw new Error(`Invalid backup: ${validated.issues.map((i) => i.message).join('; ')}`)
@@ -167,7 +244,6 @@ export async function importUniversalBackup(text: string): Promise<{
   for (const dexie of DATA_TABLES) {
     await (db.table(dexie) as { clear: () => Promise<void> }).clear()
   }
-  void EXCLUDED_CANONICAL
 
   const targets: { table: DataTableName; rows: Record<string, unknown>[] }[] = []
   const target = (canonical: string, rows: Record<string, unknown>[]) => {
@@ -175,10 +251,18 @@ export async function importUniversalBackup(text: string): Promise<{
     if (dexie && rows.length > 0) targets.push({ table: dexie as DataTableName, rows })
   }
 
-  target(
-    'products',
-    attachEmbedded(byName.get('products') ?? [], byName.get('product_units') ?? [], 'product_id', 'units')
-  )
+  // Products and product_units with boolean normalization
+  const rawUnits = (byName.get('product_units') ?? []).map((u) => ({
+    ...u,
+    is_default: u.is_default === 1 || u.is_default === true || u.is_default === '1'
+  }))
+  const rawProducts = (byName.get('products') ?? []).map((p) => ({
+    ...p,
+    is_active: p.is_active === 0 || p.is_active === false ? false : true
+  }))
+  target('products', attachEmbedded(rawProducts, rawUnits, 'product_id', 'units'))
+
+  // Sales, items, and payments
   target(
     'sales',
     attachEmbedded(
@@ -188,7 +272,44 @@ export async function importUniversalBackup(text: string): Promise<{
       'payments'
     )
   )
+
+  // Refunds and items
   target('refunds', attachEmbedded(byName.get('refunds') ?? [], byName.get('refund_items') ?? [], 'refund_id', 'items'))
+
+  // Users and user_roles (reconstruct user.roles for Android)
+  const userRoles = byName.get('user_roles') ?? []
+  const rolesByUser = groupBy(userRoles, (r) => r.user_id)
+  const users = (byName.get('users') ?? []).map((u) => {
+    const assigned = rolesByUser.get(u.id)?.map((r) => String(r.role_name)) ?? []
+    const existingRoles = Array.isArray(u.roles) ? (u.roles as string[]) : []
+    const roles = assigned.length > 0 ? assigned : existingRoles.length > 0 ? existingRoles : ['CASHIER']
+    return {
+      ...u,
+      roles,
+      is_active: u.is_active === 0 || u.is_active === false ? false : true
+    }
+  })
+  target('users', users)
+
+  // Z-Reads (parse snapshot object if JSON string)
+  const zReads = (byName.get('z_reads') ?? []).map((z) => {
+    let snapshot = z.snapshot
+    if (typeof snapshot === 'string') {
+      try { snapshot = JSON.parse(snapshot) } catch {}
+    }
+    return { ...z, snapshot }
+  })
+  target('z_reads', zReads)
+
+  // Cash counts (parse denominations if JSON string)
+  const cashCounts = (byName.get('cash_counts') ?? []).map((c) => {
+    let denominations = c.denominations
+    if (typeof denominations === 'string') {
+      try { denominations = JSON.parse(denominations) } catch {}
+    }
+    return { ...c, denominations }
+  })
+  target('cash_counts', cashCounts)
 
   const direct: [string, string][] = [
     ['categories', 'categories'],
@@ -201,14 +322,19 @@ export async function importUniversalBackup(text: string): Promise<{
     ['credit_ledger', 'credit'],
     ['expense_categories', 'expenseCategories'],
     ['cash_movements', 'cashMovements'],
-    ['cash_counts', 'cashCounts'],
-    ['z_reads', 'zReads'],
-    ['audit_logs', 'audit'],
-    ['users', 'users']
+    ['audit_logs', 'audit']
   ]
   for (const [canonical, dexie] of direct) {
     const rows = byName.get(canonical)
-    if (rows && rows.length > 0) targets.push({ table: dexie as DataTableName, rows })
+    if (rows && rows.length > 0) {
+      const normalized = rows.map((r) => {
+        if ('is_active' in r) {
+          return { ...r, is_active: r.is_active === 0 || r.is_active === false ? false : true }
+        }
+        return r
+      })
+      targets.push({ table: dexie as DataTableName, rows: normalized })
+    }
   }
 
   for (const t of targets) {

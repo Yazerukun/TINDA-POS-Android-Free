@@ -334,6 +334,7 @@ export interface TindaApi {
     create: (reason?: string) => Promise<BackupInfo>
     restore: (filename: string) => Promise<void>
     exportTinda: () => Promise<string>
+    getPayload?: (filename: string) => Promise<string | null>
     importTinda: (text: string) => Promise<{ counts: Record<string, number>; unsupported: { unsupportedTables: { name: string; reason: string }[]; summary: string } }>
     openFolder: () => Promise<void>
     selectSyncFolder: () => Promise<string | null>

@@ -47,30 +47,47 @@ export function Suppliers(): React.JSX.Element {
   }
 
   return (
-    <div className="p-6">
-      <PageHeader
-        title="Suppliers"
-        subtitle={`${rows.length} suppliers`}
-        actions={<button onClick={() => setEditing({ id: null, name: '', contact_person: '', phone: '', address: '', notes: '' })} className="btn-primary flex items-center gap-2"><Plus className="h-4 w-4" /> New Supplier</button>}
-      />
+    <div className="px-4 pt-3 pb-8 max-w-lg mx-auto space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-black text-white">Suppliers</h1>
+          <p className="text-xs text-slate-400">{rows.length} vendor partners</p>
+        </div>
+        <button onClick={() => setEditing({ id: null, name: '', contact_person: '', phone: '', address: '', notes: '' })} className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl">
+          <Plus className="h-4 w-4" /> New Supplier
+        </button>
+      </div>
 
       {loading ? (
-        <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="card h-14 animate-pulse" />)}</div>
+        <div className="space-y-2.5">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="card h-20 animate-pulse" />)}</div>
       ) : rows.length === 0 ? (
         <EmptyState title="No suppliers" message="Add suppliers to record purchases and track vendor history." icon={<Truck className="h-7 w-7" />} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2.5">
           {rows.map((s) => (
-            <div key={s.id} className="card p-4">
-              <div className="flex items-start justify-between">
-                <button onClick={() => void openDetail(s)} className="text-left">
-                  <p className="font-semibold text-white hover:underline">{s.name}</p>
-                  {s.contact_person && <p className="text-xs text-slate-500">{s.contact_person}</p>}
-                  {s.phone && <p className="text-xs text-slate-400">{s.phone}</p>}
-                </button>
-                <button onClick={() => setEditing({ id: s.id, name: s.name, contact_person: s.contact_person ?? '', phone: s.phone ?? '', address: s.address ?? '', notes: s.notes ?? '' })} className="btn-ghost-2 rounded-lg p-2"><Pencil className="h-4 w-4" /></button>
+            <div key={s.id} className="card p-3.5 flex items-start gap-3 hover:border-ink-600 transition-colors">
+              <div className="h-10 w-10 rounded-xl bg-ink-800 border border-ink-line flex items-center justify-center text-brand-400 shrink-0 mt-0.5">
+                <Truck className="h-5 w-5" />
               </div>
-              {s.address && <p className="mt-1 truncate text-xs text-slate-500">{s.address}</p>}
+              <div className="min-w-0 flex-1">
+                <button onClick={() => void openDetail(s)} className="text-left w-full">
+                  <p className="font-bold text-white text-base leading-tight hover:text-brand-300 transition-colors">{s.name}</p>
+                  {s.contact_person && <p className="text-xs text-slate-400 mt-0.5">Contact: {s.contact_person}</p>}
+                  {s.phone && (
+                    <p className="text-xs text-brand-400 font-medium mt-0.5">
+                      📞 {s.phone}
+                    </p>
+                  )}
+                  {s.address && <p className="text-xs text-slate-500 truncate mt-0.5">{s.address}</p>}
+                </button>
+              </div>
+              <button
+                onClick={() => setEditing({ id: s.id, name: s.name, contact_person: s.contact_person ?? '', phone: s.phone ?? '', address: s.address ?? '', notes: s.notes ?? '' })}
+                className="btn-ghost-2 p-2 rounded-lg text-slate-400 hover:text-white shrink-0"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
             </div>
           ))}
         </div>

@@ -25,7 +25,7 @@ export function ReceiptPaper({ lines, width }: ReceiptPaperProps): React.JSX.Ele
       <div className="shadow-xl rounded-sm max-w-full">
         <style>{css}</style>
         {/* Receipt HTML is fully escaped in shared/receiptHtml.ts — no raw user HTML. */}
-        <div dangerouslySetInnerHTML={{ __html: body }} className="bg-white rounded-sm overflow-hidden" />
+        <div dangerouslySetInnerHTML={{ __html: body }} className="bg-white rounded-sm shadow-sm" />
       </div>
     </div>
   )

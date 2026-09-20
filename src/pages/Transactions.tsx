@@ -43,106 +43,73 @@ export function Transactions(): React.JSX.Element {
   const total = rows.filter((s) => s.status !== 'VOIDED').reduce((s, x) => s + x.total_c, 0)
 
   return (
-    <div className="p-6">
-      <PageHeader title="Transactions" subtitle={`${rows.length} shown · net ${money(total)}`} />
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-48">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void load()}
-            placeholder="Receipt #, product…"
-            className="input w-full pl-9"
-          />
+    <div className="px-4 pt-3 pb-8 max-w-lg mx-auto space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-black text-white">Transactions</h1>
+          <p className="text-xs text-slate-400">{rows.length} shown · net <span className="font-bold text-brand-400">{money(total)}</span></p>
         </div>
-        <select value={status} onChange={(e) => { setStatus(e.target.value); setTimeout(() => void load(), 0) }} className="input w-40">
-          <option value="">All status</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="REFUNDED">Refunded</option>
-          <option value="PARTIALLY_REFUNDED">Partially refunded</option>
-          <option value="VOIDED">Voided</option>
-        </select>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input w-40" />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input w-40" />
-        <button onClick={() => void load()} className="btn-primary">Apply</button>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void load()}
+              placeholder="Receipt #, product…"
+              className="input w-full pl-9 text-sm py-2"
+            />
+          </div>
+          <select value={status} onChange={(e) => { setStatus(e.target.value); setTimeout(() => void load(), 0) }} className="input text-xs py-2 w-32 shrink-0">
+            <option value="">All status</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="REFUNDED">Refunded</option>
+            <option value="PARTIALLY_REFUNDED">Partially</option>
+            <option value="VOIDED">Voided</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5" />
+          <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5" />
+        </div>
       </div>
 
       {loading ? (
-        <div className="space-y-2">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="card h-12 animate-pulse" />)}</div>
+        <div className="space-y-2.5">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="card h-24 animate-pulse" />)}</div>
       ) : rows.length === 0 ? (
         <EmptyState title="No transactions" message="Sales will appear here." icon={<ListOrdered className="h-7 w-7" />} />
       ) : (
-        <>
-        <div className="grid grid-cols-1 gap-3 md:hidden">
+        <div className="space-y-2.5">
           {rows.map(s => (
-             <div key={s.id} className="card p-4">
-                <div className="flex justify-between items-start mb-2">
-                   <div>
-                      <p className="font-bold text-brand-400">{s.transaction_no}</p>
-                      <p className="text-xs text-slate-400">{shortDateTime(s.created_at)}</p>
-                   </div>
-                   <p className="font-bold tabular-nums text-white">{money(s.total_c)}</p>
+            <div key={s.id} className="card p-3.5 hover:border-ink-600 transition-colors">
+              <div className="flex justify-between items-start mb-1.5">
+                <div>
+                  <span className="font-bold text-brand-400 text-sm">{s.transaction_no}</span>
+                  <p className="text-xs text-slate-400">{shortDateTime(s.created_at)}</p>
                 </div>
-                <div className="flex justify-between items-end mt-3">
-                   <div>
-                      <p className="text-xs text-slate-500 mb-1.5">{s.cashier_name} {s.customer_name ? `· ${s.customer_name}` : ''}</p>
-                      <div><StatusBadge status={s.status} /></div>
-                   </div>
-                   <div className="flex gap-1">
-                      <button onClick={() => setView(s)} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="View"><Eye className="h-4 w-4" /></button>
-                      {(s.status === 'COMPLETED' || s.status === 'PARTIALLY_REFUNDED') && (
-                        <button onClick={() => setRefund(s)} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="Refund"><RotateCcw className="h-4 w-4" /></button>
-                      )}
-                      {s.status === 'COMPLETED' && (
-                        <button onClick={() => setVoider(s)} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-danger-400" title="Void"><Ban className="h-4 w-4" /></button>
-                      )}
-                   </div>
+                <p className="font-bold tabular-nums text-white text-base">{money(s.total_c)}</p>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-ink-line/60">
+                <div className="min-w-0 flex-1 pr-2">
+                  <p className="text-xs text-slate-400 truncate mb-1">{s.cashier_name} {s.customer_name ? `· ${s.customer_name}` : ''}</p>
+                  <div><StatusBadge status={s.status} /></div>
                 </div>
-             </div>
+                <div className="flex gap-1 shrink-0">
+                  <button onClick={() => setView(s)} className="btn-ghost-2 p-2 rounded-lg text-slate-300 hover:text-white" title="View"><Eye className="h-4 w-4" /></button>
+                  {(s.status === 'COMPLETED' || s.status === 'PARTIALLY_REFUNDED') && (
+                    <button onClick={() => setRefund(s)} className="btn-ghost-2 p-2 rounded-lg text-amber-400 hover:text-amber-300" title="Refund"><RotateCcw className="h-4 w-4" /></button>
+                  )}
+                  {s.status === 'COMPLETED' && (
+                    <button onClick={() => setVoider(s)} className="btn-ghost-2 p-2 rounded-lg text-danger-400 hover:text-danger-300" title="Void"><Ban className="h-4 w-4" /></button>
+                  )}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
-        
-        <div className="hidden md:block overflow-x-auto rounded-xl border border-ink-line bg-ink-900 shadow-card">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-ink-line bg-ink-850">
-                <th className="p-4 text-xs font-semibold text-slate-400">Receipt</th>
-                <th className="p-4 text-xs font-semibold text-slate-400">Date</th>
-                <th className="p-4 text-xs font-semibold text-slate-400">Cashier</th>
-                <th className="p-4 text-xs font-semibold text-slate-400">Customer</th>
-                <th className="p-4 text-xs font-semibold text-slate-400 text-right">Total</th>
-                <th className="p-4 text-xs font-semibold text-slate-400">Status</th>
-                <th className="p-4 text-xs font-semibold text-slate-400 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink-line">
-              {rows.map((s) => (
-                <tr key={s.id} className="hover:bg-ink-800 transition-colors">
-                  <td className="p-4 font-bold text-brand-400">{s.transaction_no}</td>
-                  <td className="p-4 whitespace-nowrap text-slate-400">{shortDateTime(s.created_at)}</td>
-                  <td className="p-4 text-slate-300">{s.cashier_name}</td>
-                  <td className="p-4 text-slate-400">{s.customer_name ?? '—'}</td>
-                  <td className="p-4 text-right font-bold text-white tabular-nums">{money(s.total_c)}</td>
-                  <td className="p-4"><StatusBadge status={s.status} /></td>
-                  <td className="p-4 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={() => setView(s)} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg" title="View"><Eye className="h-4 w-4" /></button>
-                      {(s.status === 'COMPLETED' || s.status === 'PARTIALLY_REFUNDED') && (
-                        <button onClick={() => setRefund(s)} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg" title="Refund"><RotateCcw className="h-4 w-4" /></button>
-                      )}
-                      {s.status === 'COMPLETED' && (
-                        <button onClick={() => setVoider(s)} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg text-danger-400" title="Void"><Ban className="h-4 w-4" /></button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        </>
       )}
 
       {view && <ViewSale sale={view} onClose={() => setView(null)} />}

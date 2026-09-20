@@ -49,15 +49,20 @@ export function Customers(): React.JSX.Element {
   }
 
   return (
-    <div className="px-4 py-4 sm:px-6 sm:py-6">
-      <PageHeader
-        title="Customers"
-        subtitle={`${rows.length} active customers`}
-        actions={<button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary flex items-center gap-2"><Plus className="h-4 w-4" /> New Customer</button>}
-      />
-      <div className="mb-4 relative w-full sm:max-w-md">
+    <div className="px-4 pt-3 pb-8 max-w-lg mx-auto space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-black text-white">Customers</h1>
+          <p className="text-xs text-slate-400">{rows.length} active customers</p>
+        </div>
+        <button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl">
+          <Plus className="h-4 w-4" /> New Customer
+        </button>
+      </div>
+
+      <div className="relative w-full">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customers…" className="input w-full pl-9" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customers…" className="input w-full pl-9 text-sm py-2" />
       </div>
 
       {loading ? (

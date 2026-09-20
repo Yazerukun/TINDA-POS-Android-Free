@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Store, Receipt, Users, UserPlus, Pencil, KeyRound, Heart, Coffee, Copy, DatabaseZap, FolderOpen, HardDriveDownload, RotateCcw, Printer, Database, RefreshCw, Loader2, Download, Sparkles, Bluetooth } from 'lucide-react'
+import { Save, Store, Receipt, Users, UserPlus, Pencil, KeyRound, Heart, Coffee, Copy, Check, DatabaseZap, FolderOpen, HardDriveDownload, RotateCcw, Printer, Database, RefreshCw, Loader2, Download, Sparkles, Bluetooth } from 'lucide-react'
 import type { BackupInfo, User } from '@shared/types'
 import type { DataLocationStatus, PrinterChoice } from '@shared/ipc'
 import { printerPick, printerStatusLabel } from '@shared/printer'
@@ -9,6 +9,7 @@ import { useSettings } from '../stores/settings'
 import { toastSuccess, toastError } from '../stores/toast'
 import { useUpdate } from '../stores/update'
 import { ReceiptPaper } from '../components/ReceiptPaper'
+import tindaIcon from '../assets/tinda-icon.png'
 
 type Tab = 'HOME' | 'RECEIPT' | 'USERS' | 'DATA' | 'ABOUT'
 
@@ -19,9 +20,9 @@ export function Settings({ defaultTab = 'HOME' }: { defaultTab?: Tab }): React.J
   useEffect(() => { void load() }, [load])
 
   return (
-    <div className="p-6">
+    <div className="px-4 pt-3 pb-8 max-w-lg mx-auto md:max-w-3xl space-y-4">
       <PageHeader title="Settings" />
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         {[
           { id: 'HOME', icon: Store, label: 'Store' },
           { id: 'RECEIPT', icon: Receipt, label: 'Receipt' },
@@ -215,29 +216,182 @@ const startNewStore = async () => {
 }
 
 function AboutTab(): React.JSX.Element {
+  const [copiedMaya, setCopiedMaya] = useState(false)
   const copyMaya = async () => {
     try {
       await navigator.clipboard.writeText('09912255156')
-      toastSuccess('Maya number copied')
+      setCopiedMaya(true)
+      toastSuccess('Maya number copied!', '0991 225 5156')
+      setTimeout(() => setCopiedMaya(false), 2500)
     } catch { toastError('Could not copy number') }
   }
+
   return (
-    <div className="max-w-xl space-y-4">
+    <div className="max-w-xl space-y-4 pb-12">
+      {/* 1. APP BRANDING HERO CARD */}
+      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-ink-900/90 via-ink-950 to-ink-950 p-6 text-center shadow-card">
+        {/* Ambient glow in background */}
+        <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 h-36 w-64 rounded-full bg-emerald-500/15 blur-3xl" />
+
+        {/* Circular Animated Crest */}
+        <div className="relative mx-auto flex items-center justify-center py-2 mb-3">
+          <div className="absolute h-24 w-24 rounded-full border border-dashed border-emerald-400/30 animate-orbit-ring" />
+          <div className="absolute h-20 w-20 rounded-full bg-emerald-500/20 blur-lg animate-pulse" />
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-emerald-400/70 bg-gradient-to-tr from-ink-950 via-ink-900 to-emerald-950/80 p-2.5 shadow-[0_0_24px_rgba(52,211,153,0.4)] animate-circle-glow">
+            <img
+              src={tindaIcon}
+              alt="TINDA POS"
+              className="h-full w-full rounded-full object-contain drop-shadow-[0_0_10px_rgba(52,211,153,0.75)]"
+            />
+          </div>
+        </div>
+
+        <h2 className="text-xl font-black tracking-tight text-white">
+          TINDA POS Free for Android
+        </h2>
+        <p className="mt-0.5 text-xs text-emerald-400 font-medium">
+          Offline POS System for Philippine Sari-Sari Stores
+        </p>
+
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+            v1.0.27 Stable
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-ink-800 border border-ink-line px-2.5 py-0.5 text-[11px] font-medium text-slate-300">
+            100% Offline Capable
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-ink-800 border border-ink-line px-2.5 py-0.5 text-[11px] font-medium text-slate-300">
+            Zero Cloud Dependency
+          </span>
+        </div>
+
+        <div className="mx-auto my-4 h-px max-w-xs bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+
+        <div className="flex items-center justify-center gap-1.5 text-sm text-slate-300">
+          <span className="italic text-slate-400">Crafted with care by</span>
+          <span className="font-bold text-emerald-400">Dev Francis</span>
+        </div>
+      </div>
+
+      {/* 2. DEDICATED & ORGANIZED BUY ME A COFFEE / MAYA CARD */}
+      <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-br from-ink-900 via-ink-900 to-ink-950 p-5 shadow-card">
+        {/* Subtle warm amber aura */}
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-500/10 blur-2xl" />
+
+        {/* Header with animated coffee cup */}
+        <div className="flex items-center gap-3.5">
+          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/25 via-amber-900/30 to-ink-950 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+            <div className="pointer-events-none absolute -top-2 flex items-end gap-1">
+              <span className="h-2 w-0.5 rounded-full bg-amber-400/80 animate-steam-1" />
+              <span className="h-3 w-0.5 rounded-full bg-amber-300 animate-steam-2" />
+              <span className="h-2 w-0.5 rounded-full bg-amber-400/80 animate-steam-3" />
+            </div>
+            <Coffee className="h-6 w-6 animate-coffee-catchy" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-black text-white">Buy me a coffee</h3>
+              <span className="rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                Support Updates
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Support development & continuous free updates
+            </p>
+          </div>
+        </div>
+
+        {/* English Description */}
+        <p className="mt-3.5 text-xs text-slate-300 leading-relaxed">
+          TINDA POS is 100% free and offline-ready. If it helps your store thrive, you can support future development and upcoming updates by buying the developer a coffee!
+        </p>
+
+        {/* Dedicated Maya Payment Box */}
+        <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-500/40 bg-ink-950 shadow-inner">
+          <div className="flex items-center justify-between border-b border-ink-line/80 bg-ink-900/80 px-4 py-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-12 items-center justify-center rounded-md bg-white px-1 shadow-sm">
+                <MayaMark />
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                Maya Official Wallet
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400">Philippines</span>
+          </div>
+
+          <div className="flex items-center justify-between p-4 gap-3">
+            <div className="min-w-0 flex-1">
+              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                Account Number (Mobile)
+              </span>
+              <span className="block font-mono text-xl font-black tracking-wider text-white select-all">
+                0991 225 5156
+              </span>
+              <span className="block text-[11px] text-slate-400 mt-0.5">
+                Recipient: <span className="font-semibold text-slate-300">Francis</span>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void copyMaya()}
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition shadow-sm active:scale-95 ${
+                copiedMaya
+                  ? 'bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+              }`}
+            >
+              {copiedMaya ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <p className="mt-3 text-center text-[10px] text-slate-500">
+          Voluntary donation · Dev Francis (0991 225 5156) · Daghang salamat sa inyong suporta!
+        </p>
+      </div>
+
+      {/* 3. SOFTWARE UPDATE PANEL */}
       <SoftwareUpdatePanel />
-      <div className="card overflow-hidden">
-        <div className="developer-card p-8 text-center">
-          <div className="coffee-float relative z-10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-pop ring-1 ring-white/10"><Coffee className="h-7 w-7" /></div>
-          <p className="dev-signature signature-reveal relative z-10 text-3xl italic text-white">Crafted with care</p>
-          <p className="mt-1 text-sm text-slate-400">by</p>
-          <p className="dev-signature signature-reveal relative z-10 text-2xl font-bold text-brand-300">Dev Francis</p>
-          <div className="mx-auto my-5 h-px max-w-xs bg-gradient-to-r from-transparent via-brand-500/50 to-transparent" />
-          <p className="text-sm text-slate-300">TINDA POS is free. If it helps your store, you may support the developer with a small coffee donation.</p>
-          <button onClick={() => void copyMaya()} className="donation-card mx-auto mt-4 flex items-center gap-3 rounded-xl px-5 py-3 text-left">
-            <div className="maya-logo-shell flex h-11 w-20 shrink-0 items-center justify-center rounded-xl bg-white shadow-card"><MayaMark /></div>
-            <span><span className="dev-signature block text-base font-bold text-brand-300">Buy me a coffee</span><span className="font-mono text-lg font-bold tracking-wider text-white">0991 225 5156</span><span className="block text-[9px] uppercase tracking-[0.18em] text-slate-500">Maya · tap to copy</span></span>
-            <Copy className="ml-2 h-4 w-4 text-slate-400" />
-          </button>
-          <p className="mt-3 text-[10px] text-slate-600">Donations are optional and do not unlock any features.</p>
+
+      {/* 4. APP SYSTEM SPECS / LOCAL STORAGE INFO */}
+      <div className="rounded-2xl border border-ink-line/70 bg-ink-900/60 p-4">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+          System Information
+        </h4>
+        <div className="grid grid-cols-2 gap-2.5 text-xs">
+          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
+            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Database Engine</span>
+            <span className="font-bold text-slate-200 mt-0.5 block">SQLite / IndexedDB</span>
+            <span className="text-[10px] text-emerald-400">Local & Secure</span>
+          </div>
+          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
+            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Network State</span>
+            <span className="font-bold text-slate-200 mt-0.5 block">Zero Cloud</span>
+            <span className="text-[10px] text-emerald-400">Always Functional</span>
+          </div>
+          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
+            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Thermal Printer</span>
+            <span className="font-bold text-slate-200 mt-0.5 block">58mm / 80mm</span>
+            <span className="text-[10px] text-slate-400">Bluetooth & System</span>
+          </div>
+          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
+            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Target Platform</span>
+            <span className="font-bold text-slate-200 mt-0.5 block">Android 8.0 - 15+</span>
+            <span className="text-[10px] text-slate-400">Universal APK</span>
+          </div>
         </div>
       </div>
     </div>
@@ -505,8 +659,50 @@ function ReceiptSettingsTab(): React.JSX.Element {
         {pick.status === 'UNAVAILABLE' && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">Selected receipt printer is unavailable: <span className="font-mono">{pick.name}</span>. Check if Bluetooth is turned on and paired, then press Refresh. Sales are never blocked or rolled back.</p>}
         {pick.status === 'NOT_CONFIGURED' && printers.length === 0 && <p className="rounded-lg border border-ink-line bg-ink-900 px-3 py-2 text-xs text-slate-400">No receipt printer configured. Select Android System Print (WiFi / PDF) or pair a Bluetooth thermal receipt printer (58mm/80mm), then press Refresh.</p>}
         <div className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2"><div><p className="text-sm text-slate-200">Auto Print After Sale</p><p className="text-xs text-slate-500">One silent print job, sent immediately after the sale commits.</p></div><Toggle on={f.auto_print_after_sale} onClick={() => set({ auto_print_after_sale: !f.auto_print_after_sale })} /></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="label">Paper Width</label><select value={f.receipt_paper_width} onChange={(e) => set({ receipt_paper_width: e.target.value as '58mm' | '80mm' })} className="input w-full"><option value="58mm">58mm (portable thermal)</option><option value="80mm">80mm (standard desktop)</option></select></div><div><label className="label">Copies</label><input type="number" min={1} max={3} value={f.receipt_copies} onChange={(e) => set({ receipt_copies: Math.max(1, Math.min(3, Math.trunc(Number(e.target.value) || 1))) })} className="input w-full" /></div></div>
-        <div><p className="label">Live Receipt Preview</p><ReceiptPaper width={f.receipt_paper_width} lines={[...f.receipt_header.trim().split(/\r?\n/).filter(Boolean), ...(f.receipt_title.trim() ? [f.receipt_title.trim()] : []), ...(f.receipt_show_app_name && f.receipt_title.trim().toUpperCase() !== 'TINDA POS' ? ['TINDA POS'] : []), settings?.store_name || 'My Sari-Sari Store','--------------------------------','TPOS-PREVIEW','1 x Sample Item        10.00','TOTAL                  10.00','--------------------------------',f.receipt_footer || 'Salamat po!']}/></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Paper Width</label>
+            <select value={f.receipt_paper_width} onChange={(e) => set({ receipt_paper_width: e.target.value as '58mm' | '80mm' })} className="input w-full">
+              <option value="58mm">58mm (portable thermal)</option>
+              <option value="80mm">80mm (standard desktop)</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Copies</label>
+            <input type="number" min={1} max={3} value={f.receipt_copies} onChange={(e) => set({ receipt_copies: Math.max(1, Math.min(3, Math.trunc(Number(e.target.value) || 1))) })} className="input w-full" />
+          </div>
+        </div>
+        <div>
+          <p className="label">Live Receipt Preview</p>
+          <ReceiptPaper
+            width={f.receipt_paper_width}
+            lines={[
+              settings?.store_name || 'TINDA POS',
+              ...f.receipt_header.trim().split(/\r?\n/).filter(Boolean),
+              ...(f.receipt_show_app_name ? [(f.receipt_title.trim() || 'TINDA POS')] : []),
+              ...(settings?.address ? [settings.address] : []),
+              ...(settings?.phone ? [settings.phone] : []),
+              ...(settings?.tin ? [`TIN: ${settings.tin}`] : []),
+              '--------------------------------',
+              'No: 20260920-0001',
+              'Date: Sep 20, 2026, 7:30 PM',
+              'Cashier: Manager',
+              '--------------------------------',
+              'Sample Product Item',
+              '1 x 25.00 25.00',
+              'Snack / Beverage',
+              '2 x 15.00 30.00',
+              '--------------------------------',
+              'Subtotal 55.00',
+              'TOTAL 55.00',
+              'Cash 100.00',
+              'SUKLI 45.00',
+              '--------------------------------',
+              ...(f.receipt_footer.trim() ? f.receipt_footer.trim().split(/\r?\n/).filter(Boolean) : ['Salamat po!']),
+              'Items: 3'
+            ]}
+          />
+        </div>
         <p className="rounded-lg border border-ink-line bg-ink-900 px-3 py-2 text-xs text-slate-400">Supports direct Bluetooth ESC/POS thermal printers (58mm & 80mm) and Android System Print (WiFi, Mopria, Save as PDF). Sales always complete safely even if printer is offline.</p>
         <div className="flex gap-2"><button onClick={() => void save()} disabled={saving} className="btn-primary flex items-center gap-2"><Save className="h-4 w-4" /> Save Receipt</button><button onClick={() => void testPrint()} disabled={!f.receipt_printer} className="btn-ghost flex items-center gap-2"><Printer className="h-4 w-4" /> Test Print</button></div>
       </div>

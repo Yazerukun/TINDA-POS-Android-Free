@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Plus, Pencil, Trash2, RefreshCw, Boxes, Tags, Upload, PackagePlus, Download, ClipboardList, X, PackageMinus, ArrowDownUp, AlertTriangle, CheckCircle2, Check, Sparkles } from 'lucide-react'
+import { Search, Plus, Pencil, Trash2, RefreshCw, Boxes, Tags, Upload, PackagePlus, Download, ClipboardList, X, PackageMinus, ArrowDownUp, AlertTriangle, CheckCircle2, Check, Sparkles, ScanLine } from 'lucide-react'
 import type { Product, Category, Supplier, StockReceivingRecord, StockReceivingSource, InventoryMovement, WithdrawalReason, PriceReference } from '@shared/types'
 import { money } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Modal } from '../components/ui/Modal'
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal'
 import { toastSuccess, toastError } from '../stores/toast'
 import { ProductExpiry, ExpirationList } from '../components/Expiration'
 import { PriceGuideModal } from '../components/PriceGuideModal'
@@ -35,6 +36,7 @@ export function Inventory(): React.JSX.Element {
   const [defaultThreshold, setDefaultThreshold] = useState(5)
   const [expirationOpen, setExpirationOpen] = useState(false)
   const [priceGuideOpen, setPriceGuideOpen] = useState(false)
+  const [scannerOpen, setScannerOpen] = useState(false)
   const loadState = useRef({ sequence: 0 })
 
   const load = useCallback(async (showLoading = true) => {
@@ -112,94 +114,166 @@ export function Inventory(): React.JSX.Element {
   }
 
   return (
-    <div className="px-4 py-4 sm:px-6 sm:py-6">
-      <PageHeader
-        title="Inventory"
-        subtitle={`${products.length} active products`}
-        actions={<div className="hidden flex-wrap gap-2 md:flex">
-          <button onClick={() => setPriceGuideOpen(true)} className="btn-ghost flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-            </span>
-            <span>Price Guide</span>
-          </button>
-          <button onClick={() => setExpirationOpen(true)} className="btn-ghost flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Expiration Dates</button>
-          <button onClick={() => setImporting(true)} className="btn-ghost flex items-center gap-2"><Upload className="h-4 w-4" /> Import CSV</button>
-          <button onClick={() => setViewingReceiving(true)} className="btn-ghost flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Stock Receiving</button>
-          <button onClick={() => setViewingMovements(true)} className="btn-ghost flex items-center gap-2"><ArrowDownUp className="h-4 w-4" /> Stock History</button>
-          <button onClick={() => setRestocking(true)} className="btn-primary flex items-center gap-2"><PackagePlus className="h-4 w-4" /> Restock</button>
-          <button onClick={() => setWithdrawing(true)} className="btn-primary flex items-center gap-2"><PackageMinus className="h-4 w-4" /> Withdraw</button>
-          <button onClick={() => setEditing(newProductForm(defaultThreshold))} className="btn-primary flex items-center gap-2">
-            <Plus className="h-4 w-4" /> New Product
-          </button>
-        </div>}
-      />
-
-      <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-        <div className="card p-3"><p className="text-[11px] text-slate-500">Products</p><p className="text-lg font-bold tabular-nums text-white">{products.length}</p></div>
-        <div className="card p-3"><p className="text-[11px] text-slate-500">Stock Value</p><p className="truncate text-lg font-bold tabular-nums text-brand-400">{money(totalValue)}</p></div>
-        <div className="card p-3"><p className="text-[11px] text-slate-500">Low / Out</p><p className="text-lg font-bold tabular-nums text-white">{lowCount} / {outCount}</p></div>
+    <div className="px-4 pt-3 pb-6">
+      {/* 1. COMPACT HEADER & METRICS CHIP */}
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-white">Inventory</h1>
+          <p className="text-xs text-slate-400">
+            {products.length} products · <span className="font-semibold text-brand-400">{money(totalValue)}</span> stock value
+          </p>
+        </div>
         <button
           onClick={() => setCatFilter(alertCount ? 'LOW' : 'ALL')}
-          className={`card p-3 text-left transition hover:brightness-110 flex flex-col justify-center ${alertCount ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition ${
+            alertCount
+              ? 'border border-amber-500/30 bg-amber-500/10 text-amber-300'
+              : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+          }`}
         >
-          <div className="flex items-center gap-1.5">
-            {alertCount ? <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> : <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
-            <span className="text-[11px] font-medium text-slate-500">{alertCount ? 'Alerts' : 'Status'}</span>
-          </div>
-          <p className="mt-0.5 text-sm font-bold leading-tight truncate">{alertCount ? `${alertCount} need attention` : 'Healthy'}</p>
+          {alertCount ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+          <span>{alertCount ? `${alertCount} Alerts` : 'Healthy'}</span>
         </button>
       </div>
 
-      <div className="mb-3 flex flex-col gap-2 md:hidden">
-        <button onClick={() => setEditing(newProductForm(defaultThreshold))} className="btn-primary w-full flex items-center justify-center gap-1.5 py-2.5 text-sm font-bold"><Plus className="h-4 w-4" /> New Product</button>
-        <div className="flex gap-2">
-          <button onClick={() => setRestocking(true)} className="btn-secondary flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs"><PackagePlus className="h-4 w-4" /> Restock</button>
-          <button onClick={() => setWithdrawing(true)} className="btn-secondary flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs"><PackageMinus className="h-4 w-4" /> Withdraw</button>
+      {/* 2. SEARCH INPUT WITH CAMERA SCANNER */}
+      <div className="mb-3 flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search product, barcode, or SKU…"
+            className="input h-11 w-full pl-10 pr-9 text-sm bg-ink-900/90 rounded-xl"
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setQ('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-      </div>
-
-      <div className="mb-3 grid grid-cols-2 gap-2 md:hidden">
-        <button onClick={() => setPriceGuideOpen(true)} className="card flex items-center gap-2 p-3 text-left text-sm font-medium text-emerald-300 border-emerald-500/30 bg-emerald-500/10">
-          <span className="relative flex h-2 w-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-          </span>
-          <span>Price Guide</span>
+        <button
+          type="button"
+          onClick={() => setScannerOpen(true)}
+          className="btn-primary flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold shadow-md active:scale-95 transition"
+          title="Scan barcode to find product"
+        >
+          <ScanLine className="h-4 w-4" />
+          <span className="hidden sm:inline">Scan</span>
         </button>
-        <button onClick={() => setViewingReceiving(true)} className="card flex items-center gap-2 p-3 text-left text-sm font-medium text-slate-200"><ClipboardList className="h-4 w-4 shrink-0 text-brand-400" /> Receive</button>
-        <button onClick={() => setViewingMovements(true)} className="card flex items-center gap-2 p-3 text-left text-sm font-medium text-slate-200"><ArrowDownUp className="h-4 w-4 shrink-0 text-brand-400" /> History</button>
-        <button onClick={() => setExpirationOpen(true)} className="card flex items-center gap-2 p-3 text-left text-sm font-medium text-slate-200"><ClipboardList className="h-4 w-4 shrink-0 text-brand-400" /> Expiry</button>
-        <button onClick={() => setImporting(true)} className="card flex items-center gap-2 p-3 text-left text-sm font-medium text-slate-200"><Upload className="h-4 w-4 shrink-0 text-brand-400" /> Import</button>
       </div>
 
-      <div className="relative mb-3">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products…" className="input h-12 w-full pl-9" />
-      </div>
-
-      <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+      {/* 3. CATEGORY SCROLL PILLS */}
+      <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
         {([
           { value: 'ALL' as const, label: 'All' },
           ...categories.map((category) => ({ value: category.id, label: category.name })),
-          { value: 'LOW' as const, label: lowCount ? `Low ${lowCount}` : 'Low stock' },
-          { value: 'OUT' as const, label: outCount ? `Out ${outCount}` : 'Out of stock' }
+          { value: 'LOW' as const, label: lowCount ? `Low (${lowCount})` : 'Low stock' },
+          { value: 'OUT' as const, label: outCount ? `Out (${outCount})` : 'Out of stock' }
         ] as { value: number | 'ALL' | 'LOW' | 'OUT'; label: string }[]).map((item) => (
           <button
             key={String(item.value)}
             type="button"
             onClick={() => chooseFilter(item.value)}
-            className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${catFilter === item.value ? 'border-brand-500/50 bg-brand-600/20 text-brand-300' : 'border-ink-line bg-ink-850 text-slate-300 hover:text-white hover:bg-ink-800'}`}
+            className={`shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold transition ${
+              catFilter === item.value
+                ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/20'
+                : 'border border-ink-line bg-ink-900/80 text-slate-400 hover:text-white'
+            }`}
           >
             {item.label}
           </button>
         ))}
       </div>
 
-      <div className="mb-4 flex items-center gap-2">
-        <button onClick={() => setManagingCategories(true)} className="btn-ghost flex items-center gap-2 text-xs"><Tags className="h-4 w-4" /> Categories</button>
-        <button onClick={() => void load()} className="btn-ghost flex items-center gap-2 text-xs"><RefreshCw className="h-4 w-4" /> Refresh</button>
+      {/* 4. SLEEK ACTION BAR: PRIMARY + HORIZONTAL ACTION PILLS */}
+      <div className="mb-3.5 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <button
+          onClick={() => setEditing(newProductForm(defaultThreshold))}
+          className="btn-primary shrink-0 flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm shadow-brand-500/25"
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Product</span>
+        </button>
+
+        <button
+          onClick={() => setPriceGuideOpen(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 transition active:scale-95"
+        >
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+          </span>
+          <span>Price Guide</span>
+        </button>
+
+        <button
+          onClick={() => setRestocking(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+        >
+          <PackagePlus className="h-3.5 w-3.5 text-brand-400" />
+          <span>Restock</span>
+        </button>
+
+        <button
+          onClick={() => setWithdrawing(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+        >
+          <PackageMinus className="h-3.5 w-3.5 text-amber-400" />
+          <span>Withdraw</span>
+        </button>
+
+        <button
+          onClick={() => setViewingReceiving(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+        >
+          <ClipboardList className="h-3.5 w-3.5 text-blue-400" />
+          <span>Receive</span>
+        </button>
+
+        <button
+          onClick={() => setExpirationOpen(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+        >
+          <ClipboardList className="h-3.5 w-3.5 text-purple-400" />
+          <span>Expiry</span>
+        </button>
+
+        <button
+          onClick={() => setViewingMovements(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+        >
+          <ArrowDownUp className="h-3.5 w-3.5 text-slate-400" />
+          <span>History</span>
+        </button>
+
+        <button
+          onClick={() => setManagingCategories(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+        >
+          <Tags className="h-3.5 w-3.5 text-slate-400" />
+          <span>Categories</span>
+        </button>
+
+        <button
+          onClick={() => setImporting(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+        >
+          <Upload className="h-3.5 w-3.5 text-slate-400" />
+          <span>Import CSV</span>
+        </button>
+
+        <button
+          onClick={() => void load()}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-ink-800 transition active:scale-95"
+          title="Refresh"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {loading ? (
@@ -225,10 +299,17 @@ export function Inventory(): React.JSX.Element {
                   <p className="text-lg font-black tabular-nums text-white">{p.stock} <span className="text-xs font-medium text-slate-500">{p.base_unit}</span></p>
                   <p className="text-xs text-slate-500">{money(p.purchase_cost_c)} cost</p>
                 </div>
-                <div className="flex gap-1">
-                  <button onClick={() => setRestocking(p)} className="btn-ghost-2 flex h-10 w-10 items-center justify-center rounded-lg text-brand-400" title="Restock"><PackagePlus className="h-4 w-4" /></button>
-                  <button onClick={() => setEditing(editProductForm(p))} className="btn-ghost-2 flex h-10 w-10 items-center justify-center rounded-lg" title="Edit"><Pencil className="h-4 w-4" /></button>
-                  <button onClick={() => void archive(p.id)} className="btn-ghost-2 flex h-10 w-10 items-center justify-center rounded-lg text-danger-400" title="Archive"><Trash2 className="h-4 w-4" /></button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setRestocking(p)}
+                    className="flex h-10 items-center gap-1 rounded-xl border border-brand-500/40 bg-brand-500/10 px-3 text-xs font-bold text-brand-300 hover:bg-brand-500/20 active:scale-95 transition"
+                    title="Restock this product"
+                  >
+                    <PackagePlus className="h-4 w-4" />
+                    <span>Restock</span>
+                  </button>
+                  <button onClick={() => setEditing(editProductForm(p))} className="btn-ghost-2 flex h-10 w-10 items-center justify-center rounded-xl" title="Edit"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => void archive(p.id)} className="btn-ghost-2 flex h-10 w-10 items-center justify-center rounded-xl text-danger-400" title="Archive"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
               <ProductExpiry product={p} />
@@ -284,6 +365,16 @@ export function Inventory(): React.JSX.Element {
       {withdrawing && <WithdrawModal products={products} initial={withdrawing === true ? null : withdrawing} onDone={() => { setWithdrawing(null); void load() }} onClose={() => setWithdrawing(null)} />}
       {viewingMovements && <StockHistoryView products={products} onClose={() => setViewingMovements(false)} />}
       {viewingReceiving && <StockReceivingView onClose={() => setViewingReceiving(false)} />}
+
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(code) => {
+          setQ(code)
+          toastSuccess('Barcode scanned', code)
+        }}
+        title="Scan Barcode to Find Product"
+      />
     </div>
   )
 }
@@ -508,6 +599,7 @@ function StockBadge({ status }: { status: string }): React.JSX.Element {
 
 function ProductModal({ form, categories, onSave, onClose }: { form: ProductFormData; categories: Category[]; onSave: (f: ProductFormData) => Promise<void>; onClose: () => void }): React.JSX.Element {
   const [saving, setSaving] = useState(false)
+  const [barcodeScanOpen, setBarcodeScanOpen] = useState(false)
   const [localCategories, setLocalCategories] = useState(categories)
   const [categoryName, setCategoryName] = useState('')
   const [addingCategory, setAddingCategory] = useState(false)
@@ -575,7 +667,17 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
         </div>
         <div>
           <label className="label">Barcode</label>
-          <input value={f.barcode} onChange={(e) => set({ barcode: e.target.value })} className="input w-full" />
+          <div className="relative">
+            <input value={f.barcode} onChange={(e) => set({ barcode: e.target.value })} className="input w-full pr-8" placeholder="e.g. 480..." />
+            <button
+              type="button"
+              onClick={() => setBarcodeScanOpen(true)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-400 hover:text-brand-300"
+              title="Scan barcode with camera"
+            >
+              <ScanLine className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <div>
           <label className="label">Category</label>
@@ -651,6 +753,15 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
           <p className="mt-1 text-xs text-slate-500">Conversion is how many base units one selling unit equals. Example: 1 box = 24 sachets.</p>
         </div>
       </form>
+      <BarcodeScannerModal
+        open={barcodeScanOpen}
+        onClose={() => setBarcodeScanOpen(false)}
+        onScan={(code) => {
+          set({ barcode: code })
+          toastSuccess('Barcode captured', code)
+        }}
+        title="Scan Barcode for Product"
+      />
     </Modal>
   )
 }

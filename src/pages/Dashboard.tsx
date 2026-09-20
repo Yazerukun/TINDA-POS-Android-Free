@@ -1,31 +1,32 @@
 import { useEffect, useState } from 'react'
-import { TrendingUp, Banknote, Wallet, Receipt, ShoppingCart, AlertTriangle } from 'lucide-react'
-import { PageHeader } from '../components/ui/PageHeader'
+import {
+  TrendingUp,
+  Banknote,
+  Wallet,
+  Receipt,
+  ShoppingCart,
+  AlertTriangle,
+  PlusCircle,
+  BookOpen,
+  ArrowRight,
+  Sparkles,
+  ChevronRight
+} from 'lucide-react'
 import { SectionCard, StatusBadge, EmptyState } from '../components/ui/EmptyState'
 import type { Product, Sale, ReportSummary } from '@shared/types'
 import { money, moneyShort, shortDateTime, todayKey } from '@shared/format'
-
-function StatCard({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: React.ReactNode }): React.JSX.Element {
-  return (
-    <div className="card p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-black text-white">{value}</p>
-          {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink-700 text-brand-400">{icon}</div>
-      </div>
-    </div>
-  )
-}
+import { useNav } from '../stores/nav'
+import { PriceGuideModal } from '../components/PriceGuideModal'
 
 export function Dashboard(): React.JSX.Element | null {
+  const { setPage } = useNav()
   const [summary, setSummary] = useState<ReportSummary | null>(null)
   const [recent, setRecent] = useState<Sale[]>([])
   const [alertProducts, setAlertProducts] = useState<Product[]>([])
+  const [allProducts, setAllProducts] = useState<Product[]>([])
   const [utang, setUtang] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
+  const [priceGuideOpen, setPriceGuideOpen] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -44,6 +45,7 @@ export function Dashboard(): React.JSX.Element | null {
         setError(null)
         setSummary(sales.summary)
         setRecent(tx.rows)
+        setAllProducts(prods.rows)
         const alerts = prods.rows.filter((p) => p.stock <= p.low_stock_threshold).slice(0, 10)
         setAlertProducts(alerts)
         setUtang(u.total_outstanding_c)
@@ -66,10 +68,12 @@ export function Dashboard(): React.JSX.Element | null {
 
   if (error) {
     return (
-      <div className="p-6">
-        <PageHeader title="Dashboard" subtitle="Sales Overview" />
+      <div className="px-4 pt-3 pb-6">
         <div className="card p-6 text-center">
           <p className="text-sm text-danger-400">Failed to load dashboard: {error}</p>
+          <button onClick={() => window.location.reload()} className="btn-primary mt-3 text-xs">
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -77,73 +81,253 @@ export function Dashboard(): React.JSX.Element | null {
 
   if (!summary) {
     return (
-      <div className="p-6">
-        <PageHeader title="Dashboard" subtitle="Sales Overview" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="px-4 pt-3 pb-6 space-y-4">
+        <div className="card h-36 animate-pulse" />
+        <div className="grid grid-cols-4 gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card h-24 animate-pulse" />
+            <div key={i} className="card h-20 animate-pulse" />
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card h-16 animate-pulse" />
           ))}
         </div>
       </div>
     )
   }
 
+  const netSales = summary.sales_total_c - summary.refunds_c
   const out = alertProducts.filter((p) => p.stock <= 0)
   const low = alertProducts.filter((p) => p.stock > 0)
 
   return (
-    <div className="p-6">
-      <PageHeader title="Dashboard" subtitle="Sales Overview" />
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Today's Net Sales" value={money(summary.sales_total_c - summary.refunds_c)} sub={`${summary.transactions} transactions · Refunds: ${money(summary.refunds_c)}`} icon={<TrendingUp className="h-5 w-5" />} />
-        <StatCard label="Estimated Profit" value={money(summary.profit_c)} sub={`${summary.items_sold} items sold`} icon={<Banknote className="h-5 w-5" />} />
-        <StatCard label="Outstanding Utang" value={money(utang)} sub="customer credit" icon={<Wallet className="h-5 w-5" />} />
-        <StatCard label="Expenses" value={money(summary.expenses_c)} sub="this period" icon={<Receipt className="h-5 w-5" />} />
+    <div className="px-4 pt-3 pb-6 space-y-4">
+      {/* 1. HERO SALES CARD */}
+      <div className="relative overflow-hidden rounded-2xl border border-brand-500/25 bg-gradient-to-br from-brand-950/40 via-ink-900 to-ink-950 p-4 shadow-card">
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-500/10 blur-2xl pointer-events-none" />
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Today's Net Sales</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/15 px-2 py-0.5 text-[11px] font-bold text-brand-400">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-500"></span>
+            </span>
+            Live
+          </span>
+        </div>
+
+        <div className="mt-1 flex items-baseline justify-between">
+          <p className="text-3xl font-black tracking-tight text-white tabular-nums">
+            {money(netSales)}
+          </p>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 pt-2 border-t border-ink-line/60 text-xs">
+          <span className="inline-flex items-center gap-1 rounded-md bg-ink-800/80 px-2 py-1 text-slate-300">
+            <TrendingUp className="h-3 w-3 text-brand-400" />
+            <span className="font-semibold text-white">{moneyShort(summary.profit_c)}</span> profit
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md bg-ink-800/80 px-2 py-1 text-slate-300">
+            <ShoppingCart className="h-3 w-3 text-slate-400" />
+            <span className="font-semibold text-white">{summary.transactions}</span> sales ({summary.items_sold} items)
+          </span>
+          <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 ${summary.refunds_c > 0 ? 'bg-danger-500/10 text-danger-400' : 'bg-ink-800/80 text-slate-400'}`}>
+            Refunds: {money(summary.refunds_c)}
+          </span>
+        </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="LOW / OUT OF STOCK" action={<span className="text-xs text-slate-500">{out.length} out · {low.length} low</span>}>
-          {alertProducts.length === 0 ? (
-            <p className="text-sm text-slate-400">All products in stock.</p>
-          ) : (
-            <div className="space-y-2">
-              {alertProducts.map((p) => (
-                <div key={p.id} className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <AlertTriangle className={`h-3.5 w-3.5 shrink-0 ${p.stock <= 0 ? 'text-red-400' : 'text-amber-400'}`} />
-                    <span className="truncate text-sm text-slate-200">{p.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">{p.stock} {p.base_unit}</span>
-                    <StatusBadge status={p.stock <= 0 ? 'OUT_OF_STOCK' : 'LOW_STOCK'} />
-                  </div>
-                </div>
-              ))}
+      {/* 2. FAST ACTION TILES (4-GRID) */}
+      <div>
+        <p className="mb-2 px-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Quick Actions</p>
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            onClick={() => setPage('pos')}
+            className="card flex flex-col items-center justify-center p-2.5 text-center transition active:scale-95 hover:border-brand-500/50 bg-ink-900/90"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400 shadow-sm shadow-brand-500/10">
+              <ShoppingCart className="h-5 w-5" />
             </div>
-          )}
-        </SectionCard>
+            <span className="mt-1.5 text-xs font-bold text-white">New Sale</span>
+            <span className="text-[10px] text-slate-500">POS</span>
+          </button>
 
-        <SectionCard title="RECENT TRANSACTIONS" action={<span className="text-xs text-slate-500">{recent.length} shown</span>}>
-          {recent.length === 0 ? (
-            <EmptyState title="No transactions yet" message="Sales you make today will appear here." icon={<ShoppingCart className="h-7 w-7" />} />
-          ) : (
-            <div className="space-y-2">
-              {recent.map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-line px-3 py-2">
+          <button
+            onClick={() => setPage('inventory')}
+            className="card flex flex-col items-center justify-center p-2.5 text-center transition active:scale-95 hover:border-brand-500/50 bg-ink-900/90"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400">
+              <PlusCircle className="h-5 w-5" />
+            </div>
+            <span className="mt-1.5 text-xs font-bold text-white">Product</span>
+            <span className="text-[10px] text-slate-500">Inventory</span>
+          </button>
+
+          <button
+            onClick={() => setPriceGuideOpen(true)}
+            className="card relative flex flex-col items-center justify-center p-2.5 text-center transition active:scale-95 hover:border-emerald-500/50 bg-emerald-500/5 border-emerald-500/30"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <span className="mt-1.5 text-xs font-bold text-emerald-300">Prices</span>
+            <span className="text-[10px] text-emerald-400/80 font-semibold">🟢 BANTAY</span>
+          </button>
+
+          <button
+            onClick={() => setPage('utang')}
+            className="card flex flex-col items-center justify-center p-2.5 text-center transition active:scale-95 hover:border-brand-500/50 bg-ink-900/90"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <span className="mt-1.5 text-xs font-bold text-white">Utang</span>
+            <span className="text-[10px] text-slate-500">Collect</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. FINANCIAL SNAPSHOT TILES (3 COLUMNS) */}
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          onClick={() => setPage('reports')}
+          className="card p-2.5 text-left transition active:scale-95 hover:bg-ink-800"
+        >
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Profit</span>
+            <Banknote className="h-3.5 w-3.5 text-emerald-400" />
+          </div>
+          <p className="mt-1 text-sm font-black text-white tabular-nums truncate">{moneyShort(summary.profit_c)}</p>
+          <p className="text-[10px] text-slate-500">today</p>
+        </button>
+
+        <button
+          onClick={() => setPage('utang')}
+          className="card p-2.5 text-left transition active:scale-95 hover:bg-ink-800"
+        >
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Utang</span>
+            <Wallet className="h-3.5 w-3.5 text-amber-400" />
+          </div>
+          <p className={`mt-1 text-sm font-black tabular-nums truncate ${utang > 0 ? 'text-amber-400' : 'text-slate-300'}`}>{moneyShort(utang)}</p>
+          <p className="text-[10px] text-slate-500">receivable</p>
+        </button>
+
+        <button
+          onClick={() => setPage('expenses')}
+          className="card p-2.5 text-left transition active:scale-95 hover:bg-ink-800"
+        >
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Expenses</span>
+            <Receipt className="h-3.5 w-3.5 text-slate-400" />
+          </div>
+          <p className="mt-1 text-sm font-black text-white tabular-nums truncate">{moneyShort(summary.expenses_c)}</p>
+          <p className="text-[10px] text-slate-500">today</p>
+        </button>
+      </div>
+
+      {/* 4. INVENTORY STOCK WATCHLIST */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-0.5">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Stock Alerts</p>
+          <button
+            onClick={() => setPage('inventory')}
+            className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300"
+          >
+            <span>View All ({allProducts.length})</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {alertProducts.length === 0 ? (
+          <div className="card p-3 flex items-center justify-between bg-ink-900/60">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-400" />
+              <p className="text-xs font-medium text-slate-300">All inventory levels are healthy</p>
+            </div>
+            <span className="text-[10px] text-slate-500">{allProducts.length} items active</span>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {alertProducts.slice(0, 4).map((p) => (
+              <div
+                key={p.id}
+                onClick={() => setPage('inventory')}
+                className="card p-2.5 flex items-center justify-between gap-2 hover:bg-ink-800 transition active:scale-98 cursor-pointer"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <AlertTriangle className={`h-4 w-4 shrink-0 ${p.stock <= 0 ? 'text-red-400' : 'text-amber-400'}`} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-200">{s.transaction_no}</p>
-                    <p className="text-xs text-slate-500">{s.cashier_name} · {shortDateTime(s.created_at)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white">{moneyShort(s.total_c)}</span>
-                    <StatusBadge status={s.status} />
+                    <p className="truncate text-xs font-bold text-white">{p.name}</p>
+                    <p className="text-[10px] text-slate-400">
+                      Threshold: {p.low_stock_threshold} {p.base_unit}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-xs font-bold tabular-nums ${p.stock <= 0 ? 'text-red-400' : 'text-amber-400'}`}>
+                    {p.stock} {p.base_unit}
+                  </span>
+                  <StatusBadge status={p.stock <= 0 ? 'OUT_OF_STOCK' : 'LOW_STOCK'} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* 5. RECENT SALES FEED */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-0.5">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Recent Transactions</p>
+          <button
+            onClick={() => setPage('transactions')}
+            className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300"
+          >
+            <span>History</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {recent.length === 0 ? (
+          <EmptyState
+            title="No transactions yet today"
+            message="Sales made in the POS will appear here."
+            icon={<ShoppingCart className="h-6 w-6" />}
+          />
+        ) : (
+          <div className="space-y-1.5">
+            {recent.slice(0, 5).map((s) => (
+              <div
+                key={s.id}
+                onClick={() => setPage('transactions')}
+                className="card p-2.5 flex items-center justify-between gap-3 hover:bg-ink-800 transition active:scale-98 cursor-pointer"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-slate-200">{s.transaction_no}</p>
+                  <p className="text-[10px] text-slate-500">
+                    {s.cashier_name} · {shortDateTime(s.created_at)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-black tabular-nums text-white">{moneyShort(s.total_c)}</span>
+                  <StatusBadge status={s.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* PRICE GUIDE MODAL */}
+      {priceGuideOpen && (
+        <PriceGuideModal
+          open={priceGuideOpen}
+          onClose={() => setPriceGuideOpen(false)}
+          products={allProducts}
+        />
+      )}
     </div>
   )
 }

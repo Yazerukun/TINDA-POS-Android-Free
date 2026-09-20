@@ -3,7 +3,7 @@ import { FileDown, BarChart3, Printer, LockKeyhole, Coins, Eye, RefreshCw, Share
 import type { SalesReportRow, ReportSummary, ReadReport, ZRead, CashCountRecord } from '@shared/types'
 import { cashCountLines, CASH_COUNT_DENOMINATION_CENTS } from '@shared/cashCount'
 import { readReportLines } from '@shared/readReport'
-import { money, shortDate, todayKey } from '@shared/format'
+import { money, shortDate, shortDateTime, todayKey } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
 import { ReceiptPaper } from '../components/ReceiptPaper'
 import { SalesChart } from '../components/SalesChart'
@@ -29,11 +29,13 @@ export function Reports(): React.JSX.Element {
   const [loading, setLoading] = useState(false)
   const [read, setRead] = useState<ReadReport | null>(null)
   const [history, setHistory] = useState<ZRead[]>([])
+  const [zPreview, setZPreview] = useState<ZRead | null>(null)
   const [readError, setReadError] = useState<string | null>(null)
   const [readRevision, setReadRevision] = useState(0)
+  const { settings } = useSettings()
 
   useEffect(() => {
-    if (tab !== 'X') return
+    if (tab !== 'X' && tab !== 'Z') return
     let alive = true
     let sequence = 0
     const refresh = async () => {
@@ -82,7 +84,12 @@ export function Reports(): React.JSX.Element {
   // Loaders are redefined per render; this effect intentionally keys on tab and
   // (re)loads only when the active report changes, not on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (tab === 'SALES') void loadSales(); else if (tab === 'INVENTORY') void loadInv(); else if (tab === 'UTANG') void loadUtang(); else if (tab === 'Z') void window.api.reports.xRead().then(setRead).catch(e=>{setRead(null);toastError('No open shift',String((e as Error).message||e))}); else if (tab === 'ZHISTORY') void window.api.reports.zHistory().then(setHistory) }, [tab])
+  useEffect(() => {
+    if (tab === 'SALES') void loadSales()
+    else if (tab === 'INVENTORY') void loadInv()
+    else if (tab === 'UTANG') void loadUtang()
+    else if (tab === 'ZHISTORY') void window.api.reports.zHistory().then(setHistory)
+  }, [tab])
 
   const exportCsv = async () => {
     try {
@@ -93,13 +100,13 @@ export function Reports(): React.JSX.Element {
   }
 
   return (
-    <div className="p-6">
+    <div className="px-4 pt-3 pb-8 max-w-lg mx-auto md:max-w-none space-y-4">
       <PageHeader
         title="Reports"
         actions={(['SALES','INVENTORY','UTANG'] as const).includes(tab as 'SALES'|'INVENTORY'|'UTANG') ? <button onClick={() => void exportCsv()} className="btn-primary flex items-center gap-2"><FileDown className="h-4 w-4" /> Export CSV</button> : undefined}
       />
 
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         {[
           { id: 'SALES', label: 'Sales' },
           { id: 'INVENTORY', label: 'Inventory' },
@@ -121,15 +128,18 @@ export function Reports(): React.JSX.Element {
 
       {tab === 'SALES' && (
         <>
-          <div className="mb-4 flex flex-wrap items-end gap-2">
-            <div><label className="label">From</label><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input w-44" /></div>
-            <div><label className="label">To</label><input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input w-44" /></div>
-            <div><label className="label">Group by</label>
-              <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as never)} className="input w-40">
-                <option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option>
-              </select>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div><label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">From</label><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input w-full text-xs py-1.5" /></div>
+            <div><label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">To</label><input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input w-full text-xs py-1.5" /></div>
+            <div className="col-span-2 sm:col-span-1 flex items-end gap-2">
+              <div className="flex-1">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Group by</label>
+                <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as never)} className="input w-full text-xs py-1.5">
+                  <option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option>
+                </select>
+              </div>
+              <button onClick={() => void loadSales()} className="btn-primary text-xs py-2 px-4 rounded-xl">Run</button>
             </div>
-            <button onClick={() => void loadSales()} className="btn-primary">Run</button>
           </div>
 
           {loading ? <div className="h-40 animate-pulse card" /> : data ? (
@@ -141,23 +151,49 @@ export function Reports(): React.JSX.Element {
                 <Stat label="Discounts" v={money(data.summary.discount_c)} />
                 <Stat label="Transactions" v={String(data.summary.transactions)} />
               </div>
-              <div className="card mb-4 overflow-hidden">
-                <table className="table">
-                  <thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Method</th><th className="text-right">Total</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {data.rows.map((r) => (
-                      <tr key={r.sale_id}>
-                        <td className="font-medium text-brand-400">{r.transaction_no}</td>
-                        <td className="text-slate-400">{shortDate(r.created_at)}</td>
-                        <td className="text-slate-300">{r.cashier}</td>
-                        <td className="text-slate-400">{r.method}</td>
-                        <td className="text-right font-bold text-white tabular-nums">{money(r.total_c)}</td>
-                        <td><span className="badge bg-ink-700 text-slate-300">{r.status}</span></td>
-                      </tr>
-                    ))}
-                    {data.rows.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-slate-500">No sales in this period.</td></tr>}
-                  </tbody>
-                </table>
+              {/* Mobile Sales Cards */}
+              <div className="grid grid-cols-1 gap-2.5 md:hidden mb-4">
+                {data.rows.map((r) => (
+                  <div key={r.sale_id} className="card p-3.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-brand-400 text-sm">{r.transaction_no}</span>
+                        <span className="badge bg-ink-700 text-slate-300 text-[10px]">{r.status}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {shortDate(r.created_at)} · {r.cashier} · {r.method}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-mono text-sm font-bold text-white tabular-nums">{money(r.total_c)}</span>
+                    </div>
+                  </div>
+                ))}
+                {data.rows.length === 0 && (
+                  <div className="card p-8 text-center text-slate-500 text-sm">No sales in this period.</div>
+                )}
+              </div>
+
+              {/* Desktop Sales Table */}
+              <div className="hidden md:block card mb-4 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="table min-w-full">
+                    <thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Method</th><th className="text-right">Total</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {data.rows.map((r) => (
+                        <tr key={r.sale_id}>
+                          <td className="font-medium text-brand-400">{r.transaction_no}</td>
+                          <td className="text-slate-400">{shortDate(r.created_at)}</td>
+                          <td className="text-slate-300">{r.cashier}</td>
+                          <td className="text-slate-400">{r.method}</td>
+                          <td className="text-right font-bold text-white tabular-nums">{money(r.total_c)}</td>
+                          <td><span className="badge bg-ink-700 text-slate-300">{r.status}</span></td>
+                        </tr>
+                      ))}
+                      {data.rows.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-slate-500">No sales in this period.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <SalesChart data={data.chart} />
             </>
@@ -173,27 +209,151 @@ export function Reports(): React.JSX.Element {
             <Stat label="Low Stock" v={String(inv.summary.low_stock)} />
             <Stat label="Out of Stock" v={String(inv.summary.out_of_stock)} />
           </div>
-          <div className="card overflow-hidden">
-            <table className="table">
-              <thead><tr><th>Product</th><th className="text-right">Stock</th><th className="text-right">Unit Value</th><th className="text-right">Total Value</th></tr></thead>
-              <tbody>
-                {inv.rows.map((p, i) => (
-                  <tr key={i}>
-                    <td className="text-slate-200">{p.name}</td>
-                    <td className="text-right text-slate-300 tabular-nums">{p.stock} {p.base_unit}</td>
-                    <td colSpan={2}></td>
-                  </tr>
-                ))}
-                {inv.rows.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-500">No products.</td></tr>}
-              </tbody>
-            </table>
+
+          {/* Mobile Inventory Cards */}
+          <div className="grid grid-cols-1 gap-2 md:hidden">
+            {inv.rows.map((p, i) => (
+              <div key={i} className="card p-3 flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-white text-sm block truncate">{p.name}</span>
+                  <span className="text-xs text-slate-400 mt-0.5 block">Inventory Product</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className={`badge font-mono text-xs font-bold ${p.stock <= 0 ? 'bg-red-500/15 text-red-400 border border-red-500/30' : p.stock <= 5 ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'}`}>
+                    {p.stock} {p.base_unit}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {inv.rows.length === 0 && <div className="card p-8 text-center text-slate-500 text-sm">No products.</div>}
+          </div>
+
+          {/* Desktop Inventory Table */}
+          <div className="hidden md:block card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table min-w-full">
+                <thead><tr><th>Product</th><th className="text-right">Stock</th><th className="text-right">Unit Value</th><th className="text-right">Total Value</th></tr></thead>
+                <tbody>
+                  {inv.rows.map((p, i) => (
+                    <tr key={i}>
+                      <td className="text-slate-200">{p.name}</td>
+                      <td className="text-right text-slate-300 tabular-nums">{p.stock} {p.base_unit}</td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  ))}
+                  {inv.rows.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-500">No products.</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       ) : null)}
 
-      {tab === 'X' && !read && <div role="status"><p>{readError ? 'Hindi ma-load ang X-Read. Tiyaking may bukas na shift sa account na ito.' : 'Loading X-Read...'}</p>{readError && <><p className="mt-2 text-sm text-slate-400">{readError}</p><button className="btn-ghost mt-3" title="Refresh X-Read" onClick={()=>setReadRevision(n=>n+1)}><RefreshCw className="h-4 w-4"/></button></>}</div>}
+      {(tab === 'X' || tab === 'Z') && !read && (
+        <div role="status">
+          <p>{readError ? (tab === 'Z' ? 'Hindi ma-load ang Z-Read. Tiyaking may bukas na shift sa account na ito.' : 'Hindi ma-load ang X-Read. Tiyaking may bukas na shift sa account na ito.') : (tab === 'Z' ? 'Loading Z-Read...' : 'Loading X-Read...')}</p>
+          {readError && (
+            <>
+              <p className="mt-2 text-sm text-slate-400">{readError}</p>
+              <button className="btn-ghost mt-3" title="Refresh" onClick={() => setReadRevision((n) => n + 1)}>
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {(tab === 'X' || tab === 'Z') && read && <ReadPanel key={`${tab}-${read.shift_id}`} report={read} finalize={tab === 'Z'} onUpdate={setRead} onRefresh={()=>setReadRevision(n=>n+1)} onFinalized={()=>{setRead(null);setTab('ZHISTORY')}} onCashCount={()=>setTab('CASHCOUNT')}/>}
-      {tab === 'ZHISTORY' && <div className="card overflow-hidden"><table className="table"><thead><tr><th>Report</th><th>Finalized</th><th>Cashier</th><th>Net Sales</th><th></th></tr></thead><tbody>{history.map(z=><tr key={z.id}><td>{z.report_no}</td><td>{shortDate(z.finalized_at)}</td><td>{z.snapshot.cashier_name}</td><td className="tabular-nums">{money(z.snapshot.net_sales_c)}</td><td><button className="btn-ghost flex gap-1" onClick={()=>void window.api.reports.printZRead(z.id)}><Printer className="h-4 w-4"/>Print</button></td></tr>)}{history.length===0&&<tr><td colSpan={5} className="py-8 text-center text-slate-500">No finalized Z-Reads yet.</td></tr>}</tbody></table></div>}
+      {tab === 'ZHISTORY' && (
+        <>
+          {/* Mobile Z-Read Cards */}
+          <div className="grid grid-cols-1 gap-2.5 md:hidden">
+            {history.map((z) => (
+              <div key={z.id} className="card p-3.5 flex flex-col gap-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white text-sm tracking-wide">{z.report_no}</span>
+                      <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                        FINALIZED
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">{shortDateTime(z.finalized_at)}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Net Sales</span>
+                    <span className="font-mono text-base font-black text-emerald-400 tabular-nums">
+                      {money(z.snapshot?.net_sales_c ?? 0)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-ink-line/60 pt-2 text-xs text-slate-400">
+                  <span className="truncate">Cashier: <strong className="text-slate-200">{z.snapshot?.cashier_name || z.finalized_by_name || 'Cashier'}</strong></span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => setZPreview(z)}
+                      className="btn-ghost-2 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-brand-300 border border-brand-500/30 active:scale-95"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> View
+                    </button>
+                    <button
+                      onClick={() => void window.api.reports.printZRead(z.id)}
+                      className="btn-ghost-2 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 border border-ink-line active:scale-95"
+                    >
+                      <Printer className="h-3.5 w-3.5" /> Print
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {history.length === 0 && (
+              <div className="card p-8 text-center text-slate-500 text-sm">No finalized Z-Reads yet.</div>
+            )}
+          </div>
+
+          {/* Desktop Z-Read Table */}
+          <div className="hidden md:block card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table min-w-full">
+                <thead>
+                  <tr>
+                    <th>Report</th>
+                    <th>Finalized</th>
+                    <th>Cashier</th>
+                    <th>Net Sales</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((z) => (
+                    <tr key={z.id}>
+                      <td className="font-semibold text-white">{z.report_no}</td>
+                      <td>{shortDateTime(z.finalized_at)}</td>
+                      <td>{z.snapshot?.cashier_name || z.finalized_by_name || 'Cashier'}</td>
+                      <td className="tabular-nums font-bold text-emerald-400">{money(z.snapshot?.net_sales_c ?? 0)}</td>
+                      <td className="text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <button className="btn-ghost flex items-center gap-1 text-xs" onClick={() => setZPreview(z)}>
+                            <Eye className="h-4 w-4" /> View
+                          </button>
+                          <button className="btn-ghost flex items-center gap-1 text-xs" onClick={() => void window.api.reports.printZRead(z.id)}>
+                            <Printer className="h-4 w-4" /> Print
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {history.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-500">No finalized Z-Reads yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
       {tab === 'CASHCOUNT' && <CashCountPanel />}
 
       {tab === 'UTANG' && (loading ? <div className="h-40 animate-pulse card" /> : utang ? (
@@ -202,23 +362,88 @@ export function Reports(): React.JSX.Element {
             <Stat label="Total Outstanding" v={money(utang.total_outstanding_c)} />
             <Stat label="Customers" v={String(utang.rows.length)} />
           </div>
-          <div className="card overflow-hidden">
-            <table className="table">
-              <thead><tr><th>Customer</th><th className="text-right">Limit</th><th className="text-right">Balance</th></tr></thead>
-              <tbody>
-                {utang.rows.map((c, i) => (
-                  <tr key={i}>
-                    <td className="text-slate-200">{c.full_name}</td>
-                    <td className="text-right text-slate-400 tabular-nums">{money(c.credit_limit_c)}</td>
-                    <td className={`text-right font-bold tabular-nums ${c.balance_c > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{money(c.balance_c)}</td>
-                  </tr>
-                ))}
-                {utang.rows.length === 0 && <tr><td colSpan={3} className="py-8 text-center text-slate-500">No outstanding balances.</td></tr>}
-              </tbody>
-            </table>
+
+          {/* Mobile Utang Cards */}
+          <div className="grid grid-cols-1 gap-2 md:hidden">
+            {utang.rows.map((c, i) => (
+              <div key={i} className="card p-3 flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-white text-sm block truncate">{c.full_name}</span>
+                  <span className="text-xs text-slate-400 mt-0.5 block">Limit: {money(c.credit_limit_c)}</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Balance</span>
+                  <span className={`font-mono text-sm font-bold tabular-nums ${c.balance_c > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {money(c.balance_c)}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {utang.rows.length === 0 && <div className="card p-8 text-center text-slate-500 text-sm">No outstanding balances.</div>}
+          </div>
+
+          {/* Desktop Utang Table */}
+          <div className="hidden md:block card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table min-w-full">
+                <thead><tr><th>Customer</th><th className="text-right">Limit</th><th className="text-right">Balance</th></tr></thead>
+                <tbody>
+                  {utang.rows.map((c, i) => (
+                    <tr key={i}>
+                      <td className="text-slate-200">{c.full_name}</td>
+                      <td className="text-right text-slate-400 tabular-nums">{money(c.credit_limit_c)}</td>
+                      <td className={`text-right font-bold tabular-nums ${c.balance_c > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{money(c.balance_c)}</td>
+                    </tr>
+                  ))}
+                  {utang.rows.length === 0 && <tr><td colSpan={3} className="py-8 text-center text-slate-500">No outstanding balances.</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       ) : null)}
+
+      {zPreview && (
+        <Modal
+          open
+          onClose={() => setZPreview(null)}
+          title={`Z-Read: ${zPreview.report_no}`}
+          maxWidth="max-w-md"
+          footer={
+            <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  const lines = readReportLines(zPreview.snapshot, zPreview.report_no, { actual_cash_c: zPreview.actual_cash_c, finalized_at: zPreview.finalized_at }, settings?.store_name)
+                  void window.api.printer.shareReceipt?.(lines, `Z-Read ${zPreview.report_no}`)
+                }}
+                className="btn-ghost flex items-center gap-1.5"
+              >
+                <Share2 className="h-4 w-4" /> Share
+              </button>
+              <button
+                type="button"
+                onClick={() => void window.api.reports.printZRead(zPreview.id)}
+                className="btn-primary flex items-center gap-1.5"
+              >
+                <Printer className="h-4 w-4" /> Print
+              </button>
+              <button type="button" onClick={() => setZPreview(null)} className="btn-ghost">
+                Close
+              </button>
+            </div>
+          }
+        >
+          <ReceiptPaper
+            lines={readReportLines(
+              zPreview.snapshot,
+              zPreview.report_no,
+              { actual_cash_c: zPreview.actual_cash_c, finalized_at: zPreview.finalized_at },
+              settings?.store_name
+            )}
+          />
+        </Modal>
+      )}
     </div>
   )
 }
@@ -233,7 +458,80 @@ function CashCountPanel(): React.JSX.Element {
   const tallyPreview=():CashCountRecord=>({id:0,shift_id:0,user_id:0,cashier_name:cashierName,business_date:todayKey(),starting_cash_c:expected,expected_cash_c:expected,actual_cash_c:actual,difference_c:diff,status,denominations:q,notes:notes||null,created_at:new Date().toLocaleString('en-PH')})
   const save=async()=>{try{const rec=await window.api.reports.cashCount({quantities:q,notes});toastSuccess('Cash Count saved');setLastSaved(rec);setSaved(await window.api.reports.cashCounts())}catch(e){toastError('Cash Count failed',String((e as Error).message||e))}}
   const printRecord=async(rec:CashCountRecord)=>{setBusy(true);try{const res=await window.api.reports.cashCountPrint(rec.id);if(res.ok){toastSuccess(res.message)}else{toastError('Unable to print Cash Count. The Cash Count was saved successfully. You can try printing it again from Cash Count History.',res.message)}}catch(e){toastError('Unable to print Cash Count. The Cash Count was saved successfully. You can try printing it again from Cash Count History.',String((e as Error).message||e))}finally{setBusy(false)}}
-  return <div><div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3"><Stat label="Expected Cash" v={money(expected)}/><Stat label="Actual Cash" v={money(actual)}/><Stat label={`Difference · ${status}`} v={money(diff)}/></div><div className="card p-4"><h3 className="mb-3 font-bold">Count bills and coins</h3>{labels.map((l,i)=><div className="mb-2 grid grid-cols-[minmax(0,1fr)_84px_minmax(0,1fr)] items-center gap-3" key={l}><span className="whitespace-nowrap text-left text-sm font-medium text-slate-200 select-none">{l}</span><input className="input h-10 w-full min-h-0 text-center font-bold tabular-nums px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="number" inputMode="numeric" min="0" step="1" value={q[i]??0} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=0){const a=[...q];a[i]=n;setQ(a)}}}/><span className="whitespace-nowrap text-right text-sm font-semibold tabular-nums pr-2 text-slate-100">{money((q[i]??0)*(den[i]??0))}</span></div>)}<textarea className="input mt-3 w-full" placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)}/><div className="mt-3 flex flex-wrap gap-2"><button className="btn-primary" onClick={()=>void save()}>Save Cash Count</button><button className="btn-primary flex items-center gap-1" disabled={busy} onClick={()=>lastSaved?void printRecord(lastSaved):null} title={lastSaved?'Print the last saved Cash Count':'Save a cash count first to print it'}><Printer className="h-4 w-4"/>Print</button><button className="btn-ghost flex items-center gap-1" onClick={()=>setPreview(tallyPreview())}><Eye className="h-4 w-4"/>Print Preview</button></div><p className="mt-2 text-xs text-slate-500">Print prints the last saved Cash Count using the configured receipt printer. Preview shows exactly what the printer receives.</p></div><div className="card mt-4 overflow-hidden"><h3 className="p-4 font-bold">Cash Count History</h3><table className="table"><thead><tr><th>Date</th><th>Cashier</th><th>Expected</th><th>Actual</th><th>Status</th><th></th></tr></thead><tbody>{saved.map((r)=><tr key={r.id}><td>{shortDate(r.created_at)}</td><td>{r.cashier_name}</td><td className="tabular-nums">{money(r.expected_cash_c)}</td><td className="tabular-nums">{money(r.actual_cash_c)}</td><td><span className={`badge border ${r.status==='BALANCED'?'border-emerald-500/30 text-emerald-400':r.status==='OVER'?'border-brand-500/30 text-brand-300':'border-amber-500/30 text-amber-400'}`}>{r.status}</span></td><td><div className="flex gap-1"><button className="btn-ghost flex items-center gap-1" onClick={()=>setPreview(r)}><Eye className="h-4 w-4"/>View</button><button className="btn-ghost flex items-center gap-1" disabled={busy} onClick={()=>void printRecord(r)}><Printer className="h-4 w-4"/>Print</button></div></td></tr>)}<tr>{saved.length===0&&<td colSpan={6} className="py-8 text-center text-slate-500">No cash counts saved yet.</td>}</tr></tbody></table></div>{preview && (
+  return <div><div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3"><Stat label="Expected Cash" v={money(expected)}/><Stat label="Actual Cash" v={money(actual)}/><Stat label={`Difference · ${status}`} v={money(diff)}/></div><div className="card p-4"><h3 className="mb-3 font-bold">Count bills and coins</h3>{labels.map((l,i)=><div className="mb-2 grid grid-cols-[minmax(0,1fr)_84px_minmax(0,1fr)] items-center gap-3" key={l}><span className="whitespace-nowrap text-left text-sm font-medium text-slate-200 select-none">{l}</span><input className="input h-10 w-full min-h-0 text-center font-bold tabular-nums px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="number" inputMode="numeric" min="0" step="1" value={q[i]??0} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=0){const a=[...q];a[i]=n;setQ(a)}}}/><span className="whitespace-nowrap text-right text-sm font-semibold tabular-nums pr-2 text-slate-100">{money((q[i]??0)*(den[i]??0))}</span></div>)}<textarea className="input mt-3 w-full" placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)}/><div className="mt-3 flex flex-wrap gap-2"><button className="btn-primary" onClick={()=>void save()}>Save Cash Count</button><button className="btn-primary flex items-center gap-1" disabled={busy} onClick={()=>lastSaved?void printRecord(lastSaved):null} title={lastSaved?'Print the last saved Cash Count':'Save a cash count first to print it'}><Printer className="h-4 w-4"/>Print</button><button className="btn-ghost flex items-center gap-1" onClick={()=>setPreview(tallyPreview())}><Eye className="h-4 w-4"/>Print Preview</button></div><p className="mt-2 text-xs text-slate-500">Print prints the last saved Cash Count using the configured receipt printer. Preview shows exactly what the printer receives.</p></div>      <div className="card mt-4 p-4">
+        <h3 className="font-bold text-white mb-3">Cash Count History</h3>
+
+        {/* Mobile Cash Count Cards */}
+        <div className="space-y-2 md:hidden">
+          {saved.map((r) => (
+            <div key={r.id} className="rounded-xl border border-ink-line/70 bg-ink-950/70 p-3 flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="font-bold text-white text-xs block">{shortDateTime(r.created_at)}</span>
+                  <span className="text-xs text-slate-400">{r.cashier_name}</span>
+                </div>
+                <span className={`badge border text-[10px] ${r.status === 'BALANCED' ? 'border-emerald-500/30 text-emerald-400' : r.status === 'OVER' ? 'border-brand-500/30 text-brand-300' : 'border-amber-500/30 text-amber-400'}`}>
+                  {r.status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-ink-line/60 pt-2 text-xs">
+                <div>
+                  <span className="text-slate-400 text-[10px] block">Expected / Actual</span>
+                  <span className="text-slate-200 font-mono text-xs">{money(r.expected_cash_c)} / {money(r.actual_cash_c)}</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <button className="btn-ghost-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-300 border border-ink-line" onClick={() => setPreview(r)}>
+                    <Eye className="h-3.5 w-3.5" /> View
+                  </button>
+                  <button className="btn-ghost-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-300 border border-ink-line" disabled={busy} onClick={() => void printRecord(r)}>
+                    <Printer className="h-3.5 w-3.5" /> Print
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {saved.length === 0 && (
+            <p className="py-6 text-center text-slate-500 text-xs">No cash counts saved yet.</p>
+          )}
+        </div>
+
+        {/* Desktop Cash Count Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="table min-w-full">
+            <thead>
+              <tr><th>Date</th><th>Cashier</th><th>Expected</th><th>Actual</th><th>Status</th><th className="text-right">Actions</th></tr>
+            </thead>
+            <tbody>
+              {saved.map((r) => (
+                <tr key={r.id}>
+                  <td>{shortDateTime(r.created_at)}</td>
+                  <td>{r.cashier_name}</td>
+                  <td className="tabular-nums">{money(r.expected_cash_c)}</td>
+                  <td className="tabular-nums">{money(r.actual_cash_c)}</td>
+                  <td>
+                    <span className={`badge border ${r.status === 'BALANCED' ? 'border-emerald-500/30 text-emerald-400' : r.status === 'OVER' ? 'border-brand-500/30 text-brand-300' : 'border-amber-500/30 text-amber-400'}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <button className="btn-ghost flex items-center gap-1" onClick={() => setPreview(r)}>
+                        <Eye className="h-4 w-4" /> View
+                      </button>
+                      <button className="btn-ghost flex items-center gap-1" disabled={busy} onClick={() => void printRecord(r)}>
+                        <Printer className="h-4 w-4" /> Print
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {saved.length === 0 && (
+                <tr><td colSpan={6} className="py-8 text-center text-slate-500">No cash counts saved yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>{preview && (
   <Modal open onClose={() => setPreview(null)} title="Cash Count Print Preview" maxWidth="max-w-md" footer={
     <div className="flex flex-wrap items-center justify-end gap-2 w-full">
       <button type="button" onClick={() => void window.api.printer.shareReceipt?.(cashCountLines({ ...preview, store_name: storeName }), 'Cash Count Report')} className="btn-ghost flex items-center gap-1.5"><Share2 className="h-4 w-4" /> Share</button>

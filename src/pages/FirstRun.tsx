@@ -49,9 +49,14 @@ export function FirstRun(): React.JSX.Element {
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-ink-950 p-4">
       <div className="card w-full max-w-lg p-8">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-base font-black text-white">TP</div>
-          <h1 className="text-xl font-bold text-white">Set up TINDA POS</h1>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="relative animate-float-slow mb-2">
+            <img
+              src={tindaLogo}
+              alt="TINDA POS"
+              className="h-28 w-auto max-w-[180px] object-contain animate-neon-pulse"
+            />
+          </div>
           <p className="text-xs text-slate-400">A few quick steps to get your store running.</p>
         </div>
 

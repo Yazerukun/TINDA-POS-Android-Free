@@ -352,6 +352,7 @@ const api = {
     create: system.createBackup,
     restore: system.restoreBackup,
     exportTinda: tindaBackup.exportUniversalBackup,
+    getPayload: system.getBackupPayload,
     importTinda: tindaBackup.importUniversalBackup,
     openFolder: system.openFolder,
     selectSyncFolder: system.selectSyncFolder,

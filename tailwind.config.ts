@@ -62,8 +62,8 @@ export default {
           '100%': { transform: 'translateY(0)' }
         },
         'page-fade': {
-          '0%': { opacity: '0', transform: 'translateY(4px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' }
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
         },
         'tab-active': {
           '0%': { transform: 'scale(1)' },
@@ -73,13 +73,34 @@ export default {
         'pop': {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' }
+        },
+        'neon-pulse': {
+          '0%, 100%': { filter: 'drop-shadow(0 0 12px rgba(52, 211, 153, 0.45)) drop-shadow(0 0 25px rgba(16, 185, 129, 0.25))' },
+          '50%': { filter: 'drop-shadow(0 0 24px rgba(52, 211, 153, 0.85)) drop-shadow(0 0 45px rgba(16, 185, 129, 0.5))' }
+        },
+        'float-slow': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' }
+        },
+        'logo-pop': {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '60%': { transform: 'scale(1.05)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' }
+        },
+        'laser-sweep': {
+          '0%, 100%': { transform: 'translateY(0%)', opacity: '0.85' },
+          '50%': { transform: 'translateY(220px)', opacity: '1' }
         }
       },
       animation: {
         'bottom-sheet': 'bottom-sheet 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
         'page-fade': 'page-fade 0.2s ease-out forwards',
         'tab-active': 'tab-active 0.2s ease-out forwards',
-        'pop': 'pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+        'pop': 'pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+        'neon-pulse': 'neon-pulse 2.5s ease-in-out infinite',
+        'float-slow': 'float-slow 3s ease-in-out infinite',
+        'logo-pop': 'logo-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'laser-sweep': 'laser-sweep 1.8s ease-in-out infinite'
       }
     }
   },

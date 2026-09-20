@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../stores/auth'
 import { ConnectionStatus } from '../components/ConnectionStatus'
+import tindaLogo from '../assets/tinda-logo.png'
 
 export function Login(): React.JSX.Element {
   const { login, loginPin } = useAuth()
@@ -29,14 +30,17 @@ export function Login(): React.JSX.Element {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-ink-950 p-6">
-      <div className="card w-full max-w-sm p-8">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-lg font-black text-white">
-            TP
+      <div className="card w-full max-w-sm p-6 sm:p-8">
+        <div className="mb-5 flex flex-col items-center text-center">
+          <div className="relative animate-float-slow mb-1">
+            <img
+              src={tindaLogo}
+              alt="TINDA POS"
+              className="h-32 w-auto max-w-[200px] object-contain animate-neon-pulse"
+            />
           </div>
-          <h1 className="text-xl font-bold text-white">TINDA POS</h1>
-          <p className="text-xs text-slate-400">Offline POS System</p>
-          <ConnectionStatus className="mt-3" />
+          <p className="text-xs text-slate-400">Offline POS for Sari-Sari Stores</p>
+          <ConnectionStatus className="mt-2.5" />
         </div>
 
         <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-ink-900 p-1">

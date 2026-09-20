@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -21,18 +22,20 @@ export function Modal({ open, onClose, title, children, maxWidth = 'max-w-lg', f
   }, [open, onClose])
 
   if (!open) return null
-  return (
+  return createPortal(
     <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`modal-panel ${maxWidth}`}>
-        <div className="mb-4 flex items-center justify-between">
-          {title && <h2 className="text-lg font-bold text-white">{title}</h2>}
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-ink-700 hover:text-white">
+      <div className={`modal-panel ${maxWidth} flex flex-col`}>
+        <div className="mx-auto -mt-1 mb-2 h-1.5 w-12 shrink-0 rounded-full bg-ink-700 sm:hidden" />
+        <div className="mb-3 flex shrink-0 items-center justify-between">
+          {title && <h2 className="text-lg font-bold text-white tracking-tight">{title}</h2>}
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-2 text-slate-400 hover:bg-ink-800 hover:text-white active:scale-95">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div>{children}</div>
-        {footer && <div className="mt-5 flex justify-end gap-2 border-t border-ink-line pt-4">{footer}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">{children}</div>
+        {footer && <div className="mt-3 flex shrink-0 justify-end gap-2 border-t border-ink-line pt-3 pb-[var(--saib)]">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -30,7 +30,7 @@ function isSeparator(raw: string): boolean {
 }
 
 function isMoneyLine(raw: string): { label: string; amount: string } | null {
-  const m = raw.trim().match(/^(Subtotal|Discounts?|TOTAL|TOTAL PAYMENTS|Total Payments|Cash|SUKLI|Gross Sales|Refunds|Cash Refunds|Voids|NET SALES|GCash|Maya|Utang|Expenses|Expected Cash|Actual Cash|Difference|Starting Cash|Cash In|Cash Out)\s+(-?\d[\d,]*(?:\.\d+)?)$/i)
+  const m = raw.trim().match(/^(Subtotal|Discounts?|TOTAL|TOTAL PAYMENTS|Total Payments|Cash|SUKLI|Gross Sales|Refunds|Cash Refunds|Voids|NET SALES|GCash|Maya|Utang|Expenses|Expected Cash|Actual Cash|Difference|Starting Cash|Cash In|Cash Out)\s+(?:[₱$€£]|PHP\s*)?(-?\d[\d,]*(?:\.\d+)?)$/i)
   if (!m) return null
   return { label: m[1]!.replace(/^./, (c) => c.toUpperCase()), amount: m[2]! }
 }
@@ -158,7 +158,7 @@ function rowsToHtml(lines: string[], currency: string): string {
 const baseCss = `
   .tp-sheet { margin: 0 auto; box-sizing: border-box; background: white; color: black; }
   .tp-sheet * { box-sizing: border-box; }
-  .tp-sheet { font-family: Consolas, "Courier New", "Lucida Console", monospace; line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+  .tp-sheet { font-family: Consolas, "Courier New", "Roboto Mono", monospace; line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
   .tp-row { font-size: 1em; }
   .tp-center { text-align: center; }
   .tp-heading { font-size: 1.3em; font-weight: 800; }
@@ -171,20 +171,20 @@ const baseCss = `
   .tp-itemline { display: table; width: 100%; table-layout: auto; }
   .tp-itemline > span { display: table-cell; }
   .tp-qty { font-size: 0.95em; white-space: nowrap; }
-  .tp-amt { font-variant-numeric: tabular-nums; text-align: right; width: 1%; white-space: nowrap; padding-left: 0.5em; }
+  .tp-amt { font-variant-numeric: tabular-nums; text-align: right; width: 1%; white-space: nowrap; padding-left: 0.5em; padding-right: 2px; }
   .tp-item .tp-amt, .tp-sum .tp-amt { font-weight: 700; }
   .tp-sum, .tp-total, .tp-sukli { display: table; width: 100%; table-layout: auto; }
   .tp-lbl { display: table-cell; }
   .tp-sum { font-size: 1em; }
   .tp-total { font-size: 1.2em; font-weight: 800; border-top: 3px double black; border-bottom: 3px double black; margin-top: 0.3em; padding: 0.3em 0; }
-  .tp-total .tp-amt { font-weight: 800; display: table-cell; text-align: right; }
+  .tp-total .tp-amt { font-weight: 800; display: table-cell; text-align: right; padding-right: 2px; }
   .tp-sukli { font-size: 1.1em; font-weight: 900; margin-top: 0.12em; padding: 0.1em 0; }
   .tp-sukli .tp-lbl, .tp-sukli .tp-amt { font-weight: 900; display: table-cell; }
-  .tp-sukli .tp-amt { text-align: right; }
+  .tp-sukli .tp-amt { text-align: right; padding-right: 2px; }
   .tp-denomline { display: table; width: 100%; table-layout: fixed; font-size: 0.95em; line-height: 1.35; }
   .tp-denom { display: table-cell; text-align: left; width: 34%; white-space: nowrap; font-weight: 600; }
   .tp-denomline .tp-qty { display: table-cell; text-align: center; width: 26%; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .tp-denomline .tp-amt { display: table-cell; text-align: right; width: 40%; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .tp-denomline .tp-amt { display: table-cell; text-align: right; width: 40%; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 700; padding-right: 2px; }
   .tp-badge-status { font-weight: 800; letter-spacing: 0.05em; }
   .tp-status-balanced { color: #000; }
   .tp-status-over { color: #000; }
@@ -193,11 +193,11 @@ const baseCss = `
 export function receiptCss(width: ReceiptWidth): string {
   const paperWidth = width === '80mm' ? '80mm' : '58mm'
   const contentWidth = width === '80mm' ? '72mm' : '48mm'
-  const fontSize = width === '80mm' ? '11.5px' : '9.5px'
+  const fontSize = width === '80mm' ? '11px' : '9.5px'
   return `
     ${baseCss}
     @page { size: ${paperWidth} auto; margin: 0; }
-    .tp-sheet { width: ${contentWidth}; padding: 2mm 0 4mm; font-size: ${fontSize}; }
+    .tp-sheet { width: ${contentWidth}; padding: 3mm 3.5mm 5mm; font-size: ${fontSize}; }
   `
 }
 
