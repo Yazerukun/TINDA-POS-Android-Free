@@ -3,15 +3,15 @@
 ## Overview
 Free, offline, sign-language-friendly Android POS terminal for Sari-Sari Stores built with React + Vite + Capacitor + Dexie (IndexedDB).
 
-## Operating Rules & Active Skills
+## Operating Rules & Automation Standard
 - Persona: **Fixer Agent**
-- Mode: **FULL YOLO MODE** (Proactive, autonomous execution of commands, edits, refactoring, and fixes)
-- **Active Skills & Standards:**
-  1. **[apple-design](file:///D:/TINDA-POS-Android-Free/.agents/skills/apple-design/SKILL.md)**: Apple Design Standard — physical motion, fluid gestures, interruptible springs, 1:1 direct tracking, translucent materials.
-  2. **[ponytail](file:///D:/TINDA-POS-Android-Free/.agents/skills/ponytail/SKILL.md)**: The Lazy Senior Developer — Necessity Ladder, YAGNI, standard library first, zero over-engineering, shortest working diff.
-  3. **[smart-ralph](file:///D:/TINDA-POS-Android-Free/.agents/skills/smart-ralph/SKILL.md)**: Spec-Driven Autonomous Engine — Research -> Requirements -> Design -> Tasks -> POC-first execution loop.
-  4. **[headroom](file:///D:/TINDA-POS-Android-Free/.agents/skills/headroom/SKILL.md)**: Context & Token Optimization — MCP-powered context compression and retrieval.
-  5. **[agentmemory](file:///D:/TINDA-POS-Android-Free/.agents/skills/agentmemory/SKILL.md)**: Persistent Memory & Continuous Learning — Cross-session learning, lesson saving, milestone snapshots.
+- Mode: **FULL YOLO MODE** (Proactive, autonomous execution of commands, edits, refactoring, and fixes without waiting for manual confirmation)
+- Execution: **100% AUTOMATIC 5-SKILL POWERHOUSE** (All 5 skills run automatically on every prompt — no manual trigger needed):
+  1. **[apple-design](file:///D:/TINDA-POS-Android-Free/.agents/skills/apple-design/SKILL.md)**: Automatically applied to all UI, interactions, gestures, springs, materials, and layouts.
+  2. **[ponytail](file:///D:/TINDA-POS-Android-Free/.agents/skills/ponytail/SKILL.md)**: Automatically applied to all coding decisions (Necessity Ladder, YAGNI, standard library first, shortest working diff, root-cause bug fixes).
+  3. **[smart-ralph](file:///D:/TINDA-POS-Android-Free/.agents/skills/smart-ralph/SKILL.md)**: Automatically applied to multi-step tasks (4-phase gates: POC, Refactor, Automated Verification, Quality Gate).
+  4. **[headroom](file:///D:/TINDA-POS-Android-Free/.agents/skills/headroom/SKILL.md)**: Automatically applied for context window optimization and log compression.
+  5. **[agentmemory](file:///D:/TINDA-POS-Android-Free/.agents/skills/agentmemory/SKILL.md)**: Automatically recalls past lessons and saves new bugfix lessons and release milestones.
 
 ## Latest Release (v1.0.31)
 - **User Feedback Addressed:** "something went wrong pag pindot nako sa POS manifest react error #310".
