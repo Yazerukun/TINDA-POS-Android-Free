@@ -8,7 +8,20 @@ Free, offline, sign-language-friendly Android POS terminal for Sari-Sari Stores 
 - Mode: **FULL YOLO MODE** (Proactive, autonomous execution of commands, edits, refactoring, and fixes)
 - Design Standard: [apple-design](file:///D:/CANTEEN-CREDIT-POS/.agents/skills/apple-design/SKILL.md)
 
-## Recent Patch (v1.0.28)
+## Latest Release (v1.0.29)
+- **User Feedback Addressed:** "dili daw mo gana ang utang" (Utang / Credit checkout was failing / blocked).
+- **Root Cause & Fixes Applied:**
+  1. **POS Utang Checkout Flow:** Selecting Utang in `CheckoutModal` now automatically displays the selected customer, their current credit balance, new total, and an inline selector or "+ Add Customer" button. If no customer was selected yet, tapping Charge prompts the customer picker directly rather than throwing a blocking error.
+  2. **Inline Customer Registration:** Added a Quick Add Customer form (`Full Name`, `Nickname`, `Phone`, `Credit Limit`) directly inside the customer picker so cashiers can register new credit customers in-stride without leaving POS.
+  3. **Shift Balance Accuracy:** Cash payments for Utang in `src/data/people.ts` (`payCredit`) now update active shift's register balance (`cash_in_c`), preventing register balance discrepancies at shift close.
+  4. **Utang Management Hub:** Added filter tabs (`Tanan`, `May Utang`, `Bayad Na`), "+ New Customer" button, correct badges (`OVER LIMIT`, `MAY UTANG`, `WALAY UTANG`), and fast payment amount chips (`₱50`, `₱100`, `₱200`, `₱500`, `₱1,000`, `Full Balance`).
+- **Test Results:** 17/17 test files passed, 105/105 unit tests green.
+- **Release Assets (Published):**
+  - **APK Download:** [TindaPOS-Free-1.0.29.apk](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.29/TindaPOS-Free-1.0.29.apk) (6.65 MB)
+  - **Checksum:** `5b568e10caae67620e2a72f1773fa77555566fc136ec590f31dcf4d4af09b06d`
+  - **Release Notes:** [GitHub Release v1.0.29](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.29)
+
+## Previous Patch (v1.0.28)
 - **Root Cause of v1.0.27 crash:** `tindaLogo` was added to `src/pages/FirstRun.tsx` but was not imported, throwing `ReferenceError: tindaLogo is not defined` whenever a clean APK was launched.
 - **Fix Applied:** Imported `tindaLogo from '../assets/tinda-logo.png'` in `FirstRun.tsx`.
 - **Regression Test Added:** `src/pages/__tests__/first-run.test.ts` to ensure `FirstRun` always renders without runtime asset errors.
