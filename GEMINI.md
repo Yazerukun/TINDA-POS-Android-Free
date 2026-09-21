@@ -13,7 +13,23 @@ Free, offline, sign-language-friendly Android POS terminal for Sari-Sari Stores 
   4. **[headroom](file:///D:/TINDA-POS-Android-Free/.agents/skills/headroom/SKILL.md)**: Automatically applied for context window optimization and log compression.
   5. **[agentmemory](file:///D:/TINDA-POS-Android-Free/.agents/skills/agentmemory/SKILL.md)**: Automatically recalls past lessons and saves new bugfix lessons and release milestones.
 
-## Latest Release (v1.0.31)
+## Latest Release (v1.0.32)
+- **User Feedback Addressed:** "block stock ... nag add q ug item.. kana mn mo gawas kanang chocomucho ... ang expiration dli d.ay per batch, per item user feedback ni planohi sa nig tarong."
+- **Root Cause & Fix Applied:**
+  1. **Undated Products Blocked in POS:** In `src/pages/POS.tsx`, `saleStock` checked `(!p.expiration_date || p.expiration_date < localDate()) ? 0`, causing any newly added item without an explicit expiration date (like Chocomucho snacks/candies) to evaluate as 0 sellable stock and block with `"Expired or undated stock is blocked"`.
+  2. **Clean Per-Item Expiration Model:** Streamlined shelf-life tracking from multi-batch overhead into a clean per-product optional expiration date. Undated products are 100% sellable and never blocked. Only products with an explicit expiration date that has already passed today are blocked.
+  3. **Simplified Inventory & Modals:**
+     - `ProductModal`: Replaced complex `expiration-mode` select with a single optional `Expiration Date (Optional)` date picker with clear instructions that undated items are always sellable.
+     - `RestockModal`: Added optional expiration date field and removed batch constraints.
+     - `WithdrawModal`: Removed batch selection requirement.
+     - `Expiration.tsx`: Cleaned Expiration list and alert banner to only alert on actual expired/near-expiry dates, ignoring undated items. Converted all remaining Bisaya/Tagalog modal text to 100% English.
+- **Test Results:** 17/17 test files passed, 107/107 unit tests green (+2 regression tests added).
+- **Release Assets:**
+  - **APK Download:** [TindaPOS-Free-1.0.32.apk](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.32/TindaPOS-Free-1.0.32.apk)
+  - **Checksum:** `a4310fcc475f9a6250937237a6849cf6a2bc7b8c6257795dfc9f942ad636f78d`
+  - **Release Notes:** [GitHub Release v1.0.32](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.32)
+
+## Previous Release (v1.0.31)
 - **User Feedback Addressed:** "something went wrong pag pindot nako sa POS manifest react error #310".
 - **Root Cause & Fix Applied:**
   1. **React Error #310 (Hooks Called Inside Loop):** In `src/pages/POS.tsx`, `const allowNeg = usePosCart((s) => s.allow_negative)` was erroneously called inside the `products.map(...)` iteration. On initial mount with `loading: true`, 0 hooks were called; once products loaded, 20+ hooks were executed, violating React's Rules of Hooks.

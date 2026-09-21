@@ -88,21 +88,13 @@ export function normalizeUnits(name: string, priceC: number, barcode: string | n
   return cleaned
 }
 
-/** Reads a product back with its category name, unit list, stock status and batches. */
+/** Reads a product back with its category name, unit list, stock status and sellable stock. */
 export async function hydrateProduct(product: Product, batches?: StockBatch[]): Promise<Product> {
   const category = product.category_id ? await db.categories.get(product.category_id) : null
-  const productBatches =
-    batches ?? (product.has_expiration ? await db.batches.where('product_id').equals(product.id).toArray() : [])
-  const openBatches = productBatches.filter((batch) => (batch.expiration_date ?? '') >= localDateKey() || !batch.expiration_date)
-  const batchStock = openBatches.reduce((sum, batch) => sum + num(batch.quantity), 0)
   const stock = num(product.stock)
-  const expMode = product.expiration_mode ?? (product.has_expiration ? 'ITEM' : 'NONE')
-  let sellable = stock
-  if (expMode === 'BATCH') {
-    sellable = productBatches.length > 0 ? Math.min(stock, batchStock) : stock
-  } else if (expMode === 'ITEM') {
-    sellable = product.expiration_date && product.expiration_date < localDateKey() ? 0 : stock
-  }
+  const isExpired = Boolean(product.expiration_date && product.expiration_date < localDateKey())
+  const sellable = isExpired ? 0 : stock
+  const expMode = product.expiration_date ? 'ITEM' : (product.expiration_mode ?? (product.has_expiration ? 'ITEM' : 'NONE'))
   return {
     ...product,
     stock,
@@ -111,7 +103,7 @@ export async function hydrateProduct(product: Product, batches?: StockBatch[]): 
     stock_status: stockStatus(stock, num(product.low_stock_threshold)),
     sellable_stock: sellable,
     expiration_mode: expMode,
-    batches: product.has_expiration ? productBatches : undefined
+    batches: undefined
   }
 }
 
@@ -215,8 +207,8 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     stock: Math.trunc(num(input.initial_stock_base ?? 0)),
     low_stock_threshold: num(input.low_stock_threshold ?? settings.default_low_stock, settings.default_low_stock),
     supplier_id: input.supplier_id ?? null,
-    has_expiration: Boolean(input.has_expiration),
-    expiration_mode: input.expiration_mode ?? (input.has_expiration ? 'ITEM' : 'NONE'),
+    has_expiration: Boolean(input.expiration_date),
+    expiration_mode: input.expiration_date ? 'ITEM' : 'NONE',
     expiration_date: input.expiration_date ?? null,
     image_path: null,
     status: 'ACTIVE',
@@ -281,9 +273,14 @@ export async function updateProduct(id: number, input: Partial<ProductInput>): P
   if (input.default_price_c !== undefined) patch.default_price_c = cents(input.default_price_c)
   if (input.low_stock_threshold !== undefined) patch.low_stock_threshold = num(input.low_stock_threshold)
   if (input.supplier_id !== undefined) patch.supplier_id = input.supplier_id
-  if (input.has_expiration !== undefined) patch.has_expiration = Boolean(input.has_expiration)
-  if (input.expiration_mode !== undefined) patch.expiration_mode = input.expiration_mode
-  if (input.expiration_date !== undefined) patch.expiration_date = input.expiration_date
+  if (input.expiration_date !== undefined) {
+    patch.expiration_date = input.expiration_date || null
+    patch.has_expiration = Boolean(input.expiration_date)
+    patch.expiration_mode = input.expiration_date ? 'ITEM' : 'NONE'
+  } else if (input.has_expiration !== undefined) {
+    patch.has_expiration = Boolean(input.has_expiration)
+    if (input.expiration_mode !== undefined) patch.expiration_mode = input.expiration_mode
+  }
   if (input.notes !== undefined) patch.notes = input.notes
   if (input.units !== undefined) {
     patch.units = normalizeUnits(text(patch.name ?? product.name), cents(patch.default_price_c ?? product.default_price_c), patch.barcode ?? product.barcode, input.units).map((unit) => ({ ...unit, product_id: id }))

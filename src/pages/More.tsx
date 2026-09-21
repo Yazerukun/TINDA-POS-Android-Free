@@ -163,7 +163,7 @@ export function More(): React.JSX.Element {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold text-white">Expiration Dates</span>
-                    <span className="block truncate text-xs text-slate-400 mt-0.5">Track shelf life, batches & expiring products</span>
+                    <span className="block truncate text-xs text-slate-400 mt-0.5">Track product shelf life and expiring items</span>
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
                 </button>
@@ -281,7 +281,7 @@ export function More(): React.JSX.Element {
           <span>•</span>
           <span className="rounded-full bg-ink-800/80 px-2 py-0.5 border border-ink-line/60">Universal Backup</span>
           <span>•</span>
-          <span className="rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 border border-emerald-500/30">v1.0.27</span>
+          <span className="rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 border border-emerald-500/30">v1.0.32</span>
         </div>
       </div>
 
@@ -289,7 +289,7 @@ export function More(): React.JSX.Element {
       <div className="pt-1">
         <button
           onClick={() => {
-            if (window.confirm('Sigurado ka nga gusto nimo mo-sign out sa TINDA POS?')) {
+            if (window.confirm('Are you sure you want to sign out of TINDA POS?')) {
               logout()
             }
           }}

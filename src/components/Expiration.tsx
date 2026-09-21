@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CalendarClock, CheckCircle2, Pencil, RefreshCw, X } from 'lucide-react'
+import { AlertTriangle, Pencil, RefreshCw, X } from 'lucide-react'
 import type { ExpirationEntry, Product } from '@shared/types'
-import { expirationStatus } from '@shared/expiration'
+import { expirationStatus, localDate } from '@shared/expiration'
 import { Modal } from './ui/Modal'
 import { toastError, toastSuccess } from '../stores/toast'
 import { useNav } from '../stores/nav'
 
-const labels = { EXPIRED: 'Expired', SOON: 'Expiring within 7 days', NEAR: 'Expiring within 30 days', UNKNOWN: 'Date review required', OK: 'Not near expiry' }
+const labels = { EXPIRED: 'Expired', SOON: 'Expiring within 7 days', NEAR: 'Expiring within 30 days', UNKNOWN: 'No expiration date', OK: 'Not near expiry' }
 const colors = { EXPIRED: 'text-red-400', SOON: 'text-orange-400', NEAR: 'text-yellow-400', UNKNOWN: 'text-amber-300', OK: 'text-slate-400' }
 
 export function ExpiryLabel({ date }: { date: string | null }): React.JSX.Element {
@@ -15,17 +15,14 @@ export function ExpiryLabel({ date }: { date: string | null }): React.JSX.Elemen
 }
 
 export function ProductExpiry({ product }: { product: Product }): React.JSX.Element | null {
-  if (!product.expiration_mode || product.expiration_mode === 'NONE') return null
-  const batches = product.batches ?? []
-  const nearest = batches.find((b) => b.expiration_date)
-  const undated = batches.filter((b) => !b.expiration_date).reduce((n, b) => n + b.quantity, 0)
-  return <div className="mt-2 space-y-1 break-words">
-    {product.expiration_mode === 'ITEM' ? <ExpiryLabel date={product.expiration_date ?? null} /> : <>
-      {nearest && <p><ExpiryLabel date={nearest.expiration_date} /> <span className="text-xs text-slate-400">({nearest.quantity} {product.base_unit})</span></p>}
-      {undated > 0 && <p className="text-xs text-amber-300">Date review: {undated} {product.base_unit}</p>}
-    </>}
-    {product.stock > (product.sellable_stock ?? product.stock) && <p className="text-xs text-red-400">Blocked stock: {product.stock - (product.sellable_stock ?? product.stock)} {product.base_unit}</p>}
-  </div>
+  if (!product.expiration_date) return null
+  const isExpired = product.expiration_date < localDate()
+  return (
+    <div className="mt-2 space-y-1 break-words">
+      <ExpiryLabel date={product.expiration_date} />
+      {isExpired && <p className="text-xs font-semibold text-red-400">Blocked: Expired product</p>}
+    </div>
+  )
 }
 
 export function ExpirationList({ onClose }: { onClose: () => void }): React.JSX.Element {
@@ -49,35 +46,54 @@ export function ExpirationList({ onClose }: { onClose: () => void }): React.JSX.
     return () => { unsubscribe(); window.clearInterval(timer) }
   }, [load])
   const save = async () => {
-    if (!editing?.batch_id) return
+    if (!editing) return
     setBusy(true)
-    try { await window.api.inventory.batchDate(editing.batch_id, date); setEditing(null); await load(); toastSuccess('Batch expiration saved') }
+    try {
+      if (editing.batch_id) {
+        await window.api.inventory.batchDate(editing.batch_id, date)
+      } else {
+        await window.api.catalog.update(editing.product_id, {
+          expiration_date: date || null,
+          has_expiration: Boolean(date),
+          expiration_mode: date ? 'ITEM' : 'NONE'
+        })
+      }
+      setEditing(null)
+      await load()
+      toastSuccess('Expiration date saved')
+    }
     catch (e) { toastError('Save failed', String((e as Error).message || e)) }
     finally { setBusy(false) }
   }
-  const visible = rows.filter((r) => r.product_name.toLowerCase().includes(search.toLowerCase()) && (filter === 'ALL' || (filter === 'ALERTS' ? expirationStatus(r.expiration_date) !== 'OK' : expirationStatus(r.expiration_date) === filter)))
+  const visible = rows.filter((r) =>
+    r.product_name.toLowerCase().includes(search.toLowerCase()) &&
+    (filter === 'ALL' || (filter === 'ALERTS' ? (r.expiration_date && expirationStatus(r.expiration_date) !== 'OK' && expirationStatus(r.expiration_date) !== 'UNKNOWN') : expirationStatus(r.expiration_date) === filter))
+  )
   return <Modal open onClose={onClose} title="Expiration Dates" maxWidth="max-w-4xl" footer={<button onClick={onClose} className="btn-ghost">Close</button>}>
     <div className="flex flex-wrap gap-2 mb-4">
       <input className="input min-w-0 flex-1" aria-label="Search expiration items" placeholder="Search items" value={search} onChange={(e) => setSearch(e.target.value)} />
       <select className="input max-w-full" aria-label="Expiration filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
         <option value="ALERTS">All alerts</option><option value="ALL">All tracked stock</option>
-        {Object.entries(labels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        {Object.entries(labels).filter(([key]) => key !== 'UNKNOWN').map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select>
       <button className="btn-ghost" title="Refresh expiration dates" onClick={() => void load()}><RefreshCw className="h-4 w-4" /></button>
     </div>
     {error ? <p role="alert" className="text-red-400">{error}</p> : loading ? <p>Loading expiration dates...</p> : <div className="divide-y divide-ink-line">
-      {visible.map((r) => <div key={`${r.product_id}-${r.batch_id}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
-        <div className="min-w-0 flex-1 break-words"><p className="font-semibold text-white">{r.product_name}</p><p className="text-xs text-slate-400">{r.batch_id ? `Batch #${r.batch_id}: ` : ''}{r.label}</p><ExpiryLabel date={r.expiration_date} /></div>
+      {visible.map((r) => <div key={`${r.product_id}-${r.batch_id ?? 0}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
+        <div className="min-w-0 flex-1 break-words">
+          <p className="font-semibold text-white">{r.product_name}</p>
+          <ExpiryLabel date={r.expiration_date} />
+        </div>
         <span className="text-sm">{r.quantity} {r.base_unit}</span>
-        {r.batch_id && <button className="btn-ghost" title="Correct batch expiration" onClick={() => { setEditing(r); setDate(r.expiration_date ?? '') }}><Pencil className="h-4 w-4" /></button>}
+        <button className="btn-ghost" title="Edit expiration date" onClick={() => { setEditing(r); setDate(r.expiration_date ?? '') }}><Pencil className="h-4 w-4" /></button>
       </div>)}
       {!visible.length && <p className="py-8 text-center text-slate-400">No stock matches this filter.</p>}
     </div>}
     {editing && <div className="mt-4 border-t border-ink-line pt-4">
-      <p className="mb-2 text-sm">{editing.product_name} / {editing.label}</p>
+      <p className="mb-2 text-sm font-medium text-white">{editing.product_name}</p>
       <label className="label" htmlFor="batch-date">Expiration date</label>
       <input id="batch-date" className="input w-full" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-      <div className="mt-3 flex gap-2"><button className="btn-primary" disabled={busy || !date} onClick={() => void save()}>Save Date</button><button className="btn-ghost" disabled={busy} onClick={() => setEditing(null)}>Cancel</button></div>
+      <div className="mt-3 flex gap-2"><button className="btn-primary" disabled={busy} onClick={() => void save()}>Save Date</button><button className="btn-ghost" disabled={busy} onClick={() => setEditing(null)}>Cancel</button></div>
     </div>}
   </Modal>
 }
@@ -100,7 +116,7 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
       try {
         const data = await window.api.inventory.expiration()
         if (!alive || request !== sequence) return
-        const alerts = data.filter((r) => expirationStatus(r.expiration_date) !== 'OK')
+        const alerts = data.filter((r) => r.expiration_date && expirationStatus(r.expiration_date) !== 'OK' && expirationStatus(r.expiration_date) !== 'UNKNOWN')
         setRows(alerts); setError(false); setLoading(false)
         if (first && remind && alerts.length) setReminder(true)
         first = false
@@ -115,7 +131,7 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
   }, [remind])
 
   const expired = rows.filter((r) => expirationStatus(r.expiration_date) === 'EXPIRED').length
-  const unknown = rows.filter((r) => expirationStatus(r.expiration_date) === 'UNKNOWN').length
+  const expiringSoon = rows.length - expired
 
   // When all expiration dates are healthy, do not render a banner to keep the header clean and uncluttered
   if (!loading && !error && rows.length === 0) {
@@ -130,11 +146,11 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
           <Modal
             open
             onClose={() => setReminder(false)}
-            title="Paalala sa Expiration"
+            title="Expiration Reminder"
             footer={
               <>
                 <button className="btn-ghost" onClick={() => setReminder(false)}>
-                  Mamaya
+                  Later
                 </button>
                 <button
                   className="btn-primary"
@@ -143,13 +159,13 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
                     setOpen(true)
                   }}
                 >
-                  Tingnan ang Items
+                  View Items
                 </button>
               </>
             }
           >
             <p className="text-sm text-slate-300">
-              May {expired} item/batch na expired, {rows.length - expired - unknown} na malapit nang ma-expire, at {unknown} na kailangang lagyan ng expiration date.
+              You have {expired > 0 ? `${expired} expired item(s)` : ''}{expired > 0 && expiringSoon > 0 ? ' and ' : ''}{expiringSoon > 0 ? `${expiringSoon} item(s) expiring soon` : ''}.
             </p>
           </Modal>
         )}
@@ -165,12 +181,9 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
           <AlertTriangle className={`h-4 w-4 shrink-0 ${expired ? 'text-red-400' : 'text-amber-400'}`} />
           <span className="truncate text-slate-200">
             {expired > 0 ? <strong className="font-semibold text-red-400">{expired} expired</strong> : null}
-            {expired > 0 && rows.length - expired - unknown > 0 ? <span className="text-slate-500"> · </span> : null}
-            {rows.length - expired - unknown > 0 ? (
-              <span className="text-amber-300 font-medium">{rows.length - expired - unknown} expiring soon</span>
-            ) : null}
-            {unknown > 0 && expired === 0 && rows.length - expired - unknown === 0 ? (
-              <span className="text-amber-300 font-medium">{unknown} need date review</span>
+            {expired > 0 && expiringSoon > 0 ? <span className="text-slate-500"> · </span> : null}
+            {expiringSoon > 0 ? (
+              <span className="text-amber-300 font-medium">{expiringSoon} expiring soon</span>
             ) : null}
           </span>
         </div>
@@ -195,11 +208,11 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
         <Modal
           open
           onClose={() => setReminder(false)}
-          title="Paalala sa Expiration"
+          title="Expiration Reminder"
           footer={
             <>
               <button className="btn-ghost" onClick={() => setReminder(false)}>
-                Mamaya
+                Later
               </button>
               <button
                 className="btn-primary"
@@ -208,13 +221,13 @@ export function ExpirationAlerts({ remind = false }: { remind?: boolean }): Reac
                   setOpen(true)
                 }}
               >
-                Tingnan ang Items
+                View Items
               </button>
             </>
           }
         >
           <p className="text-sm text-slate-300">
-            May {expired} item/batch na expired, {rows.length - expired - unknown} na malapit nang ma-expire, at {unknown} na kailangang lagyan ng expiration date.
+            You have {expired > 0 ? `${expired} expired item(s)` : ''}{expired > 0 && expiringSoon > 0 ? ' and ' : ''}{expiringSoon > 0 ? `${expiringSoon} item(s) expiring soon` : ''}.
           </p>
         </Modal>
       )}

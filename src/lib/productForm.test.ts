@@ -139,5 +139,33 @@ describe('v1.0.7 product form helpers', () => {
     expect(input.units).toEqual(f.units)
     expect(input.initial_stock_base).toBe(0)
     expect(input.has_expiration).toBe(false)
+    expect(input.expiration_mode).toBe('NONE')
+    expect(input.expiration_date).toBeNull()
+  })
+
+  it('sets per-item expiration properly when expiration_date is provided', () => {
+    const f = { ...newProductForm(), name: 'Chocomucho', expiration_date: '2026-12-31' }
+    const input = createProductInput(f)
+    expect(input.has_expiration).toBe(true)
+    expect(input.expiration_mode).toBe('ITEM')
+    expect(input.expiration_date).toBe('2026-12-31')
+
+    const updatePayload = updateProductInput(f)
+    expect(updatePayload.has_expiration).toBe(true)
+    expect(updatePayload.expiration_mode).toBe('ITEM')
+    expect(updatePayload.expiration_date).toBe('2026-12-31')
+  })
+
+  it('never blocks undated products with expiration flags', () => {
+    const f = { ...newProductForm(), name: 'Chocomucho', expiration_date: null }
+    const input = createProductInput(f)
+    expect(input.has_expiration).toBe(false)
+    expect(input.expiration_mode).toBe('NONE')
+    expect(input.expiration_date).toBeNull()
+
+    const updatePayload = updateProductInput(f)
+    expect(updatePayload.has_expiration).toBe(false)
+    expect(updatePayload.expiration_mode).toBe('NONE')
+    expect(updatePayload.expiration_date).toBeNull()
   })
 })

@@ -43,9 +43,9 @@ import { cashInputFromCents } from '../lib/payment'
 import { availableBase, cartHasStockConflict, maxQuantity, reservedBase } from '../lib/cartStock'
 import { localDate } from '@shared/expiration'
 
-const saleStock = (p: Product): number => p.expiration_mode === 'ITEM' && (!p.expiration_date || p.expiration_date < localDate()) ? 0
-  : p.expiration_mode === 'BATCH' ? (p.batches ?? []).reduce((n, b) => n + (b.expiration_date && b.expiration_date >= localDate() ? b.quantity : 0), 0)
-    : p.sellable_stock ?? p.stock
+const saleStock = (p: Product): number =>
+  (p.expiration_date && p.expiration_date < localDate() ? 0 : p.sellable_stock ?? p.stock)
+
 
 interface CartItem {
   product_id: number
@@ -315,7 +315,7 @@ export function POS(): React.JSX.Element {
             const cartItem = cartItems.find(item => item.product_id === p.id)
             const stock = saleStock(p)
             const available = availableBase(stock, cartItem)
-            const blocked = p.stock - stock
+            const isExpired = Boolean(p.expiration_date && p.expiration_date < localDate())
             const low = available > 0 && available <= p.low_stock_threshold
             const out = !allowNeg && available <= 0
             return (
@@ -325,7 +325,11 @@ export function POS(): React.JSX.Element {
                   if (out) {
                     playErrorTone()
                     hapticError()
-                    toastError(blocked > 0 ? 'Expired or undated stock is blocked' : 'Out of stock', `Available for sale: ${stock} ${p.base_unit}. You can enable 'Sell without stock' in Settings.`)
+                    if (isExpired) {
+                      toastError('This product is expired and blocked from sale', `Expired on ${p.expiration_date}. Sellable: ${stock} ${p.base_unit}.`)
+                    } else {
+                      toastError('Out of stock', `Available for sale: ${stock} ${p.base_unit}. You can enable 'Sell without stock' in Settings.`)
+                    }
                   } else {
                     playScanBeep()
                     hapticTap()
@@ -338,11 +342,11 @@ export function POS(): React.JSX.Element {
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                   <span className="truncate text-xs font-bold text-brand-400">{p.sku}</span>
                   <span className={`text-xs font-bold ${available <= 0 ? (allowNeg ? 'text-amber-400' : 'text-red-400') : low ? 'text-amber-400' : 'text-slate-500'}`}>
-                    {blocked > 0 ? `Sellable: ${stock}` : cartItem ? `Available: ${available} / ${stock}` : `Stock: ${stock}`} {p.base_unit}
+                    {isExpired ? 'EXPIRED' : cartItem ? `Available: ${available} / ${stock} ${p.base_unit}` : `Stock: ${stock} ${p.base_unit}`}
                   </span>
                 </div>
                 <p className="line-clamp-2 min-h-12 break-words text-base font-semibold leading-6 text-white">{p.name}</p>
-                {blocked > 0 && <p className="truncate text-xs text-red-400">{blocked} expired / undated</p>}
+                {isExpired && <p className="truncate text-xs font-semibold text-red-400">Expired: {p.expiration_date}</p>}
                 <p className="mt-auto text-xl font-bold text-brand-400">{money(p.default_price_c)}</p>
               </button>
             )

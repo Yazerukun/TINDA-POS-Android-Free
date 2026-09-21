@@ -146,18 +146,12 @@ export async function restock(input: {
     await db.products.update(product.id, { purchase_cost_c: Math.round(costC / conversion), updated_at: nowIso() })
   }
 
-  if (input.expiration_date && product.has_expiration) {
-    if ((product.expiration_mode ?? 'ITEM') === 'ITEM') {
-      await db.products.update(product.id, { expiration_date: input.expiration_date })
-    } else {
-      await insertRow(db.batches, {
-        product_id: product.id,
-        label: text(input.batch_label) || `Batch ${localDateKey()}`,
-        expiration_date: input.expiration_date,
-        quantity: baseQuantity,
-        created_at: nowIso()
-      })
-    }
+  if (input.expiration_date) {
+    await db.products.update(product.id, {
+      expiration_date: input.expiration_date,
+      has_expiration: true,
+      expiration_mode: 'ITEM'
+    })
   }
   const refreshed = await db.products.get(product.id)
   await recordReceiving({
@@ -287,32 +281,16 @@ export async function setBatchDate(id: number, date: string): Promise<void> {
 /** Expiring/expired stock, earliest first — used by the alerts strip. */
 export async function expirationEntries(): Promise<ExpirationEntry[]> {
   const products = await db.products.toArray()
-  const batches = await db.batches.toArray()
   const entries: ExpirationEntry[] = []
   for (const product of products) {
-    if (!product.has_expiration || product.status === 'ARCHIVED') continue
-    const productBatches = batches.filter((batch) => batch.product_id === product.id && num(batch.quantity) > 0)
-    if (productBatches.length) {
-      for (const batch of productBatches) {
-        entries.push({
-          product_id: product.id,
-          product_name: product.name,
-          base_unit: product.base_unit,
-          batch_id: batch.id,
-          label: batch.label,
-          expiration_date: batch.expiration_date,
-          quantity: num(batch.quantity)
-        })
-      }
-      continue
-    }
+    if (product.status === 'ARCHIVED') continue
     if (product.expiration_date) {
       entries.push({
         product_id: product.id,
         product_name: product.name,
         base_unit: product.base_unit,
         batch_id: null,
-        label: 'Product expiry',
+        label: 'Product Expiry',
         expiration_date: product.expiration_date,
         quantity: num(product.stock)
       })

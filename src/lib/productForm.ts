@@ -87,8 +87,8 @@ export function editProductForm(product: Product): ProductFormData {
     description: product.description,
     supplier_id: product.supplier_id,
     notes: product.notes,
-    expiration_mode: product.expiration_mode,
-    expiration_date: product.expiration_date,
+    expiration_mode: product.expiration_date ? 'ITEM' : 'NONE',
+    expiration_date: product.expiration_date ?? null,
     current_stock: product.stock,
     units: (product.units && product.units.length > 0 ? product.units : []).map(unitInputFrom)
   }
@@ -114,6 +114,7 @@ export function firstUnitError(units: ProductUnitInput[]): string | null {
 // has_expiration is intentionally NOT sent: the backend merges undefined
 // fields from the stored product, so editing never flips that flag.
 export function updateProductInput(form: ProductFormData): Partial<ProductInput> {
+  const hasExpiry = Boolean(form.expiration_date)
   return {
     name: form.name,
     sku: form.sku,
@@ -126,7 +127,9 @@ export function updateProductInput(form: ProductFormData): Partial<ProductInput>
     description: form.description,
     supplier_id: form.supplier_id,
     notes: form.notes,
-    ...(form.expiration_mode !== undefined ? { expiration_mode: form.expiration_mode, expiration_date: form.expiration_date || null } : {}),
+    has_expiration: hasExpiry,
+    expiration_mode: hasExpiry ? 'ITEM' : 'NONE',
+    expiration_date: form.expiration_date || null,
     units: form.units
   }
 }
@@ -137,6 +140,7 @@ export function createProductInput(form: ProductFormData): ProductInput {
   const units = form.units.length > 0
     ? form.units
     : [{ name: form.base_unit, conversion_to_base: 1, barcode: null, selling_price_c: 0, is_default: true }]
+  const hasExpiry = Boolean(form.expiration_date)
   return {
     name: form.name,
     sku: form.sku,
@@ -149,8 +153,8 @@ export function createProductInput(form: ProductFormData): ProductInput {
     initial_stock_base: form.initial_stock_base,
     description: form.description,
     supplier_id: form.supplier_id,
-    has_expiration: false,
-    expiration_mode: form.expiration_mode ?? 'NONE',
+    has_expiration: hasExpiry,
+    expiration_mode: hasExpiry ? 'ITEM' : 'NONE',
     expiration_date: form.expiration_date || null,
     notes: form.notes,
     units

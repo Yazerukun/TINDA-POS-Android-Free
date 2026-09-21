@@ -448,16 +448,14 @@ function CsvImportModal({ onDone, onClose }: { onDone: () => void; onClose: () =
 }
 
 function RestockModal({ products, initial, onDone, onClose }: { products: Product[]; initial: Product | null; onDone: () => void; onClose: () => void }): React.JSX.Element {
-  const [expiry, setExpiry] = useState('')
-  const [batchLabel, setBatchLabel] = useState('')
+  const [expiry, setExpiry] = useState(initial?.expiration_date ?? '')
   const [productId,setProductId]=useState(initial?.id ?? products[0]?.id ?? 0); const [quantity,setQuantity]=useState(''); const [unit,setUnit]=useState(initial?.units[0]?.name ?? initial?.base_unit ?? ''); const [supplierId,setSupplierId]=useState<number|null>(initial?.supplier_id ?? null); const [suppliers,setSuppliers]=useState<Supplier[]>([]); const [cost,setCost]=useState('0'); const [reference,setReference]=useState(''); const [notes,setNotes]=useState(''); const [busy,setBusy]=useState(false)
   useEffect(()=>{ void window.api.suppliers.list({status:'ACTIVE'}).then(setSuppliers) },[])
   const product=products.find(p=>p.id===productId); const selectedUnit=product?.units.find(u=>u.name===unit) ?? product?.units[0]; const qty=Number(quantity); const addBase=Number.isFinite(qty) ? qty*(selectedUnit?.conversion_to_base ?? 1):0; const newStock=(product?.stock??0)+addBase
-  const save=async()=>{setBusy(true);try{await window.api.inventory.restock({product_id:productId,quantity:qty,unit_name:selectedUnit?.name??'',supplier_id:supplierId,cost_c:Math.round(Number(cost)*100),reference,notes,expiration_date:product?.expiration_mode==='BATCH'?expiry:undefined,batch_label:batchLabel});toastSuccess('Restock saved');onDone()}catch(e){toastError('Restock failed',String((e as Error).message||e))}finally{setBusy(false)}}
+  const save=async()=>{setBusy(true);try{await window.api.inventory.restock({product_id:productId,quantity:qty,unit_name:selectedUnit?.name??'',supplier_id:supplierId,cost_c:Math.round(Number(cost)*100),reference,notes,expiration_date:expiry||undefined});toastSuccess('Restock saved');onDone()}catch(e){toastError('Restock failed',String((e as Error).message||e))}finally{setBusy(false)}}
   return <Modal open onClose={onClose} title="Restock Inventory" maxWidth="max-w-lg" footer={<><button className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={busy || !product || !(qty>0)} onClick={()=>void save()}>Save Restock</button></>}><div className="space-y-3">
-    <div><label className="label">Product</label><select className="input w-full" value={productId} onChange={e=>{const id=Number(e.target.value);setProductId(id);const p=products.find(x=>x.id===id);setUnit(p?.units[0]?.name??p?.base_unit??'')}}>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-    {product?.expiration_mode === 'BATCH' && <div className="grid grid-cols-2 gap-3"><div><label className="label">Batch label (optional)</label><input aria-label="Batch label" className="input w-full" value={batchLabel} onChange={(e) => setBatchLabel(e.target.value)} /></div><div><label className="label">Batch expiration *</label><input aria-label="Batch expiration" type="date" className="input w-full" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></div></div>}
-    {product?.expiration_mode === 'ITEM' && <p className="text-sm text-amber-300">Per-item expiration: {product.expiration_date}</p>}
+    <div><label className="label">Product</label><select className="input w-full" value={productId} onChange={e=>{const id=Number(e.target.value);setProductId(id);const p=products.find(x=>x.id===id);setUnit(p?.units[0]?.name??p?.base_unit??'');setExpiry(p?.expiration_date??'')}}>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+    <div className="space-y-1"><label className="label">Expiration Date (Optional)</label><input aria-label="Expiration date" type="date" className="input w-full" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></div>
     <div className="rounded-lg border border-ink-line p-3 text-sm">Current Stock: <b>{product?.stock ?? 0} {product?.base_unit}</b></div><div className="grid grid-cols-2 gap-3"><div><label className="label">Quantity to Add</label><input className="input w-full" type="number" min="0.01" step="any" value={quantity} onChange={e=>setQuantity(e.target.value)}/></div><div><label className="label">Unit</label><select className="input w-full" value={selectedUnit?.name??''} onChange={e=>setUnit(e.target.value)}>{product?.units.map(u=><option key={u.id} value={u.name}>{u.name}</option>)}</select></div></div>
     <div className="rounded-lg bg-brand-500/10 p-3 text-sm">Conversion: {quantity||0} × {selectedUnit?.conversion_to_base??1} = {addBase||0} {product?.base_unit}<br/><b>New Stock: {newStock||product?.stock||0} {product?.base_unit}</b></div>
     <div><label className="label">Supplier (optional)</label><select className="input w-full" value={supplierId??''} onChange={e=>setSupplierId(e.target.value?Number(e.target.value):null)}><option value="">None</option>{suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div><div><label className="label">Unit Cost (₱)</label><input className="input w-full" type="number" min="0" value={cost} onChange={e=>setCost(e.target.value)}/></div><div><label className="label">Reference (optional)</label><input className="input w-full" value={reference} onChange={e=>setReference(e.target.value)}/></div><div><label className="label">Notes (optional)</label><textarea className="input w-full" value={notes} onChange={e=>setNotes(e.target.value)}/></div>
@@ -465,7 +463,6 @@ function RestockModal({ products, initial, onDone, onClose }: { products: Produc
 }
 
 function WithdrawModal({ products, initial, onDone, onClose }: { products: Product[]; initial: Product | null; onDone: () => void; onClose: () => void }): React.JSX.Element {
-  const [batchId, setBatchId] = useState<number | undefined>()
   const [productId, setProductId] = useState(initial?.id ?? products[0]?.id ?? 0)
   const [quantity, setQuantity] = useState('')
   const [unit, setUnit] = useState(initial?.units[0]?.name ?? initial?.base_unit ?? '')
@@ -481,7 +478,7 @@ function WithdrawModal({ products, initial, onDone, onClose }: { products: Produ
   const save = async () => {
     setBusy(true)
     try {
-      await window.api.inventory.withdraw({ product_id: productId, quantity: qty, unit_name: selectedUnit?.name ?? '', reason, notes, batch_id: batchId })
+      await window.api.inventory.withdraw({ product_id: productId, quantity: qty, unit_name: selectedUnit?.name ?? '', reason, notes })
       toastSuccess('Withdrawal saved')
       onDone()
     } catch (e) { toastError('Withdrawal failed', String((e as Error).message || e)) } finally { setBusy(false) }
@@ -490,7 +487,6 @@ function WithdrawModal({ products, initial, onDone, onClose }: { products: Produ
     <div className="space-y-3">
       <div><label className="label">Product</label><select className="input w-full" value={productId} onChange={(e) => { const id = Number(e.target.value); setProductId(id); const p = products.find((x) => x.id === id); setUnit(p?.units[0]?.name ?? p?.base_unit ?? '') }}>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
       <div className="rounded-lg border border-ink-line p-3 text-sm">Current Stock: <b>{product?.stock ?? 0} {product?.base_unit}</b></div>
-      {product?.expiration_mode === 'BATCH' && <div><label className="label">Batch *</label><select aria-label="Withdrawal batch" className="input w-full" value={batchId ?? ''} onChange={(e) => setBatchId(e.target.value ? Number(e.target.value) : undefined)}><option value="">Select batch</option>{product.batches?.map((b) => <option key={b.id} value={b.id}>#{b.id} {b.label} / {b.expiration_date ?? 'Undated'} / {b.quantity} {product.base_unit}</option>)}</select></div>}
       <div className="grid grid-cols-2 gap-3">
         <div><label className="label">Quantity to Withdraw</label><input className="input w-full" type="number" min="0.01" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
         <div><label className="label">Unit</label><select className="input w-full" value={selectedUnit?.name ?? ''} onChange={(e) => setUnit(e.target.value)}>{product?.units.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}</select></div>
@@ -728,15 +724,30 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
           </div>
         )}
         <div className="col-span-2">
-          <label className="label" htmlFor="expiration-mode">Expiration Tracking</label>
-          <select id="expiration-mode" className="input w-full" value={f.expiration_mode ?? 'NONE'} onChange={(e) => set({ expiration_mode: e.target.value as Product['expiration_mode'], expiration_date: null })}>
-            <option value="NONE">None</option><option value="ITEM">Per Item</option><option value="BATCH">Per Batch</option>
-          </select>
+          <div className="flex items-center justify-between">
+            <label className="label" htmlFor="product-expiration">Expiration Date (Optional)</label>
+            {f.expiration_date && (
+              <button
+                type="button"
+                className="text-xs font-semibold text-brand-400 hover:text-brand-300 transition"
+                onClick={() => set({ expiration_date: null, expiration_mode: 'NONE' })}
+              >
+                Clear Date
+              </button>
+            )}
+          </div>
+          <input
+            id="product-expiration"
+            className="input w-full"
+            type="date"
+            value={f.expiration_date ?? ''}
+            onChange={(e) => set({
+              expiration_date: e.target.value || null,
+              expiration_mode: e.target.value ? 'ITEM' : 'NONE'
+            })}
+          />
+          <p className="mt-1 text-[11px] text-slate-500">Leave blank if the item does not expire. Undated stock is always sellable.</p>
         </div>
-        {(f.expiration_mode === 'ITEM' || (f.expiration_mode === 'BATCH' && (f.initial_stock_base > 0 || (form.expiration_mode !== 'BATCH' && (f.current_stock ?? 0) > 0)))) && <div className="col-span-2">
-          <label className="label" htmlFor="product-expiration">{f.expiration_mode === 'ITEM' ? 'Expiration Date *' : 'Existing / opening stock expiration *'}</label>
-          <input id="product-expiration" className="input w-full" type="date" value={f.expiration_date ?? ''} onChange={(e) => set({ expiration_date: e.target.value })} />
-        </div>}
         <div className="col-span-2">
           <label className="label">Selling Units (Multi-unit / Retail)</label>
           <div className="space-y-2">
