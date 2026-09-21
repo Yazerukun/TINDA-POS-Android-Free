@@ -1,170 +1,235 @@
 <div align="center">
 
+<img src="src/assets/tinda-logo.png" alt="TINDA POS Logo" width="180" style="margin-bottom: 12px; border-radius: 24px;" />
+
 # 📱 TINDA POS Free for Android
 
-**Free, 100% offline point-of-sale and inventory system for Philippine sari-sari stores, minimarts, and small businesses on Android phones and tablets.**
+**Fast, 100% offline, sign-language-friendly Point of Sale and Inventory System designed for Philippine sari-sari stores, minimarts, and retail counters on Android phones and tablets.**
 
-### v1.0.27 Stable · TINDA BANTAY Edition
+### v1.0.32 Stable · Clean Shelf Life & POS Utang Edition
 
-[![Android Version](https://img.shields.io/badge/Android-7.0%2B-green?logo=android&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
-[![Version](https://img.shields.io/badge/Release-v1.0.27%20Stable-blue)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
-[![License](https://img.shields.io/badge/License-Free%20for%20Small%20Business-emerald)](#license)
-[![Offline First](https://img.shields.io/badge/Storage-100%25%20Offline%20(Dexie)-orange)](#your-data-and-privacy)
-[![Tests](https://img.shields.io/badge/Tests-100%2F100%20Vitest%20Pass-brightgreen)](#development)
+[![Android Version](https://img.shields.io/badge/Android-7.0%2B%20(API%2024%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
+[![Release](https://img.shields.io/badge/Release-v1.0.32%20Stable-2563EB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.32)
+[![Storage](https://img.shields.io/badge/Database-100%25%20Offline%20(Dexie)-F59E0B?style=for-the-badge&logo=sqlite&logoColor=white)](#-data-privacy--offline-first)
+[![Test Suite](https://img.shields.io/badge/Tests-107%2F107%20Passed-10B981?style=for-the-badge&logo=vitest&logoColor=white)](#-automated-testing)
+[![License](https://img.shields.io/badge/License-Free%20for%20Small%20Business-8B5CF6?style=for-the-badge)](#-license)
 
-[Download APK (v1.0.27)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest) · [User Manual (Bisaya & English)](release-docs/USERMANUAL.md) · [Report an Issue](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
+<br/>
+
+[📥 **Download Release APK (v1.0.32)**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.32/TindaPOS-Free-1.0.32.apk) &nbsp;•&nbsp; 
+[📖 **User Manual**](release-docs/USERMANUAL.md) &nbsp;•&nbsp; 
+[🚀 **Release Notes**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.32) &nbsp;•&nbsp; 
+[🐛 **Report an Issue**](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
 
 ---
 
 </div>
 
-## 🏪 Your Counter in Your Pocket
+## 🏪 The Complete Retail Counter in Your Pocket
 
-**TINDA POS Android Free** brings the complete, trusted TINDA POS retail workflow to Android mobile phones and tablets. Record everyday transactions, manage inventory, track customer credit (*utang*), connect direct Bluetooth receipt printers, and reconcile cash drawer shifts without needing an active internet connection.
+**TINDA POS Free for Android** empowers neighborhood retailers, sari-sari stores, canteens, and micro-merchants with an enterprise-grade POS counter directly on standard Android smartphones and tablets. 
 
-Your store database stays 100% offline on your device — no cloud accounts, no subscription fees, no locked features, and no remote dependencies.
+Built from the ground up to handle high-frequency everyday retail: scan barcodes with your device camera, ring up multi-unit retail sales (*tingi*, pieces, packs, cases), manage customer store credit (*utang*), print receipts over Bluetooth, track shelf life, and balance cash drawers with zero cloud dependencies.
+
+> [!TIP]
+> **100% True Offline Operation:** Your store database stays permanently on your device in persistent local storage. There are no monthly subscriptions, no sign-ups, no remote server lockouts, and no requirement for an active internet connection or mobile data.
 
 ---
 
-## ✨ What's New in v1.0.27 (TINDA BANTAY)
+## ⚡ What's New in v1.0.32
 
-| Feature / Improvement | What it means at the counter |
-| --- | --- |
-| 🟢 **TINDA BANTAY (172-Item Market Price Catalog)** | Access a comprehensive 172-item reference catalog of Philippine commodities (Lucky Me, Bear Brand, San Miguel, Datu Puti, Colgate, etc.) complete with official DTI SRP ranges and prevailing market prices. |
-| 📦 **100% Offline Pre-bundled Seed** | All 172 commodity records are compiled directly into the application (`seedPriceReferences.ts`). Even on brand-new offline installations with zero internet, you have full access out-of-the-box. |
-| ⚡ **Automatic Real-Time Live Sync** | When online, TINDA POS automatically syncs market prices in the background on launch and network reconnection, with a pulsing 🟢 **LIVE** indicator badge. |
-| 💡 **1-Tap "Adopt Price"** | When adding or editing inventory, the app automatically suggests official DTI SRP and market prices. Tap **Adopt Price** to instantly apply the recommended selling price. |
-| 🔄 **Universal `.tinda-backup` (100% Windows Parity)** | Seamless bidirectional backup exchange between Android (Dexie IndexedDB) and Windows (SQLite). Back up on your phone and restore on your PC, or vice versa with zero data loss. |
-| 📲 **Native In-App APK Updater** | Automatically checks for updates from GitHub releases, downloads `TindaPOS-Free-1.0.27.apk` with progress tracking, and triggers the native Android installer. |
-| 🧪 **100/100 Automated Vitest Tests** | Expanded test coverage verifying price comparisons, fuzzy product matching, offline fallbacks, and Dexie v3 schema migrations. |
+| Enhancement | What It Delivers at the Counter |
+| :--- | :--- |
+| 🛡️ **Clean Per-Item Expiration (Chocomucho Fix)** | Products created without an explicit expiration date (candies, snacks, dry goods) are **never blocked** and are 100% sellable immediately. Expiration blocking strictly triggers only when an item has an explicit date in the past. |
+| 🏷️ **Frictionless Inventory Modals** | Eliminated multi-batch overhead. Adding or editing products features an intuitive, optional **Expiration Date** picker with an instant "Clear Date" action. |
+| 🤝 **Inline POS Customer Picker for Utang** | Cashiers can select an existing customer or tap **+ New Customer** directly from the Checkout modal to charge store credit with live balance computation. |
+| 📷 **Camera Barcode Auto-Mirroring** | Barcodes saved in the Inventory catalog now immediately mirror across the POS catalog for instant camera scanner detection. |
+| 🛠️ **React Lifecycle Hotfix (No Error #310)** | Top-level state subscription guarantees smooth, crash-free POS navigation regardless of catalog size. |
+| 🌐 **100% English UI Standard** | Standardized all modals, confirmation alerts, receipts, and navigation headers into clear, professional English. |
 
 ---
 
 ## 📥 Download & Installation
 
-Get the official release package from the [Releases page](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest):
+Download the official signed release package directly to your Android phone or tablet:
 
-| File | Size | Purpose |
-| --- | --- | --- |
-| [**`TindaPOS-Free-1.0.27.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.27/TindaPOS-Free-1.0.27.apk) | ~3.5 MB | **Recommended**. Official signed release APK for Android phones and tablets. |
+| Package Asset | Size | Checksum / Integrity | Target Devices |
+| :--- | :---: | :--- | :--- |
+| [**`TindaPOS-Free-1.0.32.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.32/TindaPOS-Free-1.0.32.apk) | **6.97 MB** | `a4310fcc475f9a6250937237a6849cf6a2bc7b8c6257795dfc9f942ad636f78d` | Android 7.0 (Nougat) to Android 15+ |
+| [**`SHA256SUMS-v1.0.32.txt`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.32/SHA256SUMS-v1.0.32.txt) | 92 B | Official SHA-256 hash manifest | Checksum verification |
 
 > [!NOTE]
-> **Data Preservation on Upgrades:** Installing a newer APK over an existing version **preserves all your store records, sales, inventory, and settings**. All official releases are signed with the same persistent key (`CN=TINDA POS Free`).
+> **Upgrading from Earlier Versions:** Installing `TindaPOS-Free-1.0.32.apk` over any previous version (v1.0.27 through v1.0.31) **fully preserves your sales history, inventory, customer ledger, and settings**. All official builds are cryptographically signed with the official persistent keystore.
 
 ### System Requirements
-- **OS:** Android 7.0 (Nougat, API 24) or higher (tested up to Android 14+).
-- **RAM:** Minimum 2 GB (runs smoothly even on budget devices).
-- **Storage:** ~20 MB free space.
-- **Hardware:** Optional Bluetooth for thermal receipt printers, optional camera for barcode scanning.
+- **Operating System:** Android 7.0 (API level 24) or higher.
+- **Memory (RAM):** 2 GB minimum (optimized for smooth performance on entry-level hardware).
+- **Disk Storage:** ~25 MB free space.
+- **Peripherals (Optional):** Bluetooth for 58mm/80mm thermal ESC/POS receipt printers; camera for barcode scanning.
 
 ---
 
-## 🔄 In-App Software Updates
-
-TINDA POS Android Free updates itself directly from official GitHub releases — no Google Play Store required:
-
-1. **Automatic Check:** Once every 24 hours on launch, the app checks for new stable updates. You can also check manually at **More → Settings → About → Software Update → Check for Updates**.
-2. **One-Tap Download:** When an update is detected, tap **Download Update**. A native progress bar tracks download progress.
-3. **Seamless Installation:** The app launches Android's native package installer with your data fully preserved.
-
----
-
-## 🛠️ Everyday Tools & Features
-
-| Module | Features Included |
-| --- | --- |
-| **POS & Checkout** | Fast product search, category chip pills, barcode scanner, quantity adjustments, Hold & Resume carts, and itemized discounts. |
-| **Payments** | Cash with fast denomination buttons & change computation, GCash reference logging, Maya reference logging, Split Payments, and Customer Utang (Credit). |
-| **Utang Tracking** | Customer ledger, balance tracking, credit limits, payment history, and partial settlements. |
-| **Inventory & Expiry** | Low-stock indicators, product batch numbers, expiry alerts, receiving logs, CSV product import/export, and stock movements. |
-| **Shift Reconciliation** | Cash Count denomination breakdown (bills & coins), required cash count before Z-Read, and drawer over/short computation. |
-| **Shift Reports** | **X-Read** (interim shift report) and **Z-Read** (final shift closing) with full audit summary and reprint capabilities. |
-| **Thermal Printing** | Auto-print on checkout, receipt reprints, 58mm/80mm thermal width support, and digital share sheet. |
-| **Data Management** | 100% offline IndexedDB persistence, manual JSON database backups, and validated backup restore. |
-
----
-
-## 🖨️ Thermal Printer Setup Guide
-
-Printing receipts with your mobile phone or tablet takes less than a minute:
-
-1. **Pair Your Printer:**
-   - Turn on your 58mm or 80mm Bluetooth thermal printer.
-   - Go to your Android device's Bluetooth settings (or open **TINDA POS → More → Settings → Printer → Pair Bluetooth**).
-   - Pair with your printer (default PIN is usually `0000` or `1234`).
-2. **Select Printer in App:**
-   - In **Settings → Printer**, tap your paired thermal printer.
-   - Choose your paper width (**58mm** or **80mm**).
-   - Tap **Test Print** to verify alignment.
-3. **Ready to Sell:**
-   - Enable **Auto-print after sale** to automatically print customer receipts upon completing checkout.
-
----
-
-## 💰 Cash Reconciliation Protocol: Cash Count First, Then Z-Read
-
-To ensure exact cash drawer balance at the end of each shift:
+## 🚀 Key Modules & Capabilities
 
 ```mermaid
 flowchart LR
-    A["Ring Up Sales & Transactions"] --> B["Open Reports > Cash Count"]
-    B --> C["Count & Enter Bills / Coins"]
-    C --> D["Save Cash Count"]
-    D --> E["Open Reports > Z-Read"]
-    E --> F["Finalize Shift & Print Report"]
+    A["🛒 POS & Cart"] --> B["💳 Multi-Payment"]
+    B --> C1["💵 Cash + Change"]
+    B --> C2["📱 GCash / Maya"]
+    B --> C3["🤝 Customer Utang"]
+    A --> D["📦 Real-Time Inventory"]
+    D --> E1["🏷️ Selling Units (Tingi)"]
+    D --> E2["⏳ Expiration Alerts"]
+    D --> E3["💡 DTI SRP Guide"]
+    B --> F["🖨️ Thermal Receipt"]
+    A --> G["📊 Cash Reconciliation"]
+    G --> H["🧾 X-Read & Z-Read"]
 ```
 
-1. Finish all pending sales and expenses for the shift.
-2. Open **Reports → Cash Count** while your shift is open.
-3. Count your cash drawer and input the quantity of each bill and coin denomination.
-4. Tap **Save Cash Count**.
-5. Open **Reports → Z-Read**, review the verified cash vs. expected cash figures, and close the shift.
+### 1. 🛒 High-Speed Point of Sale (POS)
+- **Fluid Touch Grid:** Instant search by product name, SKU, or category pill filter with optical typography and tactile spring responses.
+- **Built-in Camera Barcode Scanner:** Scan UPC, EAN, or custom barcodes directly with your phone's camera.
+- **Selling Units (Tingi / Multi-Unit Retail):** Sell items individually, in packs, or by wholesale cases with automatic stock conversion (e.g., 1 Box = 24 Pieces).
+- **Hold & Resume Carts:** Hold a customer's cart while they pick up another item, ring up another customer, and resume with one tap.
+- **Itemized & Cart Discounts:** Apply percentage or fixed-peso senior/PWD/suki discounts with audit logging.
+
+### 2. 🤝 Customer Utang & Store Credit Ledger
+- **Inline POS Charging:** Select a customer directly on checkout to charge store credit.
+- **Customer Directory:** Track customer phone numbers, addresses, personal credit limits, and total outstanding balances.
+- **Credit Limit Safeguards:** Immediate warnings if an order exceeds the customer's credit limit.
+- **Fast Settlements:** Accept partial or full cash payments against outstanding balances with automatic shift register cash-in logging.
+
+### 3. 📦 Inventory & Shelf-Life Management
+- **Per-Item Expiration:** Track expiration dates on perishable items. Products without expiration dates remain 100% sellable with zero blockers.
+- **Low Stock Warnings:** Visual alerts when inventory drops below your customizable threshold.
+- **Fast Restock & Withdrawal:** Add new stock with supplier purchase cost tracking or record damaged/expired withdrawals.
+- **CSV Bulk Import & Export:** Populate your entire store catalog in minutes using standard Excel/CSV templates.
+
+### 4. 🟢 TINDA BANTAY (172 Commodity Market Price Catalog)
+- **Official DTI SRP Guide:** 172 pre-bundled Philippine commodities (canned goods, milk, coffee, noodles, condiments, toiletries).
+- **1-Tap "Adopt Price":** Compare supplier costs against prevailing Suggested Retail Prices and apply recommended selling prices with one touch.
+- **100% Offline Seed:** Ready out-of-the-box on brand-new devices without downloading extra data.
+
+### 5. 🖨️ Thermal Receipt Printing (ESC/POS)
+- **Bluetooth Pairing:** Seamless connection with standard 58mm and 80mm wireless thermal receipt printers.
+- **Auto-Print on Sale:** Prints customer receipts automatically upon completing checkout.
+- **Digital Sharing:** Share receipts directly to messaging apps or social platforms when a printer is not present.
+
+### 6. 💰 Cash Reconciliation & Daily Audits
+- **Denomination Cash Count:** Input exact counts of Philippine bills (₱1,000, ₱500, ₱200, ₱100, ₱50, ₱20) and coins before shift closing.
+- **Shift Reports:** Generate instant **X-Read** (interim mid-day report) and **Z-Read** (final shift closing) with drawer over/short computations.
 
 ---
 
-## 🔒 Your Data and Privacy
+## 🖨️ Bluetooth Thermal Printer Setup (1-Minute Guide)
 
-- **100% Local Storage:** All store records, transactions, customer utang, and settings are stored locally in the device's persistent IndexedDB storage using [Dexie.js](https://dexie.com/).
-- **Zero Telemetry / Zero Cloud:** No personal or commercial data is ever transmitted to external servers.
-- **Backups:** Create regular backups under **More → Settings → Backup / Restore**. You can export a universal `.tinda-backup` file and store it on an SD card or cloud drive — it can also be restored on the Windows app, and vice-versa.
+1. **Pair Printer with Android:**
+   - Power on your 58mm or 80mm Bluetooth thermal printer.
+   - Open Android **Settings → Bluetooth** and pair with the device (default PIN: `0000` or `1234`).
+2. **Connect in TINDA POS:**
+   - In the app, open **More → Settings → Printer**.
+   - Select your printer from the detected devices list and choose paper width (**58mm** or **80mm**).
+3. **Verify Alignment:**
+   - Tap **Test Print** to verify paper feed, alignment, and formatting.
+   - Toggle **Auto-print after sale** for instant receipt generation upon checkout.
 
 ---
 
-## 💻 Development & Building from Source
+## 🔒 Data Privacy & Offline First
 
-The Android Free app is built with **React 18**, **TypeScript**, **Tailwind CSS**, **Capacitor**, and **Dexie.js**.
+- **Zero Cloud Storage:** All store data, sales history, customer credit records, and inventory remain strictly on your local device.
+- **IndexedDB Engine:** High-performance local storage powered by [Dexie.js](https://dexie.com/) with automated transactional safety.
+- **Universal `.tinda-backup`:** Export a complete backup file to Google Drive, an SD card, or USB flash drive. Backups are 100% cross-compatible with the Windows desktop version of TINDA POS.
+
+---
+
+## 🛠️ Architecture & Tech Stack
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    TINDA POS Mobile Shell                   │
+├──────────────────────────────┬──────────────────────────────┤
+│  Frontend (React + Vite)     │  Native Bridge (Capacitor)   │
+│  • React 18 + TypeScript     │  • Bluetooth Serial ESC/POS  │
+│  • Tailwind CSS Dark Theme   │  • Camera Barcode Scanner    │
+│  • Lucide React Icons        │  • Native In-App APK Updater │
+│  • Zustand State Stores      │  • File System Storage       │
+├──────────────────────────────┴──────────────────────────────┤
+│                    Data Storage Layer                       │
+│  • Dexie.js (IndexedDB Local Database)                      │
+│  • Bidirectional .tinda-backup Exchange (Android <-> PC)   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🧪 Automated Testing
+
+TINDA POS Free maintains rigorous test coverage to prevent counter regressions and safeguard merchant data:
+
+```bash
+npm test
+```
+
+```text
+Test Files  17 passed (17)
+     Tests  107 passed (107)
+  Duration  ~12s
+```
+
+Suites cover cash counts, hold-and-resume cart flows, price reference matching, refund calculations, customer utang tracking, product form payloads, and Dexie database migrations.
+
+---
+
+## 💻 Building from Source
 
 ### Prerequisites
-- Node.js 20+
-- JDK 21 (Temurin recommended)
-- Android SDK 36 (Build Tools 36.0.0, Platform API 36)
-- Gradle 8.14.3
+- **Node.js**: v20+
+- **Java Development Kit (JDK)**: OpenJDK 21
+- **Android SDK**: API level 34+ (Build Tools 35.0.0+)
+- **Gradle**: 8.14+
 
 ### Build Steps
 
 ```bash
-# 1. Install dependencies
+# 1. Clone repository
+git clone https://github.com/Yazerukun/TINDA-POS-Android-Free.git
+cd TINDA-POS-Android-Free
+
+# 2. Install dependencies
 npm install
 
-# 2. Run test suite (93 unit & integration tests)
+# 3. Run test suite
 npm test
 
-# 3. Build web bundle
+# 4. Build web production bundle
 npm run build
 
-# 4. Sync web bundle into native Capacitor Android shell
+# 5. Sync bundle into Android native shell
 npx cap sync android
 
-# 5. Build signed release APK
-source toolchain/env.sh
-cd android && ./gradlew assembleRelease
+# 6. Compile release APK (PowerShell / Windows)
+$env:JAVA_HOME = "D:\DevTools\jdk-21"
+$env:ANDROID_HOME = "D:\DevTools\android-sdk"
+cd android
+.\gradlew.bat assembleRelease
 ```
 
-The compiled release APK will be located at:
+The signed release APK will be generated at:
 `android/app/build/outputs/apk/release/app-release.apk`
 
 ---
 
 ## 📄 License
 
-Proprietary. **Free to use for personal and small business purposes in the Philippines.** Redistribution, resale, or packaging into paid commercial services without explicit permission is strictly prohibited.
+Proprietary. **Free to use for personal and small retail businesses in the Philippines.** Redistribution, commercial re-packaging, or charging subscription fees for this software is strictly prohibited.
+
+---
+
+<div align="center">
+
+**Crafted with care for Filipino Retailers and Sari-Sari Store Owners.**
+
+[![Follow Updates](https://img.shields.io/badge/GitHub-Yazerukun%2FTINDA--POS--Android--Free-181717?style=flat-square&logo=github)](https://github.com/Yazerukun/TINDA-POS-Android-Free)
+
+</div>
