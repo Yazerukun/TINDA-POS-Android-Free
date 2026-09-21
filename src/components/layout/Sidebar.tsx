@@ -15,6 +15,7 @@ import {
 import { useNav, type PageKey } from '../../stores/nav'
 import { useAuth } from '../../stores/auth'
 import { useSettings } from '../../stores/settings'
+import { useUpdate } from '../../stores/update'
 import { hasPermission, type Permission } from '@shared/roles'
 import { ConnectionStatus } from '../ConnectionStatus'
 
@@ -38,7 +39,9 @@ export function Sidebar(): React.JSX.Element {
   const { page, setPage } = useNav()
   const { user, logout } = useAuth()
   const { settings } = useSettings()
+  const { event, setModalOpen } = useUpdate()
 
+  const hasUpdate = event?.status === 'UPDATE_AVAILABLE'
   const visible = NAV.filter((n) => (user ? hasPermission(user.roles, n.permission) : false))
 
   return (
@@ -58,23 +61,45 @@ export function Sidebar(): React.JSX.Element {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2 md:px-3">
-        {visible.map((n) => (
-          <button
-            key={n.key}
-            onClick={() => setPage(n.key)}
-            title={n.label}
-            className={`group flex w-full items-center justify-center md:justify-start gap-2.5 rounded-lg p-2 text-sm font-medium transition-all ${
-              page === n.key
-                ? 'bg-brand-600/15 text-brand-400 border-l-2 border-brand-500'
-                : 'text-slate-400 hover:bg-ink-800 hover:text-slate-200 border-l-2 border-transparent'
-            }`}
-          >
-            <div className={`${page === n.key ? 'animate-pop' : ''}`}>
-              {n.icon}
-            </div>
-            <span className="hidden md:block">{n.label}</span>
-          </button>
-        ))}
+        {visible.map((n) => {
+          const isUpdateItem = n.key === 'update'
+          const isItemActive = page === n.key
+          return (
+            <button
+              key={n.key}
+              onClick={() => {
+                if (isUpdateItem) {
+                  setModalOpen(true)
+                }
+                setPage(n.key)
+              }}
+              title={n.label}
+              className={`group relative flex w-full items-center justify-center md:justify-start gap-2.5 rounded-lg p-2 text-sm font-medium transition-all ${
+                isItemActive
+                  ? 'bg-brand-600/15 text-brand-400 border-l-2 border-brand-500'
+                  : 'text-slate-400 hover:bg-ink-800 hover:text-slate-200 border-l-2 border-transparent'
+              }`}
+            >
+              <div className={`relative ${isItemActive ? 'animate-pop' : ''}`}>
+                {n.icon}
+                {isUpdateItem && hasUpdate && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 md:hidden">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  </span>
+                )}
+              </div>
+              <span className="hidden md:flex flex-1 items-center justify-between">
+                <span>{n.label}</span>
+                {isUpdateItem && hasUpdate && (
+                  <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] font-bold text-emerald-300">
+                    NEW
+                  </span>
+                )}
+              </span>
+            </button>
+          )
+        })}
       </nav>
 
       <div className="border-t border-ink-line px-2 py-3 md:px-3">

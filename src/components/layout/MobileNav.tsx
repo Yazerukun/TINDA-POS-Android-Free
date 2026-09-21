@@ -1,8 +1,9 @@
-import { LayoutDashboard, ShoppingCart, Boxes, BarChart3, Menu } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Boxes, BarChart3, Menu, Bell } from 'lucide-react'
 import tindaIcon from '../../assets/tinda-icon.png'
 import { useNav, type PageKey } from '../../stores/nav'
 import { useAuth } from '../../stores/auth'
 import { useSettings } from '../../stores/settings'
+import { useUpdate } from '../../stores/update'
 import { hasPermission } from '@shared/roles'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 
@@ -20,6 +21,9 @@ export function MobileTopBar(): React.JSX.Element {
   const { user } = useAuth()
   const { settings } = useSettings()
   const online = useOnlineStatus()
+  const { event, setModalOpen } = useUpdate()
+
+  const hasUpdate = event?.status === 'UPDATE_AVAILABLE'
 
   return (
     <header className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-ink-line/80 bg-ink-950/95 px-4 pt-[calc(1.35rem+var(--sait))] pb-3 backdrop-blur-md sm:hidden">
@@ -51,6 +55,25 @@ export function MobileTopBar(): React.JSX.Element {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Software Update Bell Button */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          aria-label="Software Update"
+          title={hasUpdate ? `Update Available (v${event?.available?.version})` : 'Software Updates'}
+          className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-ink-line/80 bg-ink-900/80 text-slate-300 transition-all duration-200 active:scale-90 hover:border-brand-500/50 hover:bg-ink-850 hover:text-white"
+        >
+          <Bell className={`h-5 w-5 ${hasUpdate ? 'text-emerald-400' : 'text-slate-400'}`} />
+          {hasUpdate && (
+            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+            </span>
+          )}
+        </button>
       </div>
     </header>
   )

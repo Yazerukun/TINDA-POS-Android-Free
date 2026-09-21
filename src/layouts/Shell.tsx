@@ -6,6 +6,7 @@ import { Sidebar } from '../components/layout/Sidebar'
 import { MobileTopBar, MobileBottomNav } from '../components/layout/MobileNav'
 import { ToastHost } from '../components/ui/ToastHost'
 import { UpdateNotification } from '../components/update/UpdateNotification'
+import { UpdateModal } from '../components/update/UpdateModal'
 import { Dashboard } from '../pages/Dashboard'
 import { POS } from '../pages/POS'
 import { Inventory } from '../pages/Inventory'
@@ -55,6 +56,7 @@ export function Shell(): React.JSX.Element {
       <MobileBottomNav />
       <ToastHost />
       <UpdateNotification />
+      <UpdateModal />
     </div>
   )
 }

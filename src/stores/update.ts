@@ -23,6 +23,8 @@ function writeLastCheckAt(at: number): void {
 interface UpdateState {
   event: UpdateStatusEvent | null
   initialized: boolean
+  modalOpen: boolean
+  setModalOpen: (open: boolean) => void
   init: () => Promise<void>
   check: (manual: boolean) => Promise<void>
   download: () => Promise<void>
@@ -35,6 +37,8 @@ let unsubscribe: (() => void) | null = null
 export const useUpdate = create<UpdateState>((set, get) => ({
   event: null,
   initialized: false,
+  modalOpen: false,
+  setModalOpen: (open: boolean) => set({ modalOpen: open }),
   init: async () => {
     if (get().initialized) return
     set({ initialized: true })
@@ -62,7 +66,7 @@ export const useUpdate = create<UpdateState>((set, get) => ({
     set({ event })
   },
   dismiss: async () => {
-    await window.api.update.dismiss()
-    set({ event: null })
+    const event = await window.api.update.dismiss()
+    set({ event, modalOpen: false })
   }
 }))

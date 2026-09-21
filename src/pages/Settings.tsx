@@ -8,6 +8,7 @@ import { Modal } from '../components/ui/Modal'
 import { useSettings } from '../stores/settings'
 import { toastSuccess, toastError } from '../stores/toast'
 import { useUpdate } from '../stores/update'
+import { APP_VERSION } from '../data/system'
 import { ReceiptPaper } from '../components/ReceiptPaper'
 import tindaIcon from '../assets/tinda-icon.png'
 
@@ -255,7 +256,7 @@ function AboutTab(): React.JSX.Element {
 
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
-            v1.0.27 Stable
+            v{APP_VERSION} Stable
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-ink-800 border border-ink-line px-2.5 py-0.5 text-[11px] font-medium text-slate-300">
             100% Offline Capable
@@ -359,7 +360,7 @@ function AboutTab(): React.JSX.Element {
         </div>
 
         <p className="mt-3 text-center text-[10px] text-slate-500">
-          Voluntary donation · Dev Francis (0991 225 5156) · Daghang salamat sa inyong suporta!
+          Voluntary donation · Dev Francis (0991 225 5156) · Thank you very much for your support!
         </p>
       </div>
 
@@ -398,72 +399,181 @@ function AboutTab(): React.JSX.Element {
   )
 }
 
-function SoftwareUpdatePanel(): React.JSX.Element | null {
-  const { event, check, download, install, dismiss } = useUpdate()
+function SoftwareUpdatePanel(): React.JSX.Element {
+  const { event, check, download, install, dismiss, setModalOpen } = useUpdate()
   const [busy, setBusy] = useState(false)
   const [showNotes, setShowNotes] = useState(true)
-  if (!event) return null
 
-  const installed = event.installedVersion
-  const label = statusLabel(event.status)
-  const note = event.message
-  const available = event.available?.version ?? ''
+  const installed = event?.installedVersion || APP_VERSION
+  const status = event?.status ?? 'IDLE'
+  const label = statusLabel(status)
+  const note = event?.message
+  const available = event?.available?.version ?? ''
+  const isAvailable = status === 'UPDATE_AVAILABLE' && Boolean(available)
+  const isDownloading = status === 'DOWNLOADING'
+  const isReady = status === 'DOWNLOADED' || status === 'READY_TO_INSTALL'
+  const isChecking = status === 'CHECKING'
+
+  const handleCheck = async () => {
+    setBusy(true)
+    try {
+      await check(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDownload = async () => {
+    setBusy(true)
+    try {
+      await download()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleInstall = async () => {
+    setBusy(true)
+    try {
+      await install()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
-    <div className="card p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-bold text-white"><Download className="h-4 w-4 text-brand-400" /> Software Update</h3>
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${event.status === 'ERROR' || event.status === 'OFFLINE' || event.status === 'UNABLE_TO_CHECK' ? 'bg-red-500/15 text-red-300' : event.status === 'CHECKING' || event.status === 'DOWNLOADING' ? 'bg-brand-500/15 text-brand-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{label}</span>
+    <div className="overflow-hidden rounded-3xl border border-ink-line/80 bg-ink-900/90 p-5 shadow-card space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400">
+            <Download className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white">Software Update</h3>
+            <p className="text-xs text-slate-400">Official GitHub release channel</p>
+          </div>
+        </div>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+            status === 'ERROR' || status === 'OFFLINE' || status === 'UNABLE_TO_CHECK'
+              ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+              : isAvailable
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse'
+                : isChecking || isDownloading
+                  ? 'bg-brand-500/15 text-brand-300 border border-brand-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+          }`}
+        >
+          {label}
+        </span>
       </div>
-      <div className="space-y-1 text-sm text-slate-300">
-        <p>Installed version: <span className="font-mono text-white">v{installed}</span></p>
-        {available && <p>Available version: <span className="font-mono text-white">v{available}</span></p>}
-        {event.lastCheckedAt && <p className="text-xs text-slate-500">Last checked: {new Date(event.lastCheckedAt).toLocaleString()}</p>}
-        {note && <p className="pt-1 text-xs text-slate-400">{note}</p>}
-        {event.status === 'DOWNLOADING' && event.progress && (
-          <div className="pt-2">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
-              <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${event.progress.percent}%` }} />
+
+      <div className="rounded-2xl border border-ink-line/60 bg-ink-950/70 p-4 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-slate-400">Installed Version</span>
+          <span className="font-mono font-bold text-emerald-400">v{installed}</span>
+        </div>
+
+        {available && (
+          <div className="flex items-center justify-between text-xs border-t border-ink-line/40 pt-2">
+            <span className="text-slate-400">Latest Available</span>
+            <span className="font-mono font-bold text-brand-300">v{available}</span>
+          </div>
+        )}
+
+        {event?.lastCheckedAt && (
+          <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-ink-line/40 pt-2">
+            <span>Last Checked</span>
+            <span>{new Date(event.lastCheckedAt).toLocaleString()}</span>
+          </div>
+        )}
+
+        {note && <p className="text-xs text-slate-300 pt-1 leading-relaxed">{note}</p>}
+
+        {isDownloading && event?.progress && (
+          <div className="pt-2 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-slate-300">Downloading package…</span>
+              <span className="font-mono font-bold text-brand-400">{event.progress.percent}%</span>
             </div>
-            <p className="pt-1 text-xs text-slate-500">{event.progress.percent}%</p>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-ink-800">
+              <div
+                className="h-full rounded-full bg-brand-500 transition-all duration-300"
+                style={{ width: `${event.progress.percent}%` }}
+              />
+            </div>
           </div>
         )}
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap items-center gap-2">
         <button
-          onClick={() => { setBusy(true); void check(true).finally(() => setBusy(false)) }}
-          disabled={busy || event.status === 'CHECKING' || event.status === 'DOWNLOADING'}
-          className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-xs"
+          type="button"
+          onClick={() => void handleCheck()}
+          disabled={busy || isChecking || isDownloading}
+          className="btn-ghost flex items-center gap-1.5 px-3.5 py-2 text-xs"
         >
-          {event.status === 'CHECKING' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-          Check for Updates
+          {isChecking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          <span>{isChecking ? 'Checking…' : 'Check for Updates'}</span>
         </button>
-        {event.status === 'UPDATE_AVAILABLE' && event.available && (
-          <button onClick={() => { setBusy(true); void download().finally(() => setBusy(false)) }} disabled={busy} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
-            <Download className="h-3.5 w-3.5" /> Download Update
+
+        {isAvailable && (
+          <button
+            type="button"
+            onClick={() => void handleDownload()}
+            disabled={busy || isDownloading}
+            className="btn-primary flex items-center gap-1.5 px-3.5 py-2 text-xs shadow-md shadow-brand-500/20"
+          >
+            {busy || isDownloading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span>Download Update</span>
           </button>
         )}
-        {event.status === 'ERROR' && event.available && (
-          <button onClick={() => { setBusy(true); void download().finally(() => setBusy(false)) }} disabled={busy} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
-            <Download className="h-3.5 w-3.5" /> Retry Download
+
+        {status === 'ERROR' && available && (
+          <button
+            type="button"
+            onClick={() => void handleDownload()}
+            disabled={busy}
+            className="btn-primary flex items-center gap-1.5 px-3.5 py-2 text-xs"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Retry Download</span>
           </button>
         )}
-        {(event.status === 'DOWNLOADED' || event.status === 'READY_TO_INSTALL') && (
-          <button onClick={() => { setBusy(true); void install().finally(() => setBusy(false)) }} disabled={busy} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
-            <Download className="h-3.5 w-3.5" /> Install Update
+
+        {isReady && (
+          <button
+            type="button"
+            onClick={() => void handleInstall()}
+            disabled={busy}
+            className="btn-primary flex items-center gap-1.5 px-3.5 py-2 text-xs shadow-md shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Install Update</span>
           </button>
         )}
-        {event.status === 'UPDATE_AVAILABLE' && (
-          <button onClick={() => void dismiss()} className="btn-ghost px-3 py-1.5 text-xs">Later</button>
-        )}
-        {event.available && (
-          <button onClick={() => setShowNotes((v) => !v)} className="btn-ghost flex items-center gap-1.5 px-3 py-1.5 text-xs"><Sparkles className="h-3.5 w-3.5" /> {showNotes ? 'Hide What\'s New' : 'What\'s New'}</button>
-        )}
+
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="btn-ghost flex items-center gap-1.5 px-3.5 py-2 text-xs text-slate-300"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-brand-400" />
+          <span>Update Dialog</span>
+        </button>
       </div>
-      {showNotes && event.available && (
-        <div className="mt-3 max-h-44 overflow-y-auto rounded-lg bg-ink-900/70 p-3 text-xs leading-relaxed text-slate-300">
-          <p className="mb-1 font-semibold text-white">What&apos;s New in v{event.available.version}</p>
-          <pre className="whitespace-pre-wrap font-sans">{event.available.releaseNotes}</pre>
+
+      {showNotes && event?.available?.releaseNotes && (
+        <div className="rounded-2xl border border-ink-line/60 bg-ink-950/90 p-3.5 text-xs leading-relaxed text-slate-300 space-y-1">
+          <p className="font-bold text-white">What&apos;s New in v{event.available.version}</p>
+          <pre className="max-h-44 overflow-y-auto whitespace-pre-wrap font-sans text-xs text-slate-300 no-scrollbar">
+            {event.available.releaseNotes}
+          </pre>
         </div>
       )}
     </div>

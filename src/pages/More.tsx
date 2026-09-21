@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { ChevronRight, Store, Sparkles, CalendarClock, LogOut, Coffee, Copy, Check } from 'lucide-react'
+import { ChevronRight, Store, Sparkles, CalendarClock, LogOut, Coffee, Copy, Check, Download, RefreshCw } from 'lucide-react'
 import { NAV } from '../components/layout/Sidebar'
 import { useNav, type PageKey } from '../stores/nav'
 import { useAuth } from '../stores/auth'
 import { useSettings } from '../stores/settings'
+import { useUpdate } from '../stores/update'
+import { APP_VERSION } from '../data/system'
 import { hasPermission } from '@shared/roles'
 import type { Product } from '@shared/types'
 import { PriceGuideModal } from '../components/PriceGuideModal'
@@ -31,25 +33,28 @@ const SUBTITLES: Partial<Record<PageKey, string>> = {
   expenses: 'Record store expenses',
   suppliers: 'Manage suppliers & purchases',
   transactions: 'View sales and receipt history',
+  printer: 'Receipt printer configuration',
   backup: 'Back up, restore & sync your data',
   settings: 'Store, users & data options',
-  printer: 'Receipt printer configuration',
-  update: 'Software update & about'
+  update: 'Check for updates & release notes'
 }
 
 const GROUPS: { title: string; keys: PageKey[] }[] = [
   { title: 'Store Operations', keys: ['customers', 'utang', 'expenses', 'suppliers', 'transactions'] },
-  { title: 'System & Data', keys: ['backup', 'settings', 'printer', 'update'] }
+  { title: 'Hardware & System', keys: ['printer', 'backup', 'settings', 'update'] }
 ]
 
 export function More(): React.JSX.Element {
   const { setPage } = useNav()
   const { user, logout } = useAuth()
   const { settings } = useSettings()
+  const { event, setModalOpen } = useUpdate()
   const [priceGuideOpen, setPriceGuideOpen] = useState(false)
   const [expirationOpen, setExpirationOpen] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [copiedMaya, setCopiedMaya] = useState(false)
+
+  const hasUpdate = event?.status === 'UPDATE_AVAILABLE'
 
   const copyMaya = async () => {
     try {
@@ -89,7 +94,7 @@ export function More(): React.JSX.Element {
           </p>
           <div className="mt-1 flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/15 px-2 py-0.5 text-[10px] font-bold text-brand-400">
-              v1.0.31 Stable
+              v{APP_VERSION} Stable
             </span>
             <span className="text-[10px] text-slate-500">
               {user?.full_name ? `Logged in: ${user.full_name}` : 'Local Account'}
@@ -98,7 +103,38 @@ export function More(): React.JSX.Element {
         </div>
       </div>
 
-      {/* 2. TINDA BANTAY HERO BANNER */}
+      {/* 2. PROMINENT UPDATE NOTIFICATION BANNER (IF UPDATE AVAILABLE) */}
+      {hasUpdate && (
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 via-ink-900 to-ink-950 p-4 shadow-card">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 shadow-sm shadow-emerald-500/10">
+                <Download className="h-5 w-5 animate-bounce" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white truncate">New Update Available!</span>
+                  <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                    v{event.available?.version}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 truncate mt-0.5">
+                  Tap to download and install the latest release.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="btn-primary shrink-0 px-3.5 py-1.5 text-xs shadow-md shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500"
+            >
+              Update Now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. TINDA BANTAY HERO BANNER */}
       <div className="overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 via-ink-900 to-ink-950 shadow-card">
         <button
           onClick={() => setPriceGuideOpen(true)}
@@ -126,7 +162,7 @@ export function More(): React.JSX.Element {
         </button>
       </div>
 
-      {/* 3. GROUPED OPERATION & SYSTEM CARDS */}
+      {/* 4. GROUPED OPERATION & SYSTEM CARDS */}
       {GROUPS.map((group) => {
         const keys = group.keys.filter(can)
         if (keys.length === 0) return null
@@ -136,20 +172,53 @@ export function More(): React.JSX.Element {
             <div className="overflow-hidden rounded-2xl border border-ink-line/80 bg-ink-900/90 divide-y divide-ink-line/60 shadow-card">
               {keys.map((k) => {
                 const item = NAV.find((n) => n.key === k)!
+                const isUpdateItem = k === 'update'
+
                 return (
                   <button
                     key={k}
-                    onClick={() => setPage(k)}
+                    onClick={() => {
+                      if (isUpdateItem) {
+                        setModalOpen(true)
+                      } else {
+                        setPage(k)
+                      }
+                    }}
                     className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition active:bg-ink-800 hover:bg-ink-800/60"
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink-800 text-slate-300">
-                      {item.icon}
+                      {isUpdateItem ? (
+                        <Download className={`h-4.5 w-4.5 ${hasUpdate ? 'text-emerald-400' : 'text-slate-300'}`} />
+                      ) : (
+                        item.icon
+                      )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-white">{item.label}</span>
-                      {SUBTITLES[k] && <span className="block truncate text-xs text-slate-400 mt-0.5">{SUBTITLES[k]}</span>}
+                      <span className="flex items-center gap-2">
+                        <span className="truncate text-sm font-bold text-white">
+                          {isUpdateItem ? 'Software Update' : item.label}
+                        </span>
+                        {isUpdateItem && hasUpdate && (
+                          <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.2 text-[10px] font-bold text-emerald-300">
+                            v{event.available?.version} AVAILABLE
+                          </span>
+                        )}
+                      </span>
+                      <span className="block truncate text-xs text-slate-400 mt-0.5">
+                        {isUpdateItem
+                          ? hasUpdate
+                            ? 'New version ready to download and install'
+                            : `Installed: v${APP_VERSION} · Check releases`
+                          : SUBTITLES[k]}
+                      </span>
                     </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+                    {isUpdateItem && !hasUpdate ? (
+                      <span className="rounded-full bg-ink-800 border border-ink-line px-2 py-0.5 text-[10px] font-medium text-slate-400 shrink-0">
+                        v{APP_VERSION}
+                      </span>
+                    ) : (
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
+                    )}
                   </button>
                 )
               })}
@@ -281,7 +350,7 @@ export function More(): React.JSX.Element {
           <span>•</span>
           <span className="rounded-full bg-ink-800/80 px-2 py-0.5 border border-ink-line/60">Universal Backup</span>
           <span>•</span>
-          <span className="rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 border border-emerald-500/30">v1.0.32</span>
+          <span className="rounded-full bg-emerald-500/15 text-emerald-300 px-2 py-0.5 border border-emerald-500/30">v{APP_VERSION}</span>
         </div>
       </div>
 
