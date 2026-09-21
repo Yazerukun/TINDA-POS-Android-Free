@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { useUpdate } from '../../stores/update'
+import { APP_VERSION } from '../../data/system'
 import { Capacitor } from '@capacitor/core'
 import tindaIcon from '../../assets/tinda-icon.png'
 
@@ -25,7 +26,7 @@ export function UpdateModal(): React.JSX.Element | null {
   if (!modalOpen) return null
 
   const status = event?.status ?? 'IDLE'
-  const installed = event?.installedVersion ?? '1.0.32'
+  const installed = event?.installedVersion ?? APP_VERSION
   const available = event?.available?.version ?? null
   const notes = event?.available?.releaseNotes ?? ''
   const isAvailable = status === 'UPDATE_AVAILABLE' && Boolean(available)

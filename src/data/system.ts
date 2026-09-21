@@ -27,7 +27,7 @@ import { NO_PRINTER } from './sales'
 import { listPrinters, testPrint as runTestPrint } from './printerService'
 import { exportUniversalBackup, importUniversalBackup } from './tindaBackupAndroid'
 
-export const APP_VERSION = '1.0.32'
+export const APP_VERSION = '1.0.33'
 
 const ROLE_NAMES: RoleName[] = ['ADMIN', 'MANAGER', 'CASHIER']
 
