@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 // Release signing comes from a keystore.properties kept OUTSIDE the repo
 // (default: ~/.config/tindapos/keystore.properties). Override with TINDA_KEYSTORE_PROPS.
-def keystorePropsFile = System.getenv("TINDA_KEYSTORE_PROPS") ?: new File(System.getProperty("user.home"), ".config/tindapos/keystore.properties")
+def keystorePropsFile = System.getenv("TINDA_KEYSTORE_PROPS") ? new File(System.getenv("TINDA_KEYSTORE_PROPS")) : new File(System.getProperty("user.home"), ".config/tindapos/keystore.properties")
 def keystoreProps = new java.util.Properties()
 def hasReleaseKeystore = keystorePropsFile.exists()
 if (hasReleaseKeystore) {
@@ -16,8 +16,8 @@ android {
         applicationId "com.tindapos.free"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 28
-        versionName "1.0.28"
+        versionCode 29
+        versionName "1.0.29"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

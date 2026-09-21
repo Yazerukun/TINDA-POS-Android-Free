@@ -113,6 +113,12 @@ export async function payCredit(input: { customer_id: number; amount_c: number; 
     notes: input.notes ?? null,
     user_id: session.id
   })
+  const shift = await db.shifts.where('status').equals('OPENED').first()
+  if (shift && (input.method ?? 'CASH') === 'CASH') {
+    await db.shifts.update(shift.id, {
+      cash_in_c: num(shift.cash_in_c) + amount
+    })
+  }
   await audit({ action: 'UTANG_PAYMENT', entity_type: 'customer', entity_id: input.customer_id, new_value: `${amount}` })
   return entry
 }
