@@ -8,3 +8,11 @@ android/local.properties
 *.log
 *.apk
 .DS_Store
+
+# AI, Prompts & Local Agent Files (Prevent AI leaks on GitHub)
+GEMINI.md
+PLAN.md
+.agents/
+specs/
+notes/
+scratch/
