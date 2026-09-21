@@ -89,7 +89,7 @@ export function More(): React.JSX.Element {
           </p>
           <div className="mt-1 flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/15 px-2 py-0.5 text-[10px] font-bold text-brand-400">
-              v1.0.30 Stable
+              v1.0.31 Stable
             </span>
             <span className="text-[10px] text-slate-500">
               {user?.full_name ? `Logged in: ${user.full_name}` : 'Local Account'}

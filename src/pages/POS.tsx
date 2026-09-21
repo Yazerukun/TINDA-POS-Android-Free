@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { create } from 'zustand'
 import {
@@ -138,6 +138,7 @@ export function POS(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const categoryMenuRef = useRef<HTMLDivElement>(null)
   const cartItems = usePosCart((state) => state.items)
+  const allowNeg = usePosCart((state) => state.allow_negative)
   const [scannerOpen, setScannerOpen] = useState(false)
 
   const handleBarcodeScan = async (code: string) => {
@@ -316,7 +317,6 @@ export function POS(): React.JSX.Element {
             const available = availableBase(stock, cartItem)
             const blocked = p.stock - stock
             const low = available > 0 && available <= p.low_stock_threshold
-            const allowNeg = usePosCart((s) => s.allow_negative)
             const out = !allowNeg && available <= 0
             return (
               <button
