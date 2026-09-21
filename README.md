@@ -6,19 +6,19 @@
 
 **Fast, 100% offline, sign-language-friendly Point of Sale and Inventory System designed for Philippine sari-sari stores, minimarts, and retail counters on Android phones and tablets.**
 
-### v1.0.33 Stable · In-App Software Updates & TopBar Bell Edition
+### v1.0.34 Stable · Quick Add, Statement Sharing & Autonomous Update Alert Edition
 
 [![Android Version](https://img.shields.io/badge/Android-7.0%2B%20(API%2024%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
-[![Release](https://img.shields.io/badge/Release-v1.0.33%20Stable-2563EB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.33)
+[![Release](https://img.shields.io/badge/Release-v1.0.34%20Stable-2563EB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.34)
 [![Storage](https://img.shields.io/badge/Database-100%25%20Offline%20(Dexie)-F59E0B?style=for-the-badge&logo=sqlite&logoColor=white)](#-data-privacy--offline-first)
-[![Test Suite](https://img.shields.io/badge/Tests-107%2F107%20Passed-10B981?style=for-the-badge&logo=vitest&logoColor=white)](#-automated-testing)
+[![Test Suite](https://img.shields.io/badge/Tests-109%2F109%20Passed-10B981?style=for-the-badge&logo=vitest&logoColor=white)](#-automated-testing)
 [![License](https://img.shields.io/badge/License-Free%20for%20Small%20Business-8B5CF6?style=for-the-badge)](#-license)
 
 <br/>
 
-[📥 **Download Release APK (v1.0.33)**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.33/TindaPOS-Free-1.0.33.apk) &nbsp;•&nbsp; 
+[📥 **Download Release APK (v1.0.34)**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.34/TindaPOS-Free-1.0.34.apk) &nbsp;•&nbsp; 
 [📖 **User Manual**](release-docs/USERMANUAL.md) &nbsp;•&nbsp; 
-[🚀 **Release Notes**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.33) &nbsp;•&nbsp; 
+[🚀 **Release Notes**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.34) &nbsp;•&nbsp; 
 [🐛 **Report an Issue**](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
 
 ---
@@ -36,18 +36,17 @@ Built from the ground up to handle high-frequency everyday retail: scan barcodes
 
 ---
 
-## ⚡ What's New in v1.0.33
+## ⚡ What's New in v1.0.34
 
 | Enhancement | What It Delivers at the Counter |
 | :--- | :--- |
-| 🔔 **Home TopBar Bell Notification** | Apple-styled notification Bell icon on the Home top bar. When a newer official release is published, an animated glowing emerald radar pulse alerts the cashier. |
-| 📲 **Resilient In-App Software Updater** | Tapping the notification Bell or Update card opens a fluid, native modal that displays release notes, downloads the APK with an animated progress bar, and launches the package installer in 1 tap. |
-| 📱 **Reorganized "More" Navigation Hub** | Systematically categorized into **Store Operations** (Customers, Utang, Expenses, Suppliers, Transactions, Expiration Dates) and **Hardware & System** (Printer, Backup, Settings, Software Update) with active update banners. |
-| ⚙️ **Refined Settings & Permanent Update Panel** | The Software Update status card in Settings About is permanently accessible with manual "Check for Updates" triggers, real-time diagnostic reporting, and 100% English copy. |
-| 🛡️ **Clean Per-Item Expiration Model** | Products created without an explicit expiration date (candies, snacks, dry goods) are **never blocked** and are 100% sellable immediately. Expiration blocking strictly triggers only when an item has an explicit date in the past. |
-| 🏷️ **Frictionless Inventory Modals** | Simplified product creation with an optional **Expiration Date** picker and instant "Clear Date" action, removing all multi-batch confusion. |
-| 🤝 **Inline POS Customer Picker for Utang** | Cashiers can select an existing customer or tap **+ New Customer** directly from the Checkout modal to charge store credit with live balance computation. |
-| 📷 **Camera Barcode Auto-Mirroring** | Barcodes saved in the Inventory catalog now immediately mirror across the POS catalog for instant camera scanner detection. |
+| 🔔 **Autonomous Zero-Tap Update Alerts** | 10-minute non-blocking background check on boot, app focus, and internet reconnect. Lights up the Home TopBar Bell notification with an animated emerald radar pulse and toast alert without touching the screen. |
+| 💬 **1-Tap Customer Utang Statement Sharing** | One-tap payment reminder and statement sharing (`navigator.share`) directly to SMS, Facebook Messenger, WhatsApp, or Viber with store credit balance, limit, and polite reminder message. |
+| ⚡ **POS "+ Quick Add Product" at Counter** | Instant counter-side product registration directly inside POS. If an item or scanned barcode isn't found, cashiers can register it with name, price, and stock in seconds and add it directly to cart. |
+| 📈 **Live Profit Margin & Markup Calculator** | Built directly into product creation and editing. Automatically calculates unit profit, profit margin %, and markup % in real time with eye-catching below-cost loss warnings. |
+| 📊 **Dashboard Payment Split & Top 5 Fast Movers** | Real-time multi-segment payment breakdown (Cash, GCash, Maya, Store Credit) and Top 5 fast-moving items ranked today with units sold and revenue generated. |
+| 🧾 **GCash & Maya Account Lines on Receipts** | Configurable e-wallet account numbers printed directly on 58mm/80mm thermal receipts and digital slips for customer convenience. |
+| 💾 **1-Tap Universal Database Backup Sharing** | Seamless `.tinda-backup` file sharing via native Android share sheet to Google Drive, email, or messaging apps. |
 
 ---
 
@@ -57,11 +56,11 @@ Download the official signed release package directly to your Android phone or t
 
 | Package Asset | Size | Checksum / Integrity | Target Devices |
 | :--- | :---: | :--- | :--- |
-| [**`TindaPOS-Free-1.0.33.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.33/TindaPOS-Free-1.0.33.apk) | **6.97 MB** | `1910b6921b10f761ceb38d73a4eb0d25d5a9639409c91849d6dc0ef63f6283f8` | Android 7.0 (Nougat) to Android 15+ |
-| [**`SHA256SUMS-v1.0.33.txt`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.33/SHA256SUMS-v1.0.33.txt) | 92 B | Official SHA-256 hash manifest | Checksum verification |
+| [**`TindaPOS-Free-1.0.34.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.34/TindaPOS-Free-1.0.34.apk) | **6.97 MB** | `2cb6d563245267f1070a87d1e7f302455fad00008a603c6733d889ab2835d10f` | Android 7.0 (Nougat) to Android 15+ |
+| [**`SHA256SUMS-v1.0.34.txt`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.34/SHA256SUMS-v1.0.34.txt) | 92 B | Official SHA-256 hash manifest | Checksum verification |
 
 > [!NOTE]
-> **Upgrading from Earlier Versions:** Installing `TindaPOS-Free-1.0.33.apk` over any previous version (v1.0.27 through v1.0.32) **fully preserves your sales history, inventory, customer ledger, and settings**. All official builds are cryptographically signed with the official persistent keystore.
+> **Upgrading from Earlier Versions:** Installing `TindaPOS-Free-1.0.34.apk` over any previous version (v1.0.27 through v1.0.33) **fully preserves your sales history, inventory, customer ledger, and settings**. All official builds are cryptographically signed with the official persistent keystore.
 
 ### System Requirements
 - **Operating System:** Android 7.0 (API level 24) or higher.

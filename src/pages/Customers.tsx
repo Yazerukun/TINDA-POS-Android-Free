@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Plus, Pencil, Users } from 'lucide-react'
+import { Search, Plus, Pencil, Users, Share2 } from 'lucide-react'
 import type { Customer } from '@shared/types'
 import { money } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Modal } from '../components/ui/Modal'
 import { toastSuccess, toastError } from '../stores/toast'
+import { useSettings } from '../stores/settings'
+import { shareCustomerStatement } from '../utils/shareStatement'
 
 interface Form { id: number | null; full_name: string; nickname: string; phone: string; address: string; credit_limit_c: number }
 
 export function Customers(): React.JSX.Element {
+  const { settings } = useSettings()
   const [rows, setRows] = useState<Customer[]>([])
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
@@ -79,7 +82,18 @@ export function Customers(): React.JSX.Element {
                   {c.nickname && <p className="text-sm text-slate-400 truncate">"{c.nickname}"</p>}
                   {c.phone && <p className="text-xs text-slate-500 truncate mt-0.5">{c.phone}</p>}
                 </div>
-                <button onClick={() => setEditing({ id: c.id, full_name: c.full_name, nickname: c.nickname ?? '', phone: c.phone ?? '', address: c.address ?? '', credit_limit_c: c.credit_limit_c })} className="btn-ghost-2 shrink-0 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-white" title="Edit"><Pencil className="h-4 w-4" /></button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {c.balance_c > 0 && (
+                    <button
+                      onClick={() => void shareCustomerStatement(c, settings?.store_name)}
+                      className="btn-ghost-2 shrink-0 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-400/10"
+                      title="Share payment reminder"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button onClick={() => setEditing({ id: c.id, full_name: c.full_name, nickname: c.nickname ?? '', phone: c.phone ?? '', address: c.address ?? '', credit_limit_c: c.credit_limit_c })} className="btn-ghost-2 shrink-0 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-white" title="Edit"><Pencil className="h-4 w-4" /></button>
+                </div>
               </div>
               <div className="mt-2 flex justify-between items-end">
                 <div>

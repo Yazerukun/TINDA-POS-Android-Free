@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Wallet, HandCoins, Scale, Check, Plus, Users, Loader2 } from 'lucide-react'
+import { Search, Wallet, HandCoins, Scale, Check, Plus, Users, Loader2, Share2 } from 'lucide-react'
 import type { Customer, CreditLedgerEntry } from '@shared/types'
 import { money, shortDateTime } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Modal } from '../components/ui/Modal'
 import { toastSuccess, toastError } from '../stores/toast'
+import { useSettings } from '../stores/settings'
+import { shareCustomerStatement } from '../utils/shareStatement'
 
 export function Utang(): React.JSX.Element {
+  const { settings } = useSettings()
   const [rows, setRows] = useState<Customer[]>([])
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
@@ -189,6 +192,16 @@ export function Utang(): React.JSX.Element {
                   <Scale className="h-3.5 w-3.5" />
                   <span>Adjust</span>
                 </button>
+                {c.balance_c > 0 && (
+                  <button
+                    onClick={() => void shareCustomerStatement(c, settings?.store_name)}
+                    className="btn-ghost-2 px-2.5 py-2 text-xs font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 flex items-center gap-1"
+                    title="Share payment reminder"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    <span>Remind</span>
+                  </button>
+                )}
                 <button
                   onClick={() => void openLedger(c)}
                   className="btn-ghost-2 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white"
@@ -203,7 +216,7 @@ export function Utang(): React.JSX.Element {
       )}
 
       {selected && (
-        <LedgerModal customer={selected} entries={ledger} onClose={() => setSelected(null)} onPay={() => setAction({ type: 'PAY', customer: selected })} />
+        <LedgerModal customer={selected} entries={ledger} storeName={settings?.store_name} onClose={() => setSelected(null)} onPay={() => setAction({ type: 'PAY', customer: selected })} />
       )}
       {action && <CreditActionModal action={action} onClose={() => setAction(null)} onDone={() => void actionDone()} />}
       {createCustomerOpen && (
@@ -332,10 +345,21 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
   )
 }
 
-function LedgerModal({ customer, entries, onClose, onPay }: { customer: Customer; entries: CreditLedgerEntry[]; onClose: () => void; onPay: () => void }): React.JSX.Element {
+function LedgerModal({ customer, entries, storeName, onClose, onPay }: { customer: Customer; entries: CreditLedgerEntry[]; storeName?: string; onClose: () => void; onPay: () => void }): React.JSX.Element {
   return (
     <Modal open onClose={onClose} title={customer.full_name} maxWidth="max-w-lg" footer={
-      <button onClick={onPay} className="btn-primary flex items-center gap-2"><HandCoins className="h-4 w-4" /> Collect Payment</button>
+      <div className="flex items-center justify-between w-full">
+        {customer.balance_c > 0 ? (
+          <button
+            type="button"
+            onClick={() => void shareCustomerStatement(customer, storeName)}
+            className="btn-secondary flex items-center gap-1.5 text-xs text-amber-400 border-amber-500/30"
+          >
+            <Share2 className="h-4 w-4" /> Share Reminder
+          </button>
+        ) : <div />}
+        <button onClick={onPay} className="btn-primary flex items-center gap-2 text-xs"><HandCoins className="h-4 w-4" /> Collect Payment</button>
+      </div>
     }>
       <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="card p-2 text-center"><p className="text-[10px] uppercase text-slate-500">Balance</p><p className="text-sm font-black text-amber-400">{money(customer.balance_c)}</p></div>

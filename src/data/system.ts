@@ -27,7 +27,7 @@ import { NO_PRINTER } from './sales'
 import { listPrinters, testPrint as runTestPrint } from './printerService'
 import { exportUniversalBackup, importUniversalBackup } from './tindaBackupAndroid'
 
-export const APP_VERSION = '1.0.33'
+export const APP_VERSION = '1.0.34'
 
 const ROLE_NAMES: RoleName[] = ['ADMIN', 'MANAGER', 'CASHIER']
 
@@ -43,6 +43,8 @@ export function defaultSettings(): StoreSettings {
     receipt_title: 'TINDA POS',
     receipt_show_app_name: true,
     receipt_footer: 'Thank you for your purchase!',
+    receipt_gcash_no: '',
+    receipt_maya_no: '',
     logo_path: null,
     default_low_stock: 5,
     default_tax_c: 0,

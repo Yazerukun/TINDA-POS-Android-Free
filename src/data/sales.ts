@@ -31,6 +31,8 @@ export async function buildReceiptLines(sale: Sale): Promise<string[]> {
   if (settings.address) lines.push(settings.address)
   if (settings.phone) lines.push(settings.phone)
   if (settings.tin) lines.push(`TIN: ${settings.tin}`)
+  if (settings.receipt_gcash_no) lines.push(`GCash: ${settings.receipt_gcash_no}`)
+  if (settings.receipt_maya_no) lines.push(`Maya: ${settings.receipt_maya_no}`)
   lines.push('--------------------------------')
   lines.push(`No: ${sale.transaction_no}`)
   lines.push(`Date: ${new Date(sale.created_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}`)

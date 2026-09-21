@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   TrendingUp,
   Banknote,
@@ -10,7 +10,10 @@ import {
   BookOpen,
   ArrowRight,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Smartphone,
+  Flame,
+  CreditCard
 } from 'lucide-react'
 import { SectionCard, StatusBadge, EmptyState } from '../components/ui/EmptyState'
 import type { Product, Sale, ReportSummary } from '@shared/types'
@@ -39,7 +42,7 @@ export function Dashboard(): React.JSX.Element | null {
           window.api.reports.sales({ from: today, to: today }),
           window.api.products.search('', { status: 'ACTIVE', limit: 1000 }),
           window.api.reports.utang(),
-          window.api.transactions.list({ from: `${today} 00:00:00`, to: `${today} 23:59:59`, limit: 8 })
+          window.api.transactions.list({ from: `${today} 00:00:00`, to: `${today} 23:59:59`, limit: 200 })
         ])
         if (!alive || request !== generation) return
         setError(null)
@@ -98,8 +101,57 @@ export function Dashboard(): React.JSX.Element | null {
   }
 
   const netSales = summary.sales_total_c - summary.refunds_c
-  const out = alertProducts.filter((p) => p.stock <= 0)
-  const low = alertProducts.filter((p) => p.stock > 0)
+  const safeAlerts = Array.isArray(alertProducts) ? alertProducts : []
+  const out = safeAlerts.filter((p) => p.stock <= 0)
+  const low = safeAlerts.filter((p) => p.stock > 0)
+  const safeRecent = Array.isArray(recent) ? recent : []
+  const todaySales = safeRecent.filter((s) => s && s.status !== 'VOIDED')
+
+  const paymentBreakdown = useMemo(() => {
+    let cash = 0
+    let gcash = 0
+    let maya = 0
+    let utang = 0
+    for (const s of todaySales) {
+      for (const p of s.payments) {
+        if (p.method === 'CASH') cash += p.amount_c
+        else if (p.method === 'GCASH') gcash += p.amount_c
+        else if (p.method === 'MAYA') maya += p.amount_c
+        else if (p.method === 'UTANG') utang += p.amount_c
+      }
+    }
+    const total = cash + gcash + maya + utang
+    return {
+      cash,
+      gcash,
+      maya,
+      utang,
+      total,
+      cashPct: total > 0 ? (cash / total) * 100 : 0,
+      gcashPct: total > 0 ? (gcash / total) * 100 : 0,
+      mayaPct: total > 0 ? (maya / total) * 100 : 0,
+      utangPct: total > 0 ? (utang / total) * 100 : 0
+    }
+  }, [todaySales])
+
+  const topMovers = useMemo(() => {
+    const map = new Map<string, { name: string; qty: number; revenue_c: number }>()
+    for (const s of todaySales) {
+      for (const item of s.items) {
+        const key = item.product_name || 'Item'
+        const ex = map.get(key)
+        if (ex) {
+          ex.qty += item.qty
+          ex.revenue_c += item.subtotal_c
+        } else {
+          map.set(key, { name: key, qty: item.qty, revenue_c: item.subtotal_c })
+        }
+      }
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5)
+  }, [todaySales])
 
   return (
     <div className="px-4 pt-3 pb-6 space-y-4">
@@ -227,7 +279,137 @@ export function Dashboard(): React.JSX.Element | null {
         </button>
       </div>
 
-      {/* 4. INVENTORY STOCK WATCHLIST */}
+      {/* 4. PAYMENT METHOD SPLIT */}
+      <div className="card p-3 space-y-2.5 bg-ink-900/80">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Payment Breakdown</span>
+          <span className="text-xs font-bold text-white tabular-nums">Collected: {money(paymentBreakdown.total)}</span>
+        </div>
+
+        {paymentBreakdown.total > 0 ? (
+          <>
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-ink-950">
+              {paymentBreakdown.cash > 0 && (
+                <div
+                  style={{ width: `${paymentBreakdown.cashPct}%` }}
+                  className="bg-emerald-500 transition-all"
+                  title={`Cash: ${money(paymentBreakdown.cash)} (${paymentBreakdown.cashPct.toFixed(0)}%)`}
+                />
+              )}
+              {paymentBreakdown.gcash > 0 && (
+                <div
+                  style={{ width: `${paymentBreakdown.gcashPct}%` }}
+                  className="bg-blue-500 transition-all"
+                  title={`GCash: ${money(paymentBreakdown.gcash)} (${paymentBreakdown.gcashPct.toFixed(0)}%)`}
+                />
+              )}
+              {paymentBreakdown.maya > 0 && (
+                <div
+                  style={{ width: `${paymentBreakdown.mayaPct}%` }}
+                  className="bg-teal-400 transition-all"
+                  title={`Maya: ${money(paymentBreakdown.maya)} (${paymentBreakdown.mayaPct.toFixed(0)}%)`}
+                />
+              )}
+              {paymentBreakdown.utang > 0 && (
+                <div
+                  style={{ width: `${paymentBreakdown.utangPct}%` }}
+                  className="bg-amber-500 transition-all"
+                  title={`Utang: ${money(paymentBreakdown.utang)} (${paymentBreakdown.utangPct.toFixed(0)}%)`}
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 xs:grid-cols-4 gap-1.5 pt-1 text-xs">
+              <div className="rounded-lg bg-ink-950/60 p-2 border border-ink-line/40">
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="text-[10px] font-bold uppercase">Cash</span>
+                </div>
+                <p className="mt-1 font-black text-white tabular-nums">{money(paymentBreakdown.cash)}</p>
+                <p className="text-[10px] text-slate-500">{paymentBreakdown.cashPct.toFixed(0)}%</p>
+              </div>
+
+              <div className="rounded-lg bg-ink-950/60 p-2 border border-ink-line/40">
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <span className="h-2 w-2 rounded-full bg-blue-400" />
+                  <span className="text-[10px] font-bold uppercase">GCash</span>
+                </div>
+                <p className="mt-1 font-black text-white tabular-nums">{money(paymentBreakdown.gcash)}</p>
+                <p className="text-[10px] text-slate-500">{paymentBreakdown.gcashPct.toFixed(0)}%</p>
+              </div>
+
+              <div className="rounded-lg bg-ink-950/60 p-2 border border-ink-line/40">
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <span className="h-2 w-2 rounded-full bg-teal-400" />
+                  <span className="text-[10px] font-bold uppercase">Maya</span>
+                </div>
+                <p className="mt-1 font-black text-white tabular-nums">{money(paymentBreakdown.maya)}</p>
+                <p className="text-[10px] text-slate-500">{paymentBreakdown.mayaPct.toFixed(0)}%</p>
+              </div>
+
+              <div className="rounded-lg bg-ink-950/60 p-2 border border-ink-line/40">
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  <span className="text-[10px] font-bold uppercase">Utang</span>
+                </div>
+                <p className="mt-1 font-black text-amber-400 tabular-nums">{money(paymentBreakdown.utang)}</p>
+                <p className="text-[10px] text-slate-500">{paymentBreakdown.utangPct.toFixed(0)}%</p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="py-2 text-center text-xs text-slate-500">No payment records yet today.</p>
+        )}
+      </div>
+
+      {/* 5. TOP 5 FAST-MOVING ITEMS TODAY */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-0.5">
+          <div className="flex items-center gap-1.5">
+            <Flame className="h-4 w-4 text-amber-400" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Fast Movers Today</p>
+          </div>
+          <span className="text-[10px] text-slate-500">Top 5 by units sold</span>
+        </div>
+
+        {topMovers.length > 0 ? (
+          <div className="space-y-1.5">
+            {topMovers.map((m, idx) => (
+              <div
+                key={m.name}
+                className="card p-2.5 flex items-center justify-between gap-3 bg-ink-900/80 border border-ink-line/60 hover:bg-ink-850 transition"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                      idx === 0
+                        ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+                        : idx === 1
+                        ? 'bg-slate-300/20 text-slate-200 border border-slate-300/40'
+                        : idx === 2
+                        ? 'bg-amber-700/20 text-amber-500 border border-amber-700/40'
+                        : 'bg-ink-950 text-slate-500 border border-ink-line'
+                    }`}
+                  >
+                    #{idx + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-white">{m.name}</p>
+                    <p className="text-[10px] text-slate-400">{m.qty} sold</p>
+                  </div>
+                </div>
+                <span className="text-xs font-black tabular-nums text-brand-400 shrink-0">{money(m.revenue_c)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card p-3 text-center text-xs text-slate-500 bg-ink-900/50">
+            Fast-moving products will appear here as items are sold today.
+          </div>
+        )}
+      </div>
+
+      {/* 6. INVENTORY STOCK WATCHLIST */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-0.5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Stock Alerts</p>
@@ -235,22 +417,22 @@ export function Dashboard(): React.JSX.Element | null {
             onClick={() => setPage('inventory')}
             className="flex items-center gap-1 text-xs font-semibold text-brand-400 hover:text-brand-300"
           >
-            <span>View All ({allProducts.length})</span>
+            <span>View All ({Array.isArray(allProducts) ? allProducts.length : 0})</span>
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        {alertProducts.length === 0 ? (
+        {safeAlerts.length === 0 ? (
           <div className="card p-3 flex items-center justify-between bg-ink-900/60">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-400" />
               <p className="text-xs font-medium text-slate-300">All inventory levels are healthy</p>
             </div>
-            <span className="text-[10px] text-slate-500">{allProducts.length} items active</span>
+            <span className="text-[10px] text-slate-500">{Array.isArray(allProducts) ? allProducts.length : 0} items active</span>
           </div>
         ) : (
           <div className="space-y-1.5">
-            {alertProducts.slice(0, 4).map((p) => (
+            {safeAlerts.slice(0, 4).map((p) => (
               <div
                 key={p.id}
                 onClick={() => setPage('inventory')}
@@ -277,7 +459,7 @@ export function Dashboard(): React.JSX.Element | null {
         )}
       </div>
 
-      {/* 5. RECENT SALES FEED */}
+      {/* 7. RECENT SALES FEED */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-0.5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Recent Transactions</p>
@@ -290,7 +472,7 @@ export function Dashboard(): React.JSX.Element | null {
           </button>
         </div>
 
-        {recent.length === 0 ? (
+        {safeRecent.length === 0 ? (
           <EmptyState
             title="No transactions yet today"
             message="Sales made in the POS will appear here."
@@ -298,7 +480,7 @@ export function Dashboard(): React.JSX.Element | null {
           />
         ) : (
           <div className="space-y-1.5">
-            {recent.slice(0, 5).map((s) => (
+            {safeRecent.slice(0, 5).map((s) => (
               <div
                 key={s.id}
                 onClick={() => setPage('transactions')}

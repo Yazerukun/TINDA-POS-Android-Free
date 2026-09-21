@@ -25,6 +25,7 @@ import { money } from '@shared/format'
 import { Modal } from '../components/ui/Modal'
 import { ReceiptPaper } from '../components/ReceiptPaper'
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal'
+import { QuickAddProductModal } from '../components/QuickAddProductModal'
 import { TouchNumpad } from '../components/TouchNumpad'
 import {
   playScanBeep,
@@ -140,6 +141,8 @@ export function POS(): React.JSX.Element {
   const cartItems = usePosCart((state) => state.items)
   const allowNeg = usePosCart((state) => state.allow_negative)
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddBarcode, setQuickAddBarcode] = useState('')
 
   const handleBarcodeScan = async (code: string) => {
     try {
@@ -167,9 +170,10 @@ export function POS(): React.JSX.Element {
         }
       } else {
         setQ(trimmed)
+        setQuickAddBarcode(trimmed)
         void search(trimmed, catFilter === 'ALL' ? null : catFilter)
         playErrorTone()
-        toastError('Barcode not found', `No product matching "${trimmed}"`)
+        toastError('Barcode not found', `No product matching "${trimmed}". Tap "+ Item" to add it now.`)
       }
     } catch (err) {
       toastError('Scan error', String(err))
@@ -279,6 +283,19 @@ export function POS(): React.JSX.Element {
             </div>
             <button
               type="button"
+              onClick={() => {
+                const isCode = /^\d+$/.test(q.trim())
+                setQuickAddBarcode(isCode ? q.trim() : '')
+                setQuickAddOpen(true)
+              }}
+              className="btn-secondary flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3 shadow-md active:scale-95 transition border-brand-500/30 text-brand-400 hover:bg-brand-500/10"
+              title="Quickly add new product"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline text-sm font-bold">Item</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setScannerOpen(true)}
               className="btn-primary flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3.5 shadow-md active:scale-95 transition"
               title="Scan barcode with camera"
@@ -309,7 +326,20 @@ export function POS(): React.JSX.Element {
         <div className="grid min-h-0 flex-1 auto-rows-[160px] grid-cols-[repeat(auto-fill,minmax(min(100%,160px),1fr))] content-start gap-3 overflow-y-auto pb-24 md:pb-2">
           {loading && Array.from({ length: 12 }).map((_, i) => <div key={i} className="card h-28 animate-pulse" />)}
           {!loading && products.length === 0 && (
-            <div className="col-span-full py-12 text-center text-sm text-slate-500">No products found.</div>
+            <div className="col-span-full py-12 flex flex-col items-center justify-center text-center">
+              <p className="text-sm text-slate-400 mb-3">No products found {q ? `for "${q}"` : ''}.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  const isCode = /^\d+$/.test(q.trim())
+                  setQuickAddBarcode(isCode ? q.trim() : '')
+                  setQuickAddOpen(true)
+                }}
+                className="btn-primary flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl active:scale-95 transition shadow-lg shadow-brand-500/25"
+              >
+                <Plus className="h-4 w-4" /> Quick Add Product
+              </button>
+            </div>
           )}
           {!loading && products.map((p) => {
             const cartItem = cartItems.find(item => item.product_id === p.id)
@@ -361,6 +391,23 @@ export function POS(): React.JSX.Element {
         onClose={() => setScannerOpen(false)}
         onScan={handleBarcodeScan}
         title="Scan Barcode to Add to Cart"
+      />
+
+      <QuickAddProductModal
+        open={quickAddOpen}
+        initialName={/^\d+$/.test(q.trim()) ? '' : q.trim()}
+        initialBarcode={quickAddBarcode || (/^\d+$/.test(q.trim()) ? q.trim() : '')}
+        categories={categories}
+        onClose={() => {
+          setQuickAddOpen(false)
+          setQuickAddBarcode('')
+        }}
+        onCreated={(product) => {
+          usePosCart.getState().add(product)
+          setProducts((prev) => [product, ...prev])
+          setQ('')
+          setQuickAddBarcode('')
+        }}
       />
     </div>
   )

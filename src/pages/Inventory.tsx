@@ -696,6 +696,54 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
           <label className="label">Selling Price (₱)</label>
           <input type="number" min={0} value={f.default_price_c / 100} onChange={(e) => set({ default_price_c: Math.round(parseFloat(e.target.value || '0') * 100) })} className="input w-full" />
         </div>
+
+        {/* Live Profit Margin & Markup Calculator */}
+        {f.default_price_c > 0 && (
+          <div className="col-span-2 rounded-xl border border-ink-line bg-ink-950/60 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-300">Live Profit Analysis</span>
+              {f.purchase_cost_c > 0 && f.default_price_c < f.purchase_cost_c ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/30">
+                  <AlertTriangle className="h-3 w-3" /> Loss Warning
+                </span>
+              ) : f.purchase_cost_c > 0 ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  <CheckCircle2 className="h-3 w-3" /> Profitable
+                </span>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 rounded-lg bg-ink-900/60">
+                <p className="text-[10px] uppercase font-bold text-slate-500">Unit Profit</p>
+                <p className={`text-sm font-black tabular-nums ${f.default_price_c >= f.purchase_cost_c ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {money(f.default_price_c - f.purchase_cost_c)}
+                </p>
+              </div>
+              <div className="p-2 rounded-lg bg-ink-900/60">
+                <p className="text-[10px] uppercase font-bold text-slate-500">Margin</p>
+                <p className={`text-sm font-black tabular-nums ${f.default_price_c >= f.purchase_cost_c ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {f.default_price_c > 0
+                    ? `${(((f.default_price_c - f.purchase_cost_c) / f.default_price_c) * 100).toFixed(1)}%`
+                    : '0%'}
+                </p>
+              </div>
+              <div className="p-2 rounded-lg bg-ink-900/60">
+                <p className="text-[10px] uppercase font-bold text-slate-500">Markup</p>
+                <p className="text-sm font-black tabular-nums text-brand-400">
+                  {f.purchase_cost_c > 0
+                    ? `${(((f.default_price_c - f.purchase_cost_c) / f.purchase_cost_c) * 100).toFixed(1)}%`
+                    : '—'}
+                </p>
+              </div>
+            </div>
+            {f.purchase_cost_c > 0 && f.default_price_c < f.purchase_cost_c && (
+              <p className="text-[11px] font-medium text-red-400 mt-2">
+                Warning: Selling price is lower than purchase cost. You will lose {money(f.purchase_cost_c - f.default_price_c)} per unit sold.
+              </p>
+            )}
+          </div>
+        )}
+
         {priceRef && (
           <div className="col-span-2">
             <PriceReferenceCard

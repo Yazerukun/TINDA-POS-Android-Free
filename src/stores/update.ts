@@ -1,7 +1,9 @@
 import { create } from 'zustand'
-import { shouldAutoCheck, UPDATE_CHECK_THROTTLE_MS, type UpdateStatusEvent } from '@shared/update'
+import { shouldAutoCheck, type UpdateStatusEvent } from '@shared/update'
+import { toastSuccess } from './toast'
 
 const LAST_CHECK_KEY = 'tinda-pos.update.lastCheckedAt'
+const AUTO_CHECK_THROTTLE_MS = 10 * 60 * 1000 // 10 minutes
 
 function readLastCheckAt(): number | null {
   try {
@@ -46,16 +48,42 @@ export const useUpdate = create<UpdateState>((set, get) => ({
     unsubscribe = window.api.update.onEvent((event) => set({ event }))
     const event = await window.api.update.state()
     set({ event })
-    // Launch-time update check (at most once per throttle window), so a newer
-    // official APK is offered without the user hunting through Settings.
-    if (shouldAutoCheck(readLastCheckAt(), Date.now(), UPDATE_CHECK_THROTTLE_MS)) {
-      writeLastCheckAt(Date.now())
-      await get().check(false)
+
+    // Auto-check on window focus & when reconnecting online
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', () => {
+        if (shouldAutoCheck(readLastCheckAt(), Date.now(), AUTO_CHECK_THROTTLE_MS)) {
+          writeLastCheckAt(Date.now())
+          void get().check(false).catch(() => {})
+        }
+      })
+      window.addEventListener('online', () => {
+        writeLastCheckAt(Date.now())
+        void get().check(false).catch(() => {})
+      })
+    }
+
+    // Launch-time auto check: runs in background so the Bell alerts immediately without tapping
+    if (typeof navigator === 'undefined' || navigator.onLine) {
+      if (shouldAutoCheck(readLastCheckAt(), Date.now(), AUTO_CHECK_THROTTLE_MS)) {
+        writeLastCheckAt(Date.now())
+        void get().check(false).catch(() => {})
+      }
     }
   },
   check: async (manual) => {
-    const event = await window.api.update.check(manual)
-    set({ event })
+    try {
+      const event = await window.api.update.check(manual)
+      set({ event })
+      if (!manual && event.status === 'UPDATE_AVAILABLE' && event.available) {
+        toastSuccess(
+          'Software Update Available',
+          `v${event.available.version} is ready. Tap the Bell icon to update!`
+        )
+      }
+    } catch {
+      /* Silent background check */
+    }
   },
   download: async () => {
     const event = await window.api.update.download()

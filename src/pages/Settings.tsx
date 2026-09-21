@@ -663,14 +663,38 @@ function StoreSettingsTab(): React.JSX.Element {
 
 function ReceiptSettingsTab(): React.JSX.Element {
   const { settings, update } = useSettings()
-  const [f, setF] = useState({ receipt_header: settings?.receipt_header ?? '', receipt_title: settings?.receipt_title ?? '', receipt_show_app_name: settings?.receipt_show_app_name ?? true, receipt_footer: settings?.receipt_footer ?? '', receipt_printer: settings?.receipt_printer ?? '', auto_print_after_sale: settings?.auto_print_after_sale ?? false, receipt_paper_width: settings?.receipt_paper_width ?? '80mm' as '58mm' | '80mm', receipt_copies: settings?.receipt_copies ?? 1 })
+  const [f, setF] = useState({
+    receipt_header: settings?.receipt_header ?? '',
+    receipt_title: settings?.receipt_title ?? '',
+    receipt_show_app_name: settings?.receipt_show_app_name ?? true,
+    receipt_footer: settings?.receipt_footer ?? '',
+    receipt_gcash_no: settings?.receipt_gcash_no ?? '',
+    receipt_maya_no: settings?.receipt_maya_no ?? '',
+    receipt_printer: settings?.receipt_printer ?? '',
+    auto_print_after_sale: settings?.auto_print_after_sale ?? false,
+    receipt_paper_width: settings?.receipt_paper_width ?? '80mm' as '58mm' | '80mm',
+    receipt_copies: settings?.receipt_copies ?? 1
+  })
   const set = (patch: Partial<typeof f>) => setF((p) => ({ ...p, ...patch }))
   const [saving, setSaving] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [printers, setPrinters] = useState<PrinterChoice[]>([])
 
   useEffect(() => {
-    if (settings) setF({ receipt_header: settings.receipt_header, receipt_title: settings.receipt_title, receipt_show_app_name: settings.receipt_show_app_name, receipt_footer: settings.receipt_footer, receipt_printer: settings.receipt_printer, auto_print_after_sale: settings.auto_print_after_sale, receipt_paper_width: settings.receipt_paper_width, receipt_copies: settings.receipt_copies })
+    if (settings) {
+      setF({
+        receipt_header: settings.receipt_header,
+        receipt_title: settings.receipt_title,
+        receipt_show_app_name: settings.receipt_show_app_name,
+        receipt_footer: settings.receipt_footer,
+        receipt_gcash_no: settings.receipt_gcash_no ?? '',
+        receipt_maya_no: settings.receipt_maya_no ?? '',
+        receipt_printer: settings.receipt_printer,
+        auto_print_after_sale: settings.auto_print_after_sale,
+        receipt_paper_width: settings.receipt_paper_width,
+        receipt_copies: settings.receipt_copies
+      })
+    }
   }, [settings])
 
   // Refresh the installed printer list (also used by the Refresh Printers button
@@ -704,7 +728,14 @@ function ReceiptSettingsTab(): React.JSX.Element {
   const save = async () => {
     setSaving(true)
     try {
-      await update({ receipt_header: f.receipt_header, receipt_title: f.receipt_title, receipt_show_app_name: f.receipt_show_app_name, receipt_footer: f.receipt_footer })
+      await update({
+        receipt_header: f.receipt_header,
+        receipt_title: f.receipt_title,
+        receipt_show_app_name: f.receipt_show_app_name,
+        receipt_footer: f.receipt_footer,
+        receipt_gcash_no: f.receipt_gcash_no,
+        receipt_maya_no: f.receipt_maya_no
+      })
       await window.api.printer.save({ name: f.receipt_printer, autoPrint: f.auto_print_after_sale, paperWidth: f.receipt_paper_width, copies: f.receipt_copies })
       toastSuccess('Receipt settings saved')
     } catch (e) { toastError('Save failed', String((e as Error)?.message || e)) } finally { setSaving(false) }
@@ -726,6 +757,28 @@ function ReceiptSettingsTab(): React.JSX.Element {
         <div><label className="label">Receipt Title</label><input value={f.receipt_title} onChange={e=>set({receipt_title:e.target.value})} placeholder="JUAN STORE" className="input w-full"/></div>
         <div><label className="label">Receipt Header (shown on top)</label><textarea value={f.receipt_header} onChange={(e) => set({ receipt_header: e.target.value })} rows={2} className="input w-full" /></div>
         <div><label className="label">Receipt Footer (message at bottom)</label><textarea value={f.receipt_footer} onChange={(e) => set({ receipt_footer: e.target.value })} rows={2} className="input w-full" /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="label">GCash Account / QR Number</label>
+            <input
+              value={f.receipt_gcash_no}
+              onChange={(e) => set({ receipt_gcash_no: e.target.value })}
+              placeholder="e.g. 0917-123-4567 (Juan D.)"
+              className="input w-full font-mono text-xs"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">Printed on receipts for customer GCash payments.</p>
+          </div>
+          <div>
+            <label className="label">Maya Account / QR Number</label>
+            <input
+              value={f.receipt_maya_no}
+              onChange={(e) => set({ receipt_maya_no: e.target.value })}
+              placeholder="e.g. 0918-987-6543 (Store Maya)"
+              className="input w-full font-mono text-xs"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">Printed on receipts for customer Maya payments.</p>
+          </div>
+        </div>
         <div>
           <label className="label">Printer</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto mb-2 pr-1">
@@ -793,6 +846,8 @@ function ReceiptSettingsTab(): React.JSX.Element {
               ...(settings?.address ? [settings.address] : []),
               ...(settings?.phone ? [settings.phone] : []),
               ...(settings?.tin ? [`TIN: ${settings.tin}`] : []),
+              ...(f.receipt_gcash_no ? [`GCash: ${f.receipt_gcash_no}`] : []),
+              ...(f.receipt_maya_no ? [`Maya: ${f.receipt_maya_no}`] : []),
               '--------------------------------',
               'No: 20260920-0001',
               'Date: Sep 20, 2026, 7:30 PM',

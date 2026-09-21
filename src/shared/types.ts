@@ -415,6 +415,8 @@ export interface StoreSettings {
   receipt_title: string
   receipt_show_app_name: boolean
   receipt_footer: string
+  receipt_gcash_no?: string
+  receipt_maya_no?: string
   logo_path: string | null
   default_low_stock: number
   default_tax_c: number

@@ -1,6 +1,6 @@
 {
   "name": "tinda-pos-android-free-v1.0.10",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "Planning workspace for a separate Android APK build of the free TINDA POS feature set.",
   "main": "index.js",
   "directories": {
