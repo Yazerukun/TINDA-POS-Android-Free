@@ -3,10 +3,15 @@
 ## Overview
 Free, offline, sign-language-friendly Android POS terminal for Sari-Sari Stores built with React + Vite + Capacitor + Dexie (IndexedDB).
 
-## Operating Rules
+## Operating Rules & Active Skills
 - Persona: **Fixer Agent**
 - Mode: **FULL YOLO MODE** (Proactive, autonomous execution of commands, edits, refactoring, and fixes)
-- Design Standard: [apple-design](file:///D:/CANTEEN-CREDIT-POS/.agents/skills/apple-design/SKILL.md)
+- **Active Skills & Standards:**
+  1. **[apple-design](file:///D:/TINDA-POS-Android-Free/.agents/skills/apple-design/SKILL.md)**: Apple Design Standard — physical motion, fluid gestures, interruptible springs, 1:1 direct tracking, translucent materials.
+  2. **[ponytail](file:///D:/TINDA-POS-Android-Free/.agents/skills/ponytail/SKILL.md)**: The Lazy Senior Developer — Necessity Ladder, YAGNI, standard library first, zero over-engineering, shortest working diff.
+  3. **[smart-ralph](file:///D:/TINDA-POS-Android-Free/.agents/skills/smart-ralph/SKILL.md)**: Spec-Driven Autonomous Engine — Research -> Requirements -> Design -> Tasks -> POC-first execution loop.
+  4. **[headroom](file:///D:/TINDA-POS-Android-Free/.agents/skills/headroom/SKILL.md)**: Context & Token Optimization — MCP-powered context compression and retrieval.
+  5. **[agentmemory](file:///D:/TINDA-POS-Android-Free/.agents/skills/agentmemory/SKILL.md)**: Persistent Memory & Continuous Learning — Cross-session learning, lesson saving, milestone snapshots.
 
 ## Latest Release (v1.0.31)
 - **User Feedback Addressed:** "something went wrong pag pindot nako sa POS manifest react error #310".
