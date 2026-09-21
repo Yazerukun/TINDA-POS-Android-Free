@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Store, UserRound, ReceiptText, Check, Loader2, Database } from 'lucide-react'
 import { useAuth } from '../stores/auth'
+import tindaLogo from '../assets/tinda-logo.png'
 
 type Step = 0 | 1 | 2
 
