@@ -96,14 +96,21 @@ export async function hydrateProduct(product: Product, batches?: StockBatch[]): 
   const openBatches = productBatches.filter((batch) => (batch.expiration_date ?? '') >= localDateKey() || !batch.expiration_date)
   const batchStock = openBatches.reduce((sum, batch) => sum + num(batch.quantity), 0)
   const stock = num(product.stock)
+  const expMode = product.expiration_mode ?? (product.has_expiration ? 'ITEM' : 'NONE')
+  let sellable = stock
+  if (expMode === 'BATCH') {
+    sellable = productBatches.length > 0 ? Math.min(stock, batchStock) : stock
+  } else if (expMode === 'ITEM') {
+    sellable = product.expiration_date && product.expiration_date < localDateKey() ? 0 : stock
+  }
   return {
     ...product,
     stock,
     category_name: category?.name ?? null,
     units: normalizeUnits(product.name, num(product.default_price_c), product.barcode, product.units),
     stock_status: stockStatus(stock, num(product.low_stock_threshold)),
-    sellable_stock: product.has_expiration && productBatches.length > 0 ? Math.min(stock, batchStock) : stock,
-    expiration_mode: product.expiration_mode ?? (product.has_expiration ? 'ITEM' : 'NONE'),
+    sellable_stock: sellable,
+    expiration_mode: expMode,
     batches: product.has_expiration ? productBatches : undefined
   }
 }
@@ -149,10 +156,22 @@ export async function searchProducts(
 ): Promise<{ rows: Product[]; total: number }> {
   const all = await db.products.toArray()
   const batches = await db.batches.toArray()
+  const cleanQ = (query ?? '').trim()
+  const unpaddedQ = cleanQ.replace(/^0+/, '')
   const filtered = all
     .filter((product) => (opts.status ? product.status === (opts.status as ProductStatus) : product.status !== 'ARCHIVED'))
     .filter((product) => (opts.category_id ? product.category_id === opts.category_id : true))
-    .filter((product) => matches(product.name, query) || matches(product.sku, query) || matches(product.barcode, query))
+    .filter((product) => {
+      if (!cleanQ) return true
+      if (matches(product.name, cleanQ) || matches(product.sku, cleanQ) || matches(product.barcode, cleanQ)) return true
+      if (product.units?.some((u) => matches(u.barcode, cleanQ) || matches(u.name, cleanQ))) return true
+      if (unpaddedQ) {
+        const prodBarcode = (product.barcode ?? '').replace(/^0+/, '')
+        if (prodBarcode && prodBarcode.toLowerCase() === unpaddedQ.toLowerCase()) return true
+        if (product.units?.some((u) => (u.barcode ?? '').replace(/^0+/, '').toLowerCase() === unpaddedQ.toLowerCase())) return true
+      }
+      return false
+    })
     .sort((a, b) => a.name.localeCompare(b.name))
   const total = filtered.length
   const offset = opts.offset ?? 0
@@ -208,6 +227,9 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     updated_at: now
   }
   row.units = normalizeUnits(row.name, row.default_price_c, row.barcode, input.units).map((unit) => ({ ...unit, product_id: 0 }))
+  if (row.barcode && row.units.length > 0 && !row.units[0].barcode) {
+    row.units[0].barcode = row.barcode
+  }
   const created = await insertRow(db.products, row)
   const id = created.id
   const units = created.units.map((unit) => ({ ...unit, product_id: id }))
@@ -228,6 +250,17 @@ export async function createProduct(input: ProductInput): Promise<Product> {
       created_at: now
     }
     await insertRow(db.movements, movement)
+
+    if (row.expiration_mode === 'BATCH') {
+      await insertRow(db.batches, {
+        product_id: id,
+        batch_number: 'BATCH-INITIAL',
+        label: 'Opening stock',
+        quantity: initial,
+        expiration_date: input.expiration_date ?? null,
+        created_at: now
+      })
+    }
   }
   emitInventoryChanged('RESTOCK', [id])
   await audit({ action: 'PRODUCT_CREATE', entity_type: 'product', entity_id: id, new_value: name })
@@ -254,6 +287,10 @@ export async function updateProduct(id: number, input: Partial<ProductInput>): P
   if (input.notes !== undefined) patch.notes = input.notes
   if (input.units !== undefined) {
     patch.units = normalizeUnits(text(patch.name ?? product.name), cents(patch.default_price_c ?? product.default_price_c), patch.barcode ?? product.barcode, input.units).map((unit) => ({ ...unit, product_id: id }))
+    const activeBarcode = patch.barcode ?? product.barcode
+    if (activeBarcode && patch.units.length > 0 && !patch.units[0].barcode) {
+      patch.units[0].barcode = activeBarcode
+    }
   }
   await db.products.update(id, patch)
   await audit({ action: 'PRODUCT_UPDATE', entity_type: 'product', entity_id: id, new_value: patch.name ?? product.name })

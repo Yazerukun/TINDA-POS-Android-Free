@@ -23,7 +23,7 @@ export const NAV: { key: PageKey; label: string; icon: React.ReactNode; permissi
   { key: 'pos', label: 'POS', icon: <ShoppingCart className="h-4 w-4" />, permission: 'pos:use' },
   { key: 'inventory', label: 'Inventory', icon: <Boxes className="h-4 w-4" />, permission: 'products:manage' },
   { key: 'customers', label: 'Customers', icon: <Users className="h-4 w-4" />, permission: 'customers:manage' },
-  { key: 'utang', label: 'Utang', icon: <Wallet className="h-4 w-4" />, permission: 'pos:utang' },
+  { key: 'utang', label: 'Credit', icon: <Wallet className="h-4 w-4" />, permission: 'pos:utang' },
   { key: 'expenses', label: 'Expenses', icon: <Receipt className="h-4 w-4" />, permission: 'expenses:manage' },
   { key: 'suppliers', label: 'Suppliers', icon: <Truck className="h-4 w-4" />, permission: 'suppliers:manage' },
   { key: 'transactions', label: 'Transactions', icon: <ListOrdered className="h-4 w-4" />, permission: 'transactions:view' },

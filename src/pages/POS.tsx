@@ -63,6 +63,8 @@ interface CartState {
   customer: Customer | null
   customer_id: number | null
   discount_pesos: number
+  allow_negative: boolean
+  setAllowNegative: (v: boolean) => void
   add: (p: Product) => void
   setQty: (product_id: number, qty: number) => void
   remove: (product_id: number) => void
@@ -78,12 +80,17 @@ export const usePosCart = create<CartState>((set) => ({
   customer: null,
   customer_id: null,
   discount_pesos: 0,
+  allow_negative: true,
+  setAllowNegative: (v) => set({ allow_negative: v }),
   add: (p) =>
     set((s) => {
       const stock = saleStock(p)
       const ex = s.items.find((i) => i.product_id === p.id)
-      if (stock < 1) return s
-      if (ex) return { items: s.items.map((i) => (i === ex ? { ...i, stock_base: stock, qty: Math.min(i.qty + 1, maxQuantity(stock, i.conversion_to_base)) } : i)) }
+      if (!s.allow_negative && stock < 1) return s
+      if (ex) {
+        const nextQty = s.allow_negative ? ex.qty + 1 : Math.min(ex.qty + 1, maxQuantity(stock, ex.conversion_to_base))
+        return { items: s.items.map((i) => (i === ex ? { ...i, stock_base: stock, qty: nextQty } : i)) }
+      }
       return {
         items: [...s.items, {
           product_id: p.id,
@@ -98,7 +105,13 @@ export const usePosCart = create<CartState>((set) => ({
       }
     }),
   setQty: (product_id, qty) =>
-    set((s) => ({ items: s.items.map((i) => (i.product_id === product_id ? { ...i, qty: Math.min(Math.max(0, Number.isFinite(qty) ? qty : 0), maxQuantity(i.stock_base, i.conversion_to_base)) } : i)).filter((i) => i.qty > 0) })),
+    set((s) => ({
+      items: s.items
+        .map((i) => (i.product_id === product_id
+          ? { ...i, qty: s.allow_negative ? Math.max(0, Number.isFinite(qty) ? qty : 0) : Math.min(Math.max(0, Number.isFinite(qty) ? qty : 0), maxQuantity(i.stock_base, i.conversion_to_base)) }
+          : i))
+        .filter((i) => i.qty > 0)
+    })),
   remove: (product_id) => set((s) => ({ items: s.items.filter((i) => i.product_id !== product_id) })),
   clear: () => set({ items: [], customer: null, customer_id: null, discount_pesos: 0 }),
   setCustomer: (c) =>
@@ -129,30 +142,44 @@ export function POS(): React.JSX.Element {
 
   const handleBarcodeScan = async (code: string) => {
     try {
-      const res = await window.api.products.search(code, { limit: 10, status: 'ACTIVE' })
-      const exact = res.rows.find((p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase()) || res.rows[0]
+      const trimmed = code.trim()
+      const unpadded = trimmed.replace(/^0+/, '')
+      const res = await window.api.products.search(trimmed, { limit: 10, status: 'ACTIVE' })
+      const exact = res.rows.find((p) =>
+        p.barcode?.trim() === trimmed ||
+        p.sku.toLowerCase() === trimmed.toLowerCase() ||
+        p.units?.some((u) => u.barcode?.trim() === trimmed) ||
+        (unpadded && (p.barcode?.replace(/^0+/, '') === unpadded || p.units?.some((u) => (u.barcode ?? '').replace(/^0+/, '') === unpadded)))
+      ) || res.rows[0]
       if (exact) {
         const stock = saleStock(exact)
-        if (stock > 0) {
+        const allowNeg = usePosCart.getState().allow_negative
+        if (allowNeg || stock > 0) {
           usePosCart.getState().add(exact)
           playScanBeep()
           hapticScan()
-          toastSuccess('Added to cart', `${exact.name} (${code})`)
+          toastSuccess('Added to cart', `${exact.name} (${trimmed})`)
         } else {
           playErrorTone()
           hapticError()
-          toastError('Out of stock', `${exact.name} has 0 sellable stock.`)
+          toastError('Out of stock', `${exact.name} has 0 stock. You can enable 'Sell without stock' in Settings.`)
         }
       } else {
-        setQ(code)
-        void search(code, catFilter === 'ALL' ? null : catFilter)
+        setQ(trimmed)
+        void search(trimmed, catFilter === 'ALL' ? null : catFilter)
         playErrorTone()
-        toastError('Barcode not found', `No product matching "${code}"`)
+        toastError('Barcode not found', `No product matching "${trimmed}"`)
       }
     } catch (err) {
       toastError('Scan error', String(err))
     }
   }
+
+  useEffect(() => {
+    window.api.settings.get().then((s) => {
+      usePosCart.getState().setAllowNegative(s?.allow_negative_inventory ?? true)
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -289,7 +316,8 @@ export function POS(): React.JSX.Element {
             const available = availableBase(stock, cartItem)
             const blocked = p.stock - stock
             const low = available > 0 && available <= p.low_stock_threshold
-            const out = available <= 0
+            const allowNeg = usePosCart((s) => s.allow_negative)
+            const out = !allowNeg && available <= 0
             return (
               <button
                 key={p.id}
@@ -297,7 +325,7 @@ export function POS(): React.JSX.Element {
                   if (out) {
                     playErrorTone()
                     hapticError()
-                    toastError(blocked > 0 ? 'Expired or undated stock is blocked' : 'Out of stock', `Available for sale: ${stock} ${p.base_unit}.`)
+                    toastError(blocked > 0 ? 'Expired or undated stock is blocked' : 'Out of stock', `Available for sale: ${stock} ${p.base_unit}. You can enable 'Sell without stock' in Settings.`)
                   } else {
                     playScanBeep()
                     hapticTap()
@@ -309,7 +337,7 @@ export function POS(): React.JSX.Element {
               >
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                   <span className="truncate text-xs font-bold text-brand-400">{p.sku}</span>
-                  <span className={`text-xs font-bold ${out ? 'text-red-400' : low ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <span className={`text-xs font-bold ${available <= 0 ? (allowNeg ? 'text-amber-400' : 'text-red-400') : low ? 'text-amber-400' : 'text-slate-500'}`}>
                     {blocked > 0 ? `Sellable: ${stock}` : cartItem ? `Available: ${available} / ${stock}` : `Stock: ${stock}`} {p.base_unit}
                   </span>
                 </div>
@@ -335,7 +363,7 @@ export function POS(): React.JSX.Element {
 }
 
 function CartPanel(): React.JSX.Element {
-  const { items, customer, customer_id, discount_pesos } = usePosCart()
+  const { items, customer, customer_id, discount_pesos, allow_negative } = usePosCart()
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [customerOpen, setCustomerOpen] = useState(false)
   const [heldOpen, setHeldOpen] = useState(false)
@@ -353,7 +381,7 @@ function CartPanel(): React.JSX.Element {
 
   const subtotal = useMemo(() => items.reduce((s, i) => s + i.unit_price_c * i.qty, 0), [items])
   const total = Math.max(0, subtotal - discount_pesos)
-  const stockConflict = cartHasStockConflict(items)
+  const stockConflict = !allow_negative && cartHasStockConflict(items)
 
   const loadHeldSales = async () => {
     try {
@@ -703,10 +731,10 @@ export function CartBody({
         </div>
       )}
 
-      {/* Totals & Utang Selector */}
+      {/* Totals & Credit Customer Selector */}
       <div className="shrink-0 space-y-2 border-t border-ink-line px-4 py-2.5 text-base bg-ink-900">
         <div className="flex items-center justify-between text-slate-400">
-          <span className="text-xs font-semibold">Customer (Utang)</span>
+          <span className="text-xs font-semibold">Customer (Credit)</span>
           {customer ? (
             <div className="flex items-center gap-1.5 rounded-lg bg-brand-500/10 border border-brand-500/30 px-2 py-1 max-w-[210px]">
               <User className="h-3.5 w-3.5 text-brand-400 shrink-0" />
@@ -715,7 +743,7 @@ export function CartBody({
                   {customer.full_name}
                 </span>
                 <span className="text-[10px] text-amber-400 tabular-nums block leading-tight">
-                  Utang: {money(customer.balance_c)}
+                  Credit: {money(customer.balance_c)}
                 </span>
               </div>
               <button
@@ -797,14 +825,26 @@ export function CartBody({
 }
 
 function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: number; onClose: () => void }): React.JSX.Element {
-  const { items, customer, customer_id, discount_pesos } = usePosCart()
+  const { items, customer, customer_id, discount_pesos, allow_negative } = usePosCart()
   const [method, setMethod] = useState<'CASH' | 'GCASH' | 'MAYA' | 'UTANG'>('CASH')
   const [cash, setCash] = useState<string>(cashInputFromCents(total))
   const [reference, setReference] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<{ sale: Sale; receipt: string[]; print: PrintResult } | null>(null)
   const [printing, setPrinting] = useState(false)
-  const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
+
+  // Inline Customer Selection for Credit
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [customerList, setCustomerList] = useState<Customer[]>([])
+  const [customerLoading, setCustomerLoading] = useState(false)
+  const [pickingCustomer, setPickingCustomer] = useState(false)
+  const [showAddCustomer, setShowAddCustomer] = useState(false)
+  const [savingCustomer, setSavingCustomer] = useState(false)
+  const [newCustName, setNewCustName] = useState('')
+  const [newCustNickname, setNewCustNickname] = useState('')
+  const [newCustPhone, setNewCustPhone] = useState('')
+  const [newCustLimit, setNewCustLimit] = useState('1000')
+
   const setPage = useNav((state) => state.setPage)
 
   const cashC = Math.round((parseFloat(cash) || 0) * 100)
@@ -819,16 +859,70 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
 
   useEffect(() => { void openShift() }, [])
 
+  const loadCustomers = useCallback(async (term = '') => {
+    setCustomerLoading(true)
+    try {
+      const res = await window.api.customers.list({ search: term.trim() || undefined, status: 'ACTIVE', limit: 50 })
+      setCustomerList(res.rows)
+    } catch (e) {
+      toastError('Failed to load customers', String((e as Error)?.message || e))
+    } finally {
+      setCustomerLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (method === 'UTANG') {
+      void loadCustomers(customerSearch)
+    }
+  }, [method, customerSearch, loadCustomers])
+
+  const handleCreateCustomer = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const trimmed = newCustName.trim()
+    if (!trimmed) {
+      toastError('Name required', 'Please enter customer name.')
+      return
+    }
+    setSavingCustomer(true)
+    try {
+      const limitC = Math.round((parseFloat(newCustLimit) || 1000) * 100)
+      const created = await window.api.customers.create({
+        full_name: trimmed,
+        nickname: newCustNickname.trim() || null,
+        phone: newCustPhone.trim() || null,
+        address: null,
+        notes: null,
+        credit_limit_c: limitC
+      })
+      usePosCart.getState().setCustomer(created)
+      setShowAddCustomer(false)
+      setPickingCustomer(false)
+      setNewCustName('')
+      setNewCustNickname('')
+      setNewCustPhone('')
+      playSuccessChime()
+      hapticSuccess()
+      toastSuccess('Customer selected', `${created.full_name} is ready for credit sale`)
+    } catch (err) {
+      playErrorTone()
+      hapticError()
+      toastError('Failed to add customer', String((err as Error)?.message || err))
+    } finally {
+      setSavingCustomer(false)
+    }
+  }
+
   const doCheckout = async () => {
-    if (cartHasStockConflict(items)) {
+    if (!allow_negative && cartHasStockConflict(items)) {
       toastError('Stock changed', 'Please adjust the cart to the available quantity before checkout.')
       return
     }
     if (method === 'UTANG' && !customer_id) {
       playErrorTone()
       hapticError()
-      toastError('Customer required', 'Palihug og pili o pag-add og customer para sa utang.')
-      setCustomerPickerOpen(true)
+      toastError('Customer required', 'Please select or add a customer to charge this credit sale.')
+      setPickingCustomer(true)
       return
     }
     setSubmitting(true)
@@ -912,156 +1006,295 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
     { key: 'CASH', label: 'Cash', icon: <Banknote className="h-4 w-4" /> },
     { key: 'GCASH', label: 'GCash', icon: <Smartphone className="h-4 w-4" /> },
     { key: 'MAYA', label: 'Maya', icon: <Smartphone className="h-4 w-4" /> },
-    { key: 'UTANG', label: 'Utang', icon: <Wallet className="h-4 w-4" /> }
+    { key: 'UTANG', label: 'Credit', icon: <Wallet className="h-4 w-4" /> }
   ]
 
   return (
-    <>
-      <Modal open onClose={onClose} title="Checkout" maxWidth="max-w-md" footer={
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button onClick={onClose} className="btn-ghost flex-1 sm:flex-none">Cancel</button>
-          <button onClick={doCheckout} disabled={submitting} className="btn-primary flex-1 sm:flex-none items-center justify-center gap-2">
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {method === 'UTANG' && customer
-              ? `Charge ${money(total)} (Utang: ${customer.nickname || customer.full_name})`
-              : `Charge ${money(total)}`}
-          </button>
+    <Modal open onClose={onClose} title="Checkout" maxWidth="max-w-md" footer={
+      <div className="flex gap-2 w-full sm:w-auto">
+        <button onClick={onClose} className="btn-ghost flex-1 sm:flex-none">Cancel</button>
+        <button onClick={doCheckout} disabled={submitting} className="btn-primary flex-1 sm:flex-none items-center justify-center gap-2">
+          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+          {method === 'UTANG' && customer
+            ? `Charge ${money(total)} (Credit: ${customer.nickname || customer.full_name})`
+            : `Charge ${money(total)}`}
+        </button>
+      </div>
+    }>
+      <div className="space-y-3">
+        {/* Compact Total Due Header */}
+        <div className="flex items-center justify-between rounded-xl border border-ink-line bg-ink-950 px-4 py-2.5">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Due</span>
+            <p className="text-xs text-slate-400">Subtotal {money(subtotal)} {discount_pesos > 0 ? `· Disc -${money(discount_pesos)}` : ''}</p>
+          </div>
+          <p className="text-3xl font-black text-brand-400 tabular-nums">{money(total)}</p>
         </div>
-      }>
-        <div className="space-y-3">
-          {/* Compact Total Due Header */}
-          <div className="flex items-center justify-between rounded-xl border border-ink-line bg-ink-950 px-4 py-2.5">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Due</span>
-              <p className="text-xs text-slate-400">Subtotal {money(subtotal)} {discount_pesos > 0 ? `· Disc -${money(discount_pesos)}` : ''}</p>
-            </div>
-            <p className="text-3xl font-black text-brand-400 tabular-nums">{money(total)}</p>
-          </div>
 
-          {/* Sleek Segmented Payment Method Bar */}
-          <div className="grid grid-cols-4 gap-1 rounded-xl border border-ink-line bg-ink-950 p-1">
-            {methods.map((m) => (
-              <button
-                key={m.key}
-                type="button"
-                onClick={() => setMethod(m.key)}
-                className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-xs font-semibold transition active:scale-95 ${
-                  method === m.key
-                    ? 'bg-brand-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:bg-ink-900 hover:text-white'
-                }`}
-              >
-                {m.icon}
-                <span className="text-[11px]">{m.label}</span>
-              </button>
-            ))}
-          </div>
+        {/* Sleek Segmented Payment Method Bar */}
+        <div className="grid grid-cols-4 gap-1 rounded-xl border border-ink-line bg-ink-950 p-1">
+          {methods.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => {
+                setMethod(m.key)
+                if (m.key === 'UTANG' && !customer) {
+                  setPickingCustomer(true)
+                }
+              }}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-xs font-semibold transition active:scale-95 ${
+                method === m.key
+                  ? 'bg-brand-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:bg-ink-900 hover:text-white'
+              }`}
+            >
+              {m.icon}
+              <span className="text-[11px]">{m.label}</span>
+            </button>
+          ))}
+        </div>
 
-          {method === 'CASH' && (
-            <div className="space-y-2">
-              {/* Side-by-Side Cash Received & Sukli */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl border border-ink-line bg-ink-950 px-3 py-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cash Received</span>
-                  <p className="text-xl font-black text-white tabular-nums">
-                    {cash ? `₱${cash}` : '₱0'}
-                  </p>
-                </div>
-                <div className={`rounded-xl border px-3 py-1.5 ${change >= 0 ? 'border-brand-500/30 bg-brand-500/10' : 'border-danger-500/30 bg-danger-500/10'}`}>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Change (sukli)</span>
-                  <p className={`tabular-nums ${change >= 0 ? 'text-xl font-black text-brand-300' : 'mt-0.5 text-xs font-bold text-danger-400'}`}>
-                    {change >= 0 ? money(change) : `Lacking ${money(Math.abs(change))}`}
-                  </p>
-                </div>
+        {method === 'CASH' && (
+          <div className="space-y-2">
+            {/* Side-by-Side Cash Received & Change */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-ink-line bg-ink-950 px-3 py-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cash Received</span>
+                <p className="text-xl font-black text-white tabular-nums">
+                  {cash ? `₱${cash}` : '₱0'}
+                </p>
               </div>
-
-              <TouchNumpad
-                value={cash}
-                totalPesos={Math.round(total / 100)}
-                onChange={(next) => setCash(next)}
-              />
+              <div className={`rounded-xl border px-3 py-1.5 ${change >= 0 ? 'border-brand-500/30 bg-brand-500/10' : 'border-danger-500/30 bg-danger-500/10'}`}>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Change</span>
+                <p className={`tabular-nums ${change >= 0 ? 'text-xl font-black text-brand-300' : 'mt-0.5 text-xs font-bold text-danger-400'}`}>
+                  {change >= 0 ? money(change) : `Lacking ${money(Math.abs(change))}`}
+                </p>
+              </div>
             </div>
-          )}
 
-          {(method === 'GCASH' || method === 'MAYA') && (
-            <div>
-              <label className="mb-1 block text-xs text-slate-400">Reference No.</label>
-              <input value={reference} onChange={(e) => setReference(e.target.value)} className="input w-full" placeholder="e.g. 1234-5678" />
-            </div>
-          )}
+            <TouchNumpad
+              value={cash}
+              totalPesos={Math.round(total / 100)}
+              onChange={(next) => setCash(next)}
+            />
+          </div>
+        )}
 
-          {method === 'UTANG' && (
-            <div className="space-y-2.5">
-              {customer ? (
-                <div className="rounded-xl border border-brand-500/30 bg-brand-500/10 p-3 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-4 w-4 text-brand-400 shrink-0" />
-                        <span className="font-bold text-white text-sm truncate">{customer.full_name}</span>
-                        {customer.nickname && <span className="text-xs text-slate-400 truncate">({customer.nickname})</span>}
-                      </div>
-                      {customer.phone && <p className="text-[11px] text-slate-400 mt-0.5">{customer.phone}</p>}
+        {(method === 'GCASH' || method === 'MAYA') && (
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Reference No.</label>
+            <input value={reference} onChange={(e) => setReference(e.target.value)} className="input w-full" placeholder="e.g. 1234-5678" />
+          </div>
+        )}
+
+        {method === 'UTANG' && (
+          <div className="space-y-2.5">
+            {customer && !pickingCustomer ? (
+              <div className="rounded-xl border border-brand-500/30 bg-brand-500/10 p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <User className="h-4 w-4 text-brand-400 shrink-0" />
+                      <span className="font-bold text-white text-sm truncate">{customer.full_name}</span>
+                      {customer.nickname && <span className="text-xs text-slate-400 truncate">({customer.nickname})</span>}
                     </div>
+                    {customer.phone && <p className="text-[11px] text-slate-400 mt-0.5">{customer.phone}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setCustomerPickerOpen(true)}
-                      className="text-xs font-semibold text-brand-400 hover:text-brand-300 underline shrink-0"
+                      onClick={() => {
+                        setPickingCustomer(true)
+                        setCustomerSearch('')
+                      }}
+                      className="text-xs font-semibold text-brand-400 hover:text-brand-300 underline"
                     >
                       Change
                     </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-brand-500/20 text-xs">
-                    <div>
-                      <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Current Utang</span>
-                      <p className="font-bold text-amber-400 tabular-nums text-sm">{money(customer.balance_c)}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">New Balance (+{money(total)})</span>
-                      <p className="font-black text-white tabular-nums text-sm">{money(customer.balance_c + total)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-brand-500/10 text-[11px]">
-                    <span className="text-slate-400">Credit Limit: {money(customer.credit_limit_c)}</span>
-                    {customer.balance_c + total > customer.credit_limit_c ? (
-                      <span className="text-amber-400 font-semibold">⚠️ Exceeds limit</span>
-                    ) : (
-                      <span className="text-emerald-400 font-semibold">Within limit</span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => usePosCart.getState().setCustomer(null)}
+                      className="text-slate-400 hover:text-danger-400 p-0.5"
+                      title="Clear customer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-center space-y-2.5">
-                  <div className="flex items-center justify-center gap-1.5 text-amber-300">
-                    <Wallet className="h-4 w-4" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Select Customer for Utang</span>
+
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-brand-500/20 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Current Credit</span>
+                    <p className="font-bold text-amber-400 tabular-nums text-sm">{money(customer.balance_c)}</p>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Kinsay nangutang? Palihug pag-pili o pag-add og customer para ma-charge kining halin sa ilang utang account.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setCustomerPickerOpen(true)}
-                    className="btn-primary w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2 !bg-amber-500 hover:!bg-amber-400 !text-ink-950 shadow-md active:scale-97 transition"
-                  >
-                    <User className="h-4 w-4" /> Select or Add Customer
+                  <div className="text-right">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">New Balance (+{money(total)})</span>
+                    <p className="font-black text-white tabular-nums text-sm">{money(customer.balance_c + total)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-brand-500/10 text-[11px]">
+                  <span className="text-slate-400">Credit Limit: {money(customer.credit_limit_c)}</span>
+                  {customer.balance_c + total > customer.credit_limit_c ? (
+                    <span className="text-amber-400 font-semibold">⚠️ Exceeds limit</span>
+                  ) : (
+                    <span className="text-emerald-400 font-semibold">Within limit</span>
+                  )}
+                </div>
+              </div>
+            ) : showAddCustomer ? (
+              <form onSubmit={(e) => void handleCreateCustomer(e)} className="rounded-xl border border-brand-500/30 bg-ink-950 p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Add New Customer</span>
+                  <button type="button" onClick={() => setShowAddCustomer(false)} className="text-xs text-slate-400 hover:text-white">
+                    Cancel
                   </button>
                 </div>
-              )}
-              <p className="text-[11px] text-slate-400 text-center">
-                Ma-rekord kini isip utang (credit sale) ug idugang sa customer ledger.
-              </p>
-            </div>
-          )}
-        </div>
-      </Modal>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Full Name *</label>
+                  <input
+                    value={newCustName}
+                    onChange={(e) => setNewCustName(e.target.value)}
+                    placeholder="e.g. Maria Santos"
+                    className="input w-full text-xs h-9"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Nickname</label>
+                    <input
+                      value={newCustNickname}
+                      onChange={(e) => setNewCustNickname(e.target.value)}
+                      placeholder="e.g. Maria"
+                      className="input w-full text-xs h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Phone</label>
+                    <input
+                      value={newCustPhone}
+                      onChange={(e) => setNewCustPhone(e.target.value)}
+                      placeholder="0917..."
+                      className="input w-full text-xs h-9"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-0.5">Credit Limit (₱)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={newCustLimit}
+                    onChange={(e) => setNewCustLimit(e.target.value)}
+                    className="input w-full text-xs h-9"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={savingCustomer || !newCustName.trim()}
+                  className="btn-primary w-full py-2 text-xs font-bold flex items-center justify-center gap-1.5"
+                >
+                  {savingCustomer && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Save & Select Customer
+                </button>
+              </form>
+            ) : (
+              <div className="rounded-xl border border-ink-line bg-ink-950 p-3 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-white">Select Customer for Credit</span>
+                  <div className="flex items-center gap-2">
+                    {customer && (
+                      <button
+                        type="button"
+                        onClick={() => setPickingCustomer(false)}
+                        className="text-xs text-slate-400 hover:text-white"
+                      >
+                        Keep Current
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewCustName(customerSearch)
+                        setShowAddCustomer(true)
+                      }}
+                      className="btn-primary text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1"
+                    >
+                      <Plus className="h-3 w-3" /> New
+                    </button>
+                  </div>
+                </div>
 
-      {customerPickerOpen && (
-        <CustomerPicker onClose={() => setCustomerPickerOpen(false)} />
-      )}
-    </>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+                  <input
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    placeholder="Search name or phone…"
+                    className="input w-full pl-8 text-xs h-9"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                  {customerLoading && <p className="py-4 text-center text-xs text-slate-500">Loading customers…</p>}
+                  {!customerLoading && customerList.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        usePosCart.getState().setCustomer(c)
+                        setPickingCustomer(false)
+                        hapticTap()
+                        toastSuccess('Customer selected', c.full_name)
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg border border-ink-line bg-ink-900/80 p-2 text-left hover:border-brand-500/50 hover:bg-ink-850 active:scale-98 transition"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">{c.full_name} {c.nickname ? `(${c.nickname})` : ''}</p>
+                        <p className="text-[10px] text-slate-400">{c.phone || 'No phone'} · Limit: {money(c.credit_limit_c)}</p>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <span className={`text-xs font-black tabular-nums block ${c.balance_c > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {money(c.balance_c)}
+                        </span>
+                        <span className="text-[9px] text-slate-500 font-medium">
+                          {c.balance_c > 0 ? 'credit' : 'zero'}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+
+                  {!customerLoading && customerList.length === 0 && (
+                    <div className="py-4 text-center space-y-1.5">
+                      <p className="text-xs text-slate-400">No customers found.</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewCustName(customerSearch)
+                          setShowAddCustomer(true)
+                        }}
+                        className="btn-primary text-xs mx-auto flex items-center gap-1 py-1 px-3"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {customerSearch ? `Add "${customerSearch}"` : 'Add New Customer'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <p className="text-[11px] text-slate-400 text-center">
+              Recorded as a credit sale and posted to the customer ledger.
+            </p>
+          </div>
+        )}
+      </div>
+    </Modal>
   )
 }
 
@@ -1094,7 +1327,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
     if (e) e.preventDefault()
     const trimmed = newName.trim()
     if (!trimmed) {
-      toastError('Name required', 'Palihug ibutang ang ngalan sa customer.')
+      toastError('Name required', 'Please enter the customer name.')
       return
     }
     setSaving(true)
@@ -1111,7 +1344,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
       usePosCart.getState().setCustomer(created)
       playSuccessChime()
       hapticSuccess()
-      toastSuccess('Customer selected', `${created.full_name} is ready for utang`)
+      toastSuccess('Customer selected', `${created.full_name} selected for store credit`)
       onClose()
     } catch (err) {
       playErrorTone()
@@ -1133,7 +1366,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
     <Modal
       open
       onClose={onClose}
-      title={showAdd ? 'Add New Customer' : 'Select Customer (Utang)'}
+      title={showAdd ? 'Add New Customer' : 'Select Customer (Store Credit)'}
       maxWidth="max-w-md"
       footer={
         showAdd ? (
@@ -1159,7 +1392,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
               }}
               className="btn-ghost text-xs"
             >
-              Walk-in (no utang)
+              Walk-in (Cash / No Credit)
             </button>
             <button type="button" onClick={onClose} className="btn-secondary text-xs">Close</button>
           </div>
@@ -1173,7 +1406,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Mang Ben / Aling Maria"
+              placeholder="e.g. Maria Santos"
               className="input w-full"
               autoFocus
               required
@@ -1185,7 +1418,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
               <input
                 value={newNickname}
                 onChange={(e) => setNewNickname(e.target.value)}
-                placeholder="e.g. Ben"
+                placeholder="e.g. Maria"
                 className="input w-full"
               />
             </div>
@@ -1209,7 +1442,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
               onChange={(e) => setNewLimit(e.target.value)}
               className="input w-full"
             />
-            <p className="text-[10px] text-slate-500 mt-1">Default ₱1,000. Pwede pa gihapon pa-utang bisan lapas sa limit.</p>
+            <p className="text-[10px] text-slate-500 mt-1">Default ₱1,000. Store credit may exceed limit if approved.</p>
           </div>
         </form>
       ) : (
@@ -1261,7 +1494,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
                     {money(c.balance_c)}
                   </span>
                   <span className="text-[10px] text-slate-500 font-medium">
-                    {c.balance_c > 0 ? 'utang' : 'no utang'}
+                    {c.balance_c > 0 ? 'credit' : 'zero'}
                   </span>
                 </div>
               </button>
@@ -1269,7 +1502,7 @@ function CustomerPicker({ onClose }: { onClose: () => void }): React.JSX.Element
 
             {!loading && rows.length === 0 && (
               <div className="py-8 text-center space-y-2">
-                <p className="text-sm text-slate-400">Walay nakit-an nga customer.</p>
+                <p className="text-sm text-slate-400">No customers found.</p>
                 <button
                   type="button"
                   onClick={() => {

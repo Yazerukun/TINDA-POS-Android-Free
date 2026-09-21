@@ -112,7 +112,7 @@ function rowsToHtml(lines: string[], currency: string): string {
     const money = isMoneyLine(raw)
     if (money) {
       const cls = money.label === 'SUKLI' ? 'tp-sukli' : /^(TOTAL|TOTAL PAYMENTS|Total Payments|NET SALES|Actual Cash)$/i.test(money.label) ? 'tp-total' : 'tp-sum'
-      const label = money.label === 'SUKLI' ? 'Change / SUKLI' : money.label === 'Cash' ? 'Cash' : money.label
+      const label = money.label === 'SUKLI' ? 'Change' : money.label === 'Cash' ? 'Cash' : money.label
       pushRow(
         `<div class="${cls}"><span class="tp-lbl">${escapeHtml(label)}</span><span class="tp-amt">${fmtSigned(money.amount, symbol)}</span></div>`
       )

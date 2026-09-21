@@ -23,7 +23,7 @@ export function Utang(): React.JSX.Element {
       const res = await window.api.customers.list({ status: 'ACTIVE', limit: 1000 })
       setRows(res.rows)
     } catch (e) {
-      toastError('Failed to load utang', String((e as Error)?.message || e))
+      toastError('Failed to load credit', String((e as Error)?.message || e))
     } finally {
       setLoading(false)
     }
@@ -66,7 +66,7 @@ export function Utang(): React.JSX.Element {
   return (
     <div className="px-4 pt-3 pb-6">
       <PageHeader
-        title="Utang"
+        title="Store Credit"
         subtitle={`Customers with credit · total outstanding ${money(totalOutstanding)}`}
         actions={
           <button
@@ -86,21 +86,21 @@ export function Utang(): React.JSX.Element {
             onClick={() => setFilterTab('ALL')}
             className={`flex-1 py-1.5 rounded-lg text-center transition ${filterTab === 'ALL' ? 'bg-brand-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
           >
-            Tanan ({rows.length})
+            All ({rows.length})
           </button>
           <button
             type="button"
             onClick={() => setFilterTab('WITH_BALANCE')}
             className={`flex-1 py-1.5 rounded-lg text-center transition ${filterTab === 'WITH_BALANCE' ? 'bg-brand-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
           >
-            May Utang ({withBalanceCount})
+            With Balance ({withBalanceCount})
           </button>
           <button
             type="button"
             onClick={() => setFilterTab('ZERO_BALANCE')}
             className={`flex-1 py-1.5 rounded-lg text-center transition ${filterTab === 'ZERO_BALANCE' ? 'bg-brand-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
           >
-            Bayad Na ({zeroBalanceCount})
+            Zero Balance ({zeroBalanceCount})
           </button>
         </div>
 
@@ -119,8 +119,8 @@ export function Utang(): React.JSX.Element {
         <div className="space-y-2.5">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="card h-28 animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
         <EmptyState
-          title={filterTab === 'WITH_BALANCE' ? 'Walay customers nga may utang' : 'Walay nakit-an nga customer'}
-          message={filterTab === 'WITH_BALANCE' ? 'Tanan accounts bayad na o walay utang.' : 'Pag-add og customer aron makasugod og pa-utang.'}
+          title={filterTab === 'WITH_BALANCE' ? 'No customers with outstanding balance' : 'No customers found'}
+          message={filterTab === 'WITH_BALANCE' ? 'All customer accounts are settled with zero balance.' : 'Add a customer to begin extending store credit.'}
           icon={<Wallet className="h-7 w-7" />}
           action={
             <button onClick={() => setCreateCustomerOpen(true)} className="btn-primary flex items-center gap-1.5">
@@ -147,11 +147,11 @@ export function Utang(): React.JSX.Element {
                     </span>
                   ) : c.balance_c > 0 ? (
                     <span className="inline-flex items-center rounded-md bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/30">
-                      MAY UTANG
+                      HAS BALANCE
                     </span>
                   ) : (
                     <span className="inline-flex items-center rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
-                      WALAY UTANG
+                      ZERO BALANCE
                     </span>
                   )}
                 </div>
@@ -176,10 +176,10 @@ export function Utang(): React.JSX.Element {
                 <button
                   onClick={() => setAction({ type: 'PAY', customer: c })}
                   className="btn-primary flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold"
-                  title="Collect payment"
+                  title="Record payment"
                 >
                   <HandCoins className="h-3.5 w-3.5" />
-                  <span>Bayad (Pay)</span>
+                  <span>Record Payment</span>
                 </button>
                 <button
                   onClick={() => setAction({ type: 'ADJUST', customer: c })}
@@ -325,7 +325,7 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
             onChange={(e) => setCreditLimit(e.target.value)}
             className="input w-full"
           />
-          <p className="text-[10px] text-slate-500 mt-1">Default ₱1,000. Pwede pa gihapon pa-utang bisan lapas sa limit.</p>
+          <p className="text-[10px] text-slate-500 mt-1">Default ₱1,000. Store credit may exceed limit if approved.</p>
         </div>
       </form>
     </Modal>
@@ -390,7 +390,7 @@ function CreditActionModal({ action, onClose, onDone }: { action: { type: 'PAY' 
 
   const isPay = action.type === 'PAY'
   return (
-    <Modal open onClose={onClose} title={`${isPay ? 'Collect Payment (Bayad Utang)' : action.type === 'ADJUST' ? 'Adjust Balance' : 'Approve Overlimit'} — ${action.customer.full_name}`} maxWidth="max-w-md" footer={
+    <Modal open onClose={onClose} title={`${isPay ? 'Record Payment' : action.type === 'ADJUST' ? 'Adjust Balance' : 'Approve Overlimit'} — ${action.customer.full_name}`} maxWidth="max-w-md" footer={
       <>
         <button onClick={onClose} className="btn-ghost">Cancel</button>
         <button onClick={() => void submit()} disabled={submitting || (isPay ? amountC <= 0 : false)} className="btn-primary flex items-center gap-2">
@@ -400,7 +400,7 @@ function CreditActionModal({ action, onClose, onDone }: { action: { type: 'PAY' 
       </>
     }>
       <div className="mb-3 rounded-xl border border-ink-line bg-ink-950 p-3 text-center">
-        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Current Utang Balance</p>
+        <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Current Credit Balance</p>
         <p className="text-2xl font-black text-amber-400 tabular-nums mt-0.5">{money(action.customer.balance_c)}</p>
       </div>
 
@@ -447,7 +447,7 @@ function CreditActionModal({ action, onClose, onDone }: { action: { type: 'PAY' 
 
         {isPay && amountC > 0 && (
           <div className="flex items-center justify-between rounded-xl bg-ink-950 p-2.5 text-xs border border-ink-line">
-            <span className="text-slate-400">Mahibiling Utang (Remaining Balance):</span>
+            <span className="text-slate-400">Remaining Balance:</span>
             <span className="font-black text-white tabular-nums text-sm">
               {money(Math.max(0, action.customer.balance_c - amountC))}
             </span>
@@ -457,13 +457,13 @@ function CreditActionModal({ action, onClose, onDone }: { action: { type: 'PAY' 
         {action.type === 'ADJUST' && (
           <div>
             <label className="label">Reason *</label>
-            <input value={reason} onChange={(e) => setReason(e.target.value)} className="input w-full" placeholder="e.g. Diskwento / Sayop nga record" />
+            <input value={reason} onChange={(e) => setReason(e.target.value)} className="input w-full" placeholder="e.g. Discount / Adjustment" />
           </div>
         )}
 
         <div>
           <label className="label">Notes (Optional)</label>
-          <input value={notes} onChange={(e) => setNotes(e.target.value)} className="input w-full" placeholder="e.g. Partial payment / Resibo note" />
+          <input value={notes} onChange={(e) => setNotes(e.target.value)} className="input w-full" placeholder="e.g. Partial payment reference" />
         </div>
       </div>
     </Modal>

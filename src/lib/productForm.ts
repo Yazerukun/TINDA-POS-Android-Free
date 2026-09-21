@@ -60,7 +60,7 @@ export function newProductForm(defaultLowStock = 5): ProductFormData {
     purchase_cost_c: 0,
     default_price_c: 0,
     low_stock_threshold: defaultLowStock,
-    initial_stock_base: 0,
+    initial_stock_base: 1,
     description: null,
     supplier_id: null,
     notes: null,

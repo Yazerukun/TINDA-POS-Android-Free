@@ -27,7 +27,7 @@ function MayaMark(): React.JSX.Element {
 
 const SUBTITLES: Partial<Record<PageKey, string>> = {
   customers: 'Customer credit, contacts & balances',
-  utang: 'Track and settle customer utang',
+  utang: 'Track and settle customer store credit',
   expenses: 'Record store expenses',
   suppliers: 'Manage suppliers & purchases',
   transactions: 'View sales and receipt history',
@@ -89,7 +89,7 @@ export function More(): React.JSX.Element {
           </p>
           <div className="mt-1 flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/15 px-2 py-0.5 text-[10px] font-bold text-brand-400">
-              v1.0.29 Stable
+              v1.0.30 Stable
             </span>
             <span className="text-[10px] text-slate-500">
               {user?.full_name ? `Logged in: ${user.full_name}` : 'Local Account'}
@@ -119,7 +119,7 @@ export function More(): React.JSX.Element {
               </span>
             </div>
             <p className="truncate text-xs text-slate-400 mt-0.5">
-              172-item market price reference · DTI e-Presyo synced
+              172-item market price reference · DTI Price Guide synced
             </p>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-slate-500" />

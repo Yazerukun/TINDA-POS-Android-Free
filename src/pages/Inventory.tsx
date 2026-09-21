@@ -722,8 +722,9 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
         </div>
         {!form.id && (
           <div>
-            <label className="label">Opening Stock</label>
-            <input type="number" min={0} value={f.initial_stock_base} onChange={(e) => set({ initial_stock_base: parseInt(e.target.value || '0', 10) })} className="input w-full" />
+            <label className="label">Opening Stock (Sellable Units)</label>
+            <input type="number" min={0} value={f.initial_stock_base} onChange={(e) => set({ initial_stock_base: parseInt(e.target.value || '0', 10) })} className="input w-full" placeholder="Available to sell" />
+            <p className="text-[10px] text-slate-500 mt-1">Available immediately for sale in POS.</p>
           </div>
         )}
         <div className="col-span-2">
@@ -737,13 +738,13 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
           <input id="product-expiration" className="input w-full" type="date" value={f.expiration_date ?? ''} onChange={(e) => set({ expiration_date: e.target.value })} />
         </div>}
         <div className="col-span-2">
-          <label className="label">Selling Units (Tingi / Multi-unit)</label>
+          <label className="label">Selling Units (Multi-unit / Retail)</label>
           <div className="space-y-2">
             {rows.map((r, i) => (
               <div key={i} className="grid grid-cols-[1fr_76px_110px_28px] items-center gap-2">
                 <input placeholder={i === 0 ? 'Unit name (e.g. piece)' : 'Selling unit name'} value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} className="input w-full" />
                 <input type="number" min={1} step={1} title={`1 ${f.base_unit || 'base unit'} × ${r.conversion_to_base}`} value={r.conversion_to_base} onChange={(e) => setRow(i, { conversion_to_base: Math.max(1, parseInt(e.target.value || '1', 10)) })} className="input w-full" />
-                <input placeholder="Barcode" value={r.barcode ?? ''} onChange={(e) => setRow(i, { barcode: e.target.value || null })} className="input w-full" />
+                <input placeholder="Barcode" value={r.barcode ?? ''} onChange={(e) => setRow(i, { barcode: e.target.value ? e.target.value.trim() : null })} className="input w-full" />
                 <button type="button" onClick={() => removeUnit(i)} disabled={rows.length <= 1} className="btn-ghost-2 rounded-lg p-2 text-danger-400 disabled:opacity-30" title="Remove selling unit"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
@@ -757,8 +758,10 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
         open={barcodeScanOpen}
         onClose={() => setBarcodeScanOpen(false)}
         onScan={(code) => {
-          set({ barcode: code })
-          toastSuccess('Barcode captured', code)
+          const trimmed = code.trim()
+          set({ barcode: trimmed })
+          setRow(0, { barcode: trimmed })
+          toastSuccess('Barcode captured', trimmed)
         }}
         title="Scan Barcode for Product"
       />

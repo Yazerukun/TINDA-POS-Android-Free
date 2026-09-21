@@ -68,7 +68,7 @@ export function Customers(): React.JSX.Element {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="card h-28 animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
-        <EmptyState title="No customers" message="Add customers to sell on utang (credit)." icon={<Users className="h-7 w-7" />} action={<button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary">New Customer</button>} />
+        <EmptyState title="No customers" message="Add customers to extend store credit." icon={<Users className="h-7 w-7" />} action={<button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary">New Customer</button>} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((c) => (
