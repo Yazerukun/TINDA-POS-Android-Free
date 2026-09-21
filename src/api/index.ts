@@ -36,7 +36,26 @@ const ANDROID_UPDATER = Capacitor.getPlatform() === 'android'
 
 let installedVersion = system.APP_VERSION
 let versionRequest: Promise<string> | null = null
-let downloadedApkName: string | null = null
+const APK_NAME_KEY = 'tinda-pos.update.downloadedApk'
+
+function getStoredApkName(): string | null {
+  try {
+    return window.localStorage.getItem(APK_NAME_KEY) || null
+  } catch {
+    return null
+  }
+}
+
+function setStoredApkName(name: string | null): void {
+  try {
+    if (name) window.localStorage.setItem(APK_NAME_KEY, name)
+    else window.localStorage.removeItem(APK_NAME_KEY)
+  } catch {
+    // Ignore storage issues
+  }
+}
+
+let downloadedApkName: string | null = getStoredApkName()
 
 const updateListeners = new Set<(event: UpdateStatusEvent) => void>()
 
@@ -199,6 +218,7 @@ const api = {
         return emitUpdateEvent({ status: 'ERROR', available: plan.latest, progress: null, message: `Download failed: ${errorText(error)}` })
       }
       downloadedApkName = downloaded.fileName
+      setStoredApkName(downloaded.fileName)
       const done = { downloaded: downloaded.bytes, total: downloaded.bytes, percent: 100 }
       emitUpdateEvent({ status: 'DOWNLOADED', available: plan.latest, progress: done, message: `Downloaded v${version}.` })
       const install = await launchInstaller(downloaded.fileName)
@@ -210,11 +230,19 @@ const api = {
       })
     },
     install: async () => {
-      if (!downloadedApkName) {
-        return emitUpdateEvent({ status: 'ERROR', message: 'No downloaded update found. Download the update again.' })
+      let apkName = downloadedApkName || getStoredApkName()
+      if (!apkName && lastUpdateEvent.available?.version) {
+        apkName = `TindaPOS-Free-${lastUpdateEvent.available.version}.apk`
       }
-      const install = await launchInstaller(downloadedApkName)
-      return emitUpdateEvent({ status: install.launched ? 'READY_TO_INSTALL' : 'DOWNLOADED', message: install.message })
+      if (!apkName) {
+        apkName = 'tinda-pos-free-update.apk'
+      }
+      const install = await launchInstaller(apkName)
+      return emitUpdateEvent({
+        status: install.launched ? 'READY_TO_INSTALL' : 'DOWNLOADED',
+        available: lastUpdateEvent.available,
+        message: install.message
+      })
     },
     dismiss: async () => emitUpdateEvent({ status: 'DISMISSED', progress: null, message: null }),
     onEvent: (callback: (event: UpdateStatusEvent) => void) => {

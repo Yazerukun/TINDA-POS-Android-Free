@@ -69,38 +69,6 @@ export function Dashboard(): React.JSX.Element | null {
     }
   }, [])
 
-  if (error) {
-    return (
-      <div className="px-4 pt-3 pb-6">
-        <div className="card p-6 text-center">
-          <p className="text-sm text-danger-400">Failed to load dashboard: {error}</p>
-          <button onClick={() => window.location.reload()} className="btn-primary mt-3 text-xs">
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!summary) {
-    return (
-      <div className="px-4 pt-3 pb-6 space-y-4">
-        <div className="card h-36 animate-pulse" />
-        <div className="grid grid-cols-4 gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card h-20 animate-pulse" />
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="card h-16 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  const netSales = summary.sales_total_c - summary.refunds_c
   const safeAlerts = Array.isArray(alertProducts) ? alertProducts : []
   const out = safeAlerts.filter((p) => p.stock <= 0)
   const low = safeAlerts.filter((p) => p.stock > 0)
@@ -152,6 +120,39 @@ export function Dashboard(): React.JSX.Element | null {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5)
   }, [todaySales])
+
+  if (error) {
+    return (
+      <div className="px-4 pt-3 pb-6">
+        <div className="card p-6 text-center">
+          <p className="text-sm text-danger-400">Failed to load dashboard: {error}</p>
+          <button onClick={() => window.location.reload()} className="btn-primary mt-3 text-xs">
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!summary) {
+    return (
+      <div className="px-4 pt-3 pb-6 space-y-4">
+        <div className="card h-36 animate-pulse" />
+        <div className="grid grid-cols-4 gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card h-20 animate-pulse" />
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card h-16 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const netSales = summary.sales_total_c - summary.refunds_c
 
   return (
     <div className="px-4 pt-3 pb-6 space-y-4">

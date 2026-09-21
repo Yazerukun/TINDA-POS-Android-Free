@@ -23,8 +23,6 @@ export function UpdateModal(): React.JSX.Element | null {
   const [busy, setBusy] = useState(false)
   const [showNotes, setShowNotes] = useState(true)
 
-  if (!modalOpen) return null
-
   const status = event?.status ?? 'IDLE'
   const installed = event?.installedVersion ?? APP_VERSION
   const available = event?.available?.version ?? null
@@ -40,6 +38,8 @@ export function UpdateModal(): React.JSX.Element | null {
     setBusy(true)
     try {
       await check(true)
+    } catch (e) {
+      console.error('Check update error:', e)
     } finally {
       setBusy(false)
     }
@@ -49,6 +49,8 @@ export function UpdateModal(): React.JSX.Element | null {
     setBusy(true)
     try {
       await download()
+    } catch (e) {
+      console.error('Download update error:', e)
     } finally {
       setBusy(false)
     }
@@ -58,6 +60,8 @@ export function UpdateModal(): React.JSX.Element | null {
     setBusy(true)
     try {
       await install()
+    } catch (e) {
+      console.error('Install update error:', e)
     } finally {
       setBusy(false)
     }

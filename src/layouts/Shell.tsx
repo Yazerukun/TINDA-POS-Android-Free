@@ -21,6 +21,8 @@ import { Settings } from '../pages/Settings'
 import { More } from '../pages/More'
 import { ExpirationAlerts } from '../components/Expiration'
 
+import { ErrorBoundary } from '../components/ui/ErrorBoundary'
+
 export function Shell(): React.JSX.Element {
   const { user } = useAuth()
   const { load } = useSettings()
@@ -37,20 +39,22 @@ export function Shell(): React.JSX.Element {
         <MobileTopBar />
         {user && <ExpirationAlerts key={user.id} remind />}
         <div key={page} className="min-h-0 flex-1 overflow-y-auto animate-page-fade">
-        {user && page === 'dashboard' && <Dashboard />}
-        {user && page === 'pos' && <POS />}
-        {user && page === 'inventory' && <Inventory />}
-        {user && page === 'customers' && <Customers />}
-        {user && page === 'utang' && <Utang />}
-        {user && page === 'expenses' && <Expenses />}
-        {user && page === 'suppliers' && <Suppliers />}
-        {user && page === 'transactions' && <Transactions />}
-        {user && page === 'reports' && <Reports />}
-        {user && page === 'backup' && <Backup />}
-        {user && page === 'settings' && <Settings defaultTab="HOME" />}
-        {user && page === 'printer' && <Settings defaultTab="RECEIPT" />}
-        {user && page === 'update' && <Settings defaultTab="ABOUT" />}
-        {user && page === 'more' && <More />}
+          <ErrorBoundary inline>
+            {user && page === 'dashboard' && <Dashboard />}
+            {user && page === 'pos' && <POS />}
+            {user && page === 'inventory' && <Inventory />}
+            {user && page === 'customers' && <Customers />}
+            {user && page === 'utang' && <Utang />}
+            {user && page === 'expenses' && <Expenses />}
+            {user && page === 'suppliers' && <Suppliers />}
+            {user && page === 'transactions' && <Transactions />}
+            {user && page === 'reports' && <Reports />}
+            {user && page === 'backup' && <Backup />}
+            {user && page === 'settings' && <Settings defaultTab="HOME" />}
+            {user && page === 'printer' && <Settings defaultTab="RECEIPT" />}
+            {user && page === 'update' && <Settings defaultTab="ABOUT" />}
+            {user && page === 'more' && <More />}
+          </ErrorBoundary>
         </div>
       </main>
       <MobileBottomNav />
