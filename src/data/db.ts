@@ -120,6 +120,11 @@ class TindaDatabase extends Dexie {
     this.version(3).stores({
       priceReferences: '++id, product_id, barcode, product_name, brand, category, source_name, last_synced_at'
     })
+    // v4 adds parent_id to categories for main→sub hierarchy.
+    // Existing categories automatically get parent_id=null (top-level) — zero data loss.
+    this.version(4).stores({
+      categories: '++id, &name, parent_id'
+    })
   }
 }
 

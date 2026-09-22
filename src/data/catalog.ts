@@ -109,17 +109,26 @@ export async function hydrateProduct(product: Product, batches?: StockBatch[]): 
 
 export async function listCategories(): Promise<Category[]> {
   const rows = await db.categories.toArray()
-  return rows.sort((a, b) => a.name.localeCompare(b.name))
+  // Ensure all rows have parent_id (old rows pre-v4 won't have it)
+  return rows
+    .map((c) => ({ ...c, parent_id: c.parent_id ?? null }))
+    .sort((a, b) => {
+      // Sort: parents first (parent_id=null), then children under their parent
+      const aParent = a.parent_id ?? 0
+      const bParent = b.parent_id ?? 0
+      if (aParent !== bParent) return aParent - bParent
+      return a.name.localeCompare(b.name)
+    })
 }
 
-export async function createCategory(name: string): Promise<Category> {
+export async function createCategory(name: string, parentId?: number | null): Promise<Category> {
   const clean = text(name)
   if (!clean) throw new Error('Category name is required.')
   const existing = await db.categories.where('name').equals(clean).first()
-  if (existing) return existing
-  const row = await insertRow(db.categories, { name: clean, created_at: nowIso() })
+  if (existing) return { ...existing, parent_id: existing.parent_id ?? null }
+  const row = await insertRow(db.categories, { name: clean, parent_id: parentId ?? null, created_at: nowIso() })
   await audit({ action: 'CATEGORY_CREATE', entity_type: 'category', entity_id: row.id, new_value: clean })
-  return row
+  return { ...row, parent_id: row.parent_id ?? null }
 }
 
 export async function removeCategory(id: number): Promise<void> {

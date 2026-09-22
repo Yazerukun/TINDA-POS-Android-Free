@@ -274,6 +274,7 @@ const api = {
   categories: {
     list: catalog.listCategories,
     create: catalog.createCategory,
+    createSub: (name: string, parentId: number) => catalog.createCategory(name, parentId),
     remove: catalog.removeCategory
   },
   products: {

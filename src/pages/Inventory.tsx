@@ -76,9 +76,14 @@ export function Inventory(): React.JSX.Element {
     if (q) list = list.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) || (p.barcode || '').toLowerCase().includes(q.toLowerCase()) || p.sku.toLowerCase().includes(q.toLowerCase()))
     if (catFilter === 'LOW') list = list.filter((p) => p.stock > 0 && p.stock <= p.low_stock_threshold)
     else if (catFilter === 'OUT') list = list.filter((p) => p.stock <= 0)
-    else if (catFilter !== 'ALL') list = list.filter((p) => p.category_id === catFilter)
+    else if (catFilter !== 'ALL') {
+      // Include products in this category OR any subcategory whose parent = catFilter
+      const childIds = categories.filter((c) => c.parent_id === catFilter).map((c) => c.id)
+      const matchIds = new Set([catFilter as number, ...childIds])
+      list = list.filter((p) => p.category_id !== null && matchIds.has(p.category_id))
+    }
     return list
-  }, [products, q, catFilter])
+  }, [products, q, catFilter, categories])
 
   const totalValue = products.reduce((s, p) => s + p.stock * p.purchase_cost_c, 0)
   const lowCount = products.filter((p) => p.stock > 0 && p.stock <= p.low_stock_threshold).length
@@ -539,47 +544,126 @@ function StockHistoryView({ products, onClose }: { products: Product[]; onClose:
   </Modal>
 }
 
-function CategoryModal({ categories, onChanged, onClose }: { categories: Category[]; onChanged: () => Promise<void>; onClose: () => void }): React.JSX.Element {
+function CategoryModal({ categories: initialCategories, onChanged, onClose }: { categories: Category[]; onChanged: () => Promise<void>; onClose: () => void }): React.JSX.Element {
+  const [cats, setCats] = useState<Category[]>(initialCategories.map((c) => ({ ...c, parent_id: c.parent_id ?? null })))
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  // Track which parent has its "Add Sub" form open (by parent id)
+  const [addingSubFor, setAddingSubFor] = useState<number | null>(null)
+  const [subName, setSubName] = useState('')
 
-  const add = async () => {
+  const refreshLocal = async () => {
+    try {
+      const fresh = await window.api.categories.list()
+      setCats(fresh.map((c) => ({ ...c, parent_id: c.parent_id ?? null })))
+    } catch { /* ignore */ }
+    await onChanged()
+  }
+
+  const addMain = async () => {
     if (!name.trim()) { toastError('Category name is required'); return }
     setBusy(true)
     try {
       await window.api.categories.create(name)
       setName('')
-      await onChanged()
+      await refreshLocal()
       toastSuccess('Category added')
     } catch (e) { toastError('Add category failed', String((e as Error)?.message || e)) } finally { setBusy(false) }
   }
 
+  const addSub = async (parentId: number) => {
+    if (!subName.trim()) { toastError('Subcategory name is required'); return }
+    setBusy(true)
+    try {
+      await window.api.categories.createSub(subName, parentId)
+      setSubName('')
+      setAddingSubFor(null)
+      await refreshLocal()
+      toastSuccess('Subcategory added')
+    } catch (e) { toastError('Add subcategory failed', String((e as Error)?.message || e)) } finally { setBusy(false) }
+  }
+
   const remove = async (category: Category) => {
-    if (!confirm(`Delete category "${category.name}"? Products must be moved first if this category is in use.`)) return
+    const hasChildren = cats.some((c) => c.parent_id === category.id)
+    if (hasChildren) {
+      toastError('Cannot delete', `"${category.name}" has subcategories. Delete them first.`)
+      return
+    }
+    if (!confirm(`Delete category "${category.name}"? Products in this category will become uncategorized.`)) return
     setBusy(true)
     try {
       await window.api.categories.remove(category.id)
-      await onChanged()
+      await refreshLocal()
       toastSuccess('Category deleted')
     } catch (e) { toastError('Delete category failed', String((e as Error)?.message || e)) } finally { setBusy(false) }
   }
 
+  const mainCats = cats.filter((c) => !c.parent_id)
+  const subCats = (parentId: number) => cats.filter((c) => c.parent_id === parentId)
+
   return (
     <Modal open onClose={onClose} title="Manage Categories" maxWidth="max-w-md" footer={<button onClick={onClose} className="btn-ghost">Close</button>}>
-      <form onSubmit={(e) => { e.preventDefault(); void add() }} className="mb-4 flex gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New category name" className="input flex-1" autoFocus />
+      {/* Add main category */}
+      <form onSubmit={(e) => { e.preventDefault(); void addMain() }} className="mb-4 flex gap-2">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New main category" className="input flex-1" autoFocus />
         <button type="submit" disabled={busy || !name.trim()} className="btn-primary flex items-center gap-1"><Plus className="h-4 w-4" /> Add</button>
       </form>
-      <div className="max-h-80 space-y-2 overflow-y-auto">
-        {categories.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No categories yet.</p>}
-        {categories.map((category) => (
-          <div key={category.id} className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2">
-            <span className="text-sm font-medium text-slate-200">{category.name}</span>
-            <button onClick={() => void remove(category)} disabled={busy} className="btn-ghost-2 rounded-lg p-2 text-danger-400" title="Delete category"><Trash2 className="h-4 w-4" /></button>
-          </div>
-        ))}
+
+      <div className="max-h-[22rem] space-y-1.5 overflow-y-auto">
+        {mainCats.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No categories yet.</p>}
+        {mainCats.map((parent) => {
+          const subs = subCats(parent.id)
+          return (
+            <div key={parent.id} className="rounded-lg border border-ink-line overflow-hidden">
+              {/* Parent row */}
+              <div className="flex items-center justify-between bg-ink-800/60 px-3 py-2">
+                <span className="text-sm font-bold text-slate-200">{parent.name}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => { setAddingSubFor(addingSubFor === parent.id ? null : parent.id); setSubName('') }}
+                    disabled={busy}
+                    className="btn-ghost-2 rounded-lg px-2 py-1 text-[11px] text-brand-400 hover:text-brand-300"
+                    title="Add subcategory"
+                  >
+                    + Sub
+                  </button>
+                  <button onClick={() => void remove(parent)} disabled={busy} className="btn-ghost-2 rounded-lg p-1.5 text-danger-400" title="Delete">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Sub form inline */}
+              {addingSubFor === parent.id && (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); void addSub(parent.id) }}
+                  className="flex items-center gap-2 border-t border-ink-line bg-ink-900 px-3 py-2"
+                >
+                  <span className="text-slate-500 shrink-0 text-xs">↳</span>
+                  <input value={subName} onChange={(e) => setSubName(e.target.value)} placeholder="Subcategory name" className="input flex-1 py-1 text-sm" autoFocus />
+                  <button type="submit" disabled={busy || !subName.trim()} className="btn-primary px-2 py-1 text-xs">Add</button>
+                  <button type="button" onClick={() => setAddingSubFor(null)} className="btn-ghost px-2 py-1 text-xs">✕</button>
+                </form>
+              )}
+
+              {/* Subcategory rows */}
+              {subs.map((sub) => (
+                <div key={sub.id} className="flex items-center justify-between border-t border-ink-line/50 px-3 py-1.5 pl-6">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-slate-500 text-xs shrink-0">↳</span>
+                    <span className="text-xs text-slate-300 truncate">{sub.name}</span>
+                  </div>
+                  <button onClick={() => void remove(sub)} disabled={busy} className="btn-ghost-2 rounded-lg p-1.5 text-danger-400/70 hover:text-danger-400 shrink-0" title="Delete subcategory">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        })}
       </div>
-      <p className="mt-3 text-xs text-slate-500">A category used by a product cannot be deleted until those products are moved or uncategorized.</p>
+
+      <p className="mt-3 text-xs text-slate-500">Delete subcategories before deleting a main category. Products in deleted categories become uncategorized.</p>
     </Modal>
   )
 }

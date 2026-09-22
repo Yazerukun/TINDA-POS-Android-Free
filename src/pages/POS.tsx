@@ -59,11 +59,14 @@ interface CartItem {
   conversion_to_base: number
 }
 
+type DiscountType = 'NONE' | 'CUSTOM' | 'PWD' | 'SENIOR'
+
 interface CartState {
   items: CartItem[]
   customer: Customer | null
   customer_id: number | null
   discount_pesos: number
+  discount_type: DiscountType
   allow_negative: boolean
   setAllowNegative: (v: boolean) => void
   add: (p: Product) => void
@@ -72,8 +75,16 @@ interface CartState {
   clear: () => void
   setCustomer: (c: Customer | number | null) => void
   setDiscountPesos: (v: number) => void
+  setDiscountType: (t: DiscountType) => void
   replace: (items: CartItem[], discount_pesos: number) => void
   syncStocks: (products: Product[]) => void
+}
+
+/** Compute auto-discount centavos for PWD/Senior: 20% of subtotal */
+function autoDiscount(items: CartItem[], type: DiscountType): number {
+  if (type !== 'PWD' && type !== 'SENIOR') return 0
+  const subtotal = items.reduce((s, i) => s + i.unit_price_c * i.qty, 0)
+  return Math.round(subtotal * 0.20)
 }
 
 export const usePosCart = create<CartState>((set) => ({
@@ -81,6 +92,7 @@ export const usePosCart = create<CartState>((set) => ({
   customer: null,
   customer_id: null,
   discount_pesos: 0,
+  discount_type: 'NONE',
   allow_negative: true,
   setAllowNegative: (v) => set({ allow_negative: v }),
   add: (p) =>
@@ -88,12 +100,12 @@ export const usePosCart = create<CartState>((set) => ({
       const stock = saleStock(p)
       const ex = s.items.find((i) => i.product_id === p.id)
       if (!s.allow_negative && stock < 1) return s
+      let newItems: CartItem[]
       if (ex) {
         const nextQty = s.allow_negative ? ex.qty + 1 : Math.min(ex.qty + 1, maxQuantity(stock, ex.conversion_to_base))
-        return { items: s.items.map((i) => (i === ex ? { ...i, stock_base: stock, qty: nextQty } : i)) }
-      }
-      return {
-        items: [...s.items, {
+        newItems = s.items.map((i) => (i === ex ? { ...i, stock_base: stock, qty: nextQty } : i))
+      } else {
+        newItems = [...s.items, {
           product_id: p.id,
           name: p.name,
           unit_name: p.base_unit,
@@ -104,30 +116,40 @@ export const usePosCart = create<CartState>((set) => ({
           conversion_to_base: 1
         }]
       }
+      return { items: newItems, discount_pesos: autoDiscount(newItems, s.discount_type) || s.discount_pesos }
     }),
   setQty: (product_id, qty) =>
-    set((s) => ({
-      items: s.items
+    set((s) => {
+      const newItems = s.items
         .map((i) => (i.product_id === product_id
           ? { ...i, qty: s.allow_negative ? Math.max(0, Number.isFinite(qty) ? qty : 0) : Math.min(Math.max(0, Number.isFinite(qty) ? qty : 0), maxQuantity(i.stock_base, i.conversion_to_base)) }
           : i))
         .filter((i) => i.qty > 0)
-    })),
-  remove: (product_id) => set((s) => ({ items: s.items.filter((i) => i.product_id !== product_id) })),
-  clear: () => set({ items: [], customer: null, customer_id: null, discount_pesos: 0 }),
+      return { items: newItems, discount_pesos: autoDiscount(newItems, s.discount_type) || s.discount_pesos }
+    }),
+  remove: (product_id) => set((s) => {
+    const newItems = s.items.filter((i) => i.product_id !== product_id)
+    return { items: newItems, discount_pesos: autoDiscount(newItems, s.discount_type) || (s.discount_type === 'NONE' || s.discount_type === 'PWD' || s.discount_type === 'SENIOR' ? 0 : s.discount_pesos) }
+  }),
+  clear: () => set({ items: [], customer: null, customer_id: null, discount_pesos: 0, discount_type: 'NONE' }),
   setCustomer: (c) =>
     set(() => {
       if (!c) return { customer: null, customer_id: null }
       if (typeof c === 'number') return { customer_id: c }
       return { customer: c, customer_id: c.id }
     }),
-  setDiscountPesos: (v) => set({ discount_pesos: Math.max(0, v) }),
-  replace: (items, discount_pesos) => set({ items, customer: null, customer_id: null, discount_pesos }),
+  setDiscountPesos: (v) => set({ discount_pesos: Math.max(0, v), discount_type: 'CUSTOM' }),
+  setDiscountType: (t) => set((s) => ({
+    discount_type: t,
+    discount_pesos: t === 'NONE' ? 0 : t === 'CUSTOM' ? s.discount_pesos : autoDiscount(s.items, t)
+  })),
+  replace: (items, discount_pesos) => set({ items, customer: null, customer_id: null, discount_pesos, discount_type: discount_pesos > 0 ? 'CUSTOM' : 'NONE' }),
   syncStocks: (products) => set((s) => {
     const stocks = new Map(products.map(p => [p.id, saleStock(p)]))
     return { items: s.items.map(item => ({ ...item, stock_base: stocks.get(item.product_id) ?? item.stock_base })) }
   })
 }))
+
 
 export function POS(): React.JSX.Element {
   const [q, setQ] = useState('')
@@ -414,7 +436,7 @@ export function POS(): React.JSX.Element {
 }
 
 function CartPanel(): React.JSX.Element {
-  const { items, customer, customer_id, discount_pesos, allow_negative } = usePosCart()
+  const { items, customer, customer_id, discount_pesos, discount_type, allow_negative } = usePosCart()
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [customerOpen, setCustomerOpen] = useState(false)
   const [heldOpen, setHeldOpen] = useState(false)
@@ -528,6 +550,7 @@ function CartPanel(): React.JSX.Element {
           subtotal={subtotal}
           total={total}
           discount_pesos={discount_pesos}
+          discount_type={discount_type}
           stockConflict={stockConflict}
           heldSalesCount={heldSales.length}
           holdBusy={holdBusy}
@@ -575,6 +598,7 @@ function CartPanel(): React.JSX.Element {
                 subtotal={subtotal}
                 total={total}
                 discount_pesos={discount_pesos}
+                discount_type={discount_type}
                 stockConflict={stockConflict}
                 heldSalesCount={heldSales.length}
                 holdBusy={holdBusy}
@@ -631,6 +655,7 @@ interface CartBodyProps {
   subtotal: number
   total: number
   discount_pesos: number
+  discount_type: DiscountType
   stockConflict: boolean
   heldSalesCount: number
   holdBusy: boolean
@@ -649,6 +674,7 @@ export function CartBody({
   subtotal,
   total,
   discount_pesos,
+  discount_type,
   stockConflict,
   heldSalesCount,
   holdBusy,
@@ -827,16 +853,47 @@ export function CartBody({
           <span>Subtotal</span>
           <span className="text-slate-200">{money(subtotal)}</span>
         </div>
-        <div className="flex items-center justify-between text-slate-400">
-          <span>Discount (₱)</span>
-          <input
-            type="number"
-            min={0}
-            value={discount_pesos}
-            onChange={(e) => usePosCart.getState().setDiscountPesos((parseFloat(e.target.value) || 0) * 100)}
-            className="w-24 rounded-lg border border-ink-line bg-ink-950 px-2 py-1 text-right text-sm text-slate-200"
-          />
+
+        {/* Discount Section — None / Custom / PWD 20% / Senior 20% */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1 flex-wrap">
+            {(['NONE', 'CUSTOM', 'PWD', 'SENIOR'] as DiscountType[]).map((t) => {
+              const labels: Record<DiscountType, string> = { NONE: 'No Disc.', CUSTOM: 'Custom ₱', PWD: 'PWD 20%', SENIOR: 'Senior 20%' }
+              const active = discount_type === t
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => usePosCart.getState().setDiscountType(t)}
+                  className={`rounded-lg px-2 py-1 text-[11px] font-semibold border transition-colors ${active
+                    ? 'bg-brand-500/20 border-brand-500/60 text-brand-300'
+                    : 'bg-ink-800 border-ink-line text-slate-400 hover:text-slate-200'}`}
+                >
+                  {labels[t]}
+                </button>
+              )
+            })}
+          </div>
+          {discount_type !== 'NONE' && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400">
+                {discount_type === 'PWD' ? 'PWD Discount (20%)' : discount_type === 'SENIOR' ? 'Senior Discount (20%)' : 'Discount (₱)'}
+              </span>
+              {discount_type === 'CUSTOM' ? (
+                <input
+                  type="number"
+                  min={0}
+                  value={discount_pesos / 100}
+                  onChange={(e) => usePosCart.getState().setDiscountPesos((parseFloat(e.target.value) || 0) * 100)}
+                  className="w-24 rounded-lg border border-ink-line bg-ink-950 px-2 py-1 text-right text-sm text-slate-200"
+                />
+              ) : (
+                <span className="text-sm font-bold text-brand-400">−{money(discount_pesos)}</span>
+              )}
+            </div>
+          )}
         </div>
+
         <div className="flex justify-between border-t border-ink-line pt-1.5">
           <span className="font-bold text-white">TOTAL</span>
           <span className="text-2xl font-bold text-brand-400">{money(total)}</span>

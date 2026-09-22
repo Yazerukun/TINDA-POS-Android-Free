@@ -30,6 +30,7 @@ export interface SessionUser {
 export interface Category {
   id: number
   name: string
+  parent_id: number | null  // null = main/top-level category; set to parent's id for subcategory
   created_at: string
 }
 

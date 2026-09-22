@@ -179,29 +179,31 @@ function ViewSale({ sale, onClose }: { sale: Sale; onClose: () => void }): React
 }
 
 function RefundModal({ sale, onClose, onDone }: { sale: Sale; onClose: () => void; onDone: () => void }): React.JSX.Element {
-  const [selected, setSelected] = useState<Record<number, number>>({})
+  const [qty, setQty] = useState<Record<number, number>>({})
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const items = sale.items.filter((i) => i.qty_base - i.refunded_qty_base > 0)
-  const totalRefund = Object.entries(selected).reduce((s, [id, qty]) => {
-    const item = sale.items.find((i) => i.id === Number(id))
-    return s + (item ? (item.subtotal_c / item.qty_base) * qty : 0)
+  const refundableItems = sale.items.filter((i) => i.qty_base - i.refunded_qty_base > 0)
+
+  const setItemQty = (itemId: number, value: number, maxQty: number) => {
+    const clamped = Math.max(0, Math.min(maxQty, Math.round(value) || 0))
+    setQty((prev) => ({ ...prev, [itemId]: clamped }))
+  }
+
+  const totalRefund = refundableItems.reduce((sum, i) => {
+    const q = qty[i.id] ?? 0
+    return sum + (q > 0 ? Math.round((i.subtotal_c / (i.qty_base || 1)) * q) : 0)
   }, 0)
 
   const submit = async () => {
-    if (totalRefund <= 0) { toastError('Select items to refund'); return }
-    if (!reason.trim()) { toastError('Enter a refund reason'); return }
+    if (totalRefund <= 0) { toastError('Select items to refund', 'Set quantity to at least 1 for one item.'); return }
+    if (!reason.trim()) { toastError('Reason required', 'Enter a refund reason.'); return }
     setSubmitting(true)
     try {
-      const refundItems = items
-        .map((i) => ({ sale_item_id: i.id, product_id: i.product_id as number, qty_base: selected[i.id] ?? 0, unit_name: i.unit_name }))
+      const items = refundableItems
+        .map((i) => ({ sale_item_id: i.id, product_id: i.product_id as number, qty_base: qty[i.id] ?? 0, unit_name: i.unit_name }))
         .filter((i) => i.qty_base > 0)
-      await window.api.transactions.refund({
-        sale_id: sale.id,
-        reason,
-        items: refundItems
-      })
+      await window.api.transactions.refund({ sale_id: sale.id, reason, items })
       toastSuccess('Refund processed')
       onDone()
     } catch (e) {
@@ -211,33 +213,65 @@ function RefundModal({ sale, onClose, onDone }: { sale: Sale; onClose: () => voi
     }
   }
 
-  const toggle = (itemId: number, qtyBase: number, maxQty: number) => {
-    setSelected((prev) => ({ ...prev, [itemId]: prev[itemId] ? 0 : Math.max(1, Math.min(maxQty, qtyBase)) }))
-  }
-
   return (
     <Modal open onClose={onClose} title={`Refund — ${sale.transaction_no}`} maxWidth="max-w-md" footer={
-      <button onClick={() => void submit()} disabled={submitting} className="btn-primary">Refund {money(totalRefund)}</button>
+      <button onClick={() => void submit()} disabled={submitting || totalRefund <= 0} className="btn-primary">
+        {totalRefund > 0 ? `Refund ${money(totalRefund)}` : 'Select items'}
+      </button>
     }>
-      <div className="space-y-2">
-        {items.map((i) => {
+      <div className="space-y-3">
+        {refundableItems.map((i) => {
           const maxQty = i.qty_base - i.refunded_qty_base
+          const currentQty = qty[i.id] ?? 0
+          const itemRefund = currentQty > 0 ? Math.round((i.subtotal_c / (i.qty_base || 1)) * currentQty) : 0
           return (
-            <div key={i.id} className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2">
-              <div>
-                <p className="text-sm text-slate-200">{i.product_name}</p>
-                <p className="text-xs text-slate-500">{money(i.subtotal_c / i.qty_base)} × {i.qty} {i.unit_name}</p>
+            <div key={i.id} className="rounded-lg border border-ink-line p-3">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-200 leading-tight">{i.product_name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {money(Math.round(i.subtotal_c / (i.qty_base || 1)))} / {i.unit_name} · Remaining: <span className="text-slate-300 font-semibold">{maxQty}</span>
+                  </p>
+                </div>
+                {itemRefund > 0 && (
+                  <span className="text-xs font-bold text-brand-400 shrink-0">−{money(itemRefund)}</span>
+                )}
               </div>
-              <button
-                onClick={() => toggle(i.id, i.qty_base, maxQty)}
-                className={`btn-ghost rounded-lg px-3 py-1 text-xs ${selected[i.id] ? '!border-brand-500 !text-brand-400' : ''}`}
-              >
-                {selected[i.id] ? `Refund ${selected[i.id]}` : 'Refund'}
-              </button>
+              {/* Qty stepper: [−] [input] [+] */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setItemQty(i.id, currentQty - 1, maxQty)}
+                  disabled={currentQty <= 0}
+                  className="btn-ghost-2 h-9 w-9 rounded-lg text-lg font-bold disabled:opacity-30"
+                >−</button>
+                <input
+                  type="number"
+                  min={0}
+                  max={maxQty}
+                  value={currentQty === 0 ? '' : currentQty}
+                  placeholder="0"
+                  onChange={(e) => setItemQty(i.id, parseInt(e.target.value || '0', 10), maxQty)}
+                  className="h-9 w-16 rounded-lg border border-ink-line bg-ink-950 text-center text-sm font-bold text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setItemQty(i.id, currentQty + 1, maxQty)}
+                  disabled={currentQty >= maxQty}
+                  className="btn-ghost-2 h-9 w-9 rounded-lg text-lg font-bold disabled:opacity-30"
+                >+</button>
+                <span className="text-xs text-slate-500">of {maxQty} {i.unit_name}</span>
+                {currentQty === maxQty && (
+                  <span className="ml-auto text-[10px] text-amber-400 font-semibold">Full</span>
+                )}
+              </div>
             </div>
           )
         })}
-        <div><label className="label">Reason *</label><input value={reason} onChange={(e) => setReason(e.target.value)} className="input w-full" /></div>
+        <div>
+          <label className="label">Reason *</label>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} className="input w-full" placeholder="e.g. Damaged, customer changed mind" />
+        </div>
       </div>
     </Modal>
   )
