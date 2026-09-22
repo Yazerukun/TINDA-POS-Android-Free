@@ -740,7 +740,8 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
     finally { setCategoryBusy(false) }
   }
   const [imageBusy, setImageBusy] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const handleImagePick = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -754,13 +755,15 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
       toastError('Photo processing failed', String((err as Error)?.message || err))
     } finally {
       setImageBusy(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (cameraInputRef.current) cameraInputRef.current.value = ''
+      if (galleryInputRef.current) galleryInputRef.current.value = ''
     }
   }
 
   const removeImage = () => {
     set({ image_path: null })
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (cameraInputRef.current) cameraInputRef.current.value = ''
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
 
   return (
@@ -771,63 +774,102 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
       </>
     }>
       <form onSubmit={(e) => { e.preventDefault(); void submit() }} className="grid grid-cols-2 gap-3">
-        {/* Product Photo Upload Section */}
+        {/* Product Photo Upload Section - Dual Mode (Camera & Gallery) */}
         <div className="col-span-2">
           <label className="label mb-1.5 block">Product Photo (Optional)</label>
+          {/* Camera input with capture="environment" for immediate hardware camera launch */}
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
             className="hidden"
             onChange={(e) => void handleImagePick(e)}
           />
-          {f.image_path ? (
-            <div className="flex items-center gap-3 rounded-xl border border-ink-line bg-ink-950/60 p-2.5">
-              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-ink-line bg-ink-900">
+          {/* Gallery input without capture to trigger system gallery/photo picker */}
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => void handleImagePick(e)}
+          />
+
+          {imageBusy ? (
+            <div className="flex items-center justify-center gap-2.5 rounded-2xl border border-brand-500/30 bg-brand-500/5 p-4 text-xs font-semibold text-brand-400">
+              <RefreshCw className="h-4 w-4 animate-spin text-brand-400" />
+              <span>Compressing photo...</span>
+            </div>
+          ) : f.image_path ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-ink-line bg-ink-950/60 p-3 shadow-sm">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-ink-line bg-ink-900 shadow-inner">
                 <img src={f.image_path} alt="Product preview" className="h-full w-full object-cover" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-slate-200">Photo Attached</p>
-                <p className="text-[11px] text-slate-500">Compressed & ready for counter display</p>
-                <div className="mt-2 flex items-center gap-2">
+                <p className="text-[11px] text-slate-400">Optimized thumbnail (~15-30KB)</p>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
                     disabled={imageBusy}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn-ghost-2 px-2.5 py-1 text-xs font-bold text-brand-400 hover:text-brand-300"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 rounded-lg border border-brand-500/20 bg-brand-500/10 px-2.5 py-1 text-xs font-semibold text-brand-300 hover:bg-brand-500/20 active:scale-95 transition"
                   >
-                    Change
+                    <Camera className="h-3.5 w-3.5" />
+                    <span>Camera</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={imageBusy}
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 rounded-lg border border-ink-line bg-ink-900/80 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:bg-ink-800 active:scale-95 transition"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span>Gallery</span>
                   </button>
                   <button
                     type="button"
                     onClick={removeImage}
-                    className="btn-ghost-2 px-2.5 py-1 text-xs font-bold text-danger-400 hover:text-danger-300"
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-danger-400 hover:bg-danger-500/10 active:scale-95 transition"
                   >
-                    Remove
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Remove</span>
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              disabled={imageBusy}
-              onClick={() => fileInputRef.current?.click()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink-line bg-ink-950/40 p-4 text-xs font-semibold text-slate-400 hover:border-brand-500/40 hover:text-brand-400 transition active:scale-98"
-            >
-              {imageBusy ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin text-brand-400" />
-                  <span>Processing Photo...</span>
-                </>
-              ) : (
-                <>
-                  <Camera className="h-4 w-4 text-brand-400" />
-                  <span>Take Photo or Choose Image</span>
-                </>
-              )}
-            </button>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                disabled={imageBusy}
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-brand-500/30 bg-brand-500/5 p-3 text-center transition hover:border-brand-500/50 hover:bg-brand-500/10 active:scale-98"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/15 text-brand-400">
+                  <Camera className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-slate-200">Take Photo</span>
+                  <span className="block text-[10px] text-slate-400">Open camera</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={imageBusy}
+                onClick={() => galleryInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-ink-line bg-ink-950/40 p-3 text-center transition hover:border-slate-500/50 hover:bg-ink-900/50 active:scale-98"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-900 text-slate-300">
+                  <ImageIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-slate-200">Upload Photo</span>
+                  <span className="block text-[10px] text-slate-400">Choose from gallery</span>
+                </div>
+              </button>
+            </div>
           )}
         </div>
 
