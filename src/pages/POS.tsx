@@ -26,6 +26,7 @@ import { Modal } from '../components/ui/Modal'
 import { ReceiptPaper } from '../components/ReceiptPaper'
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal'
 import { QuickAddProductModal } from '../components/QuickAddProductModal'
+import { ProductImage } from '../components/ui/ProductImage'
 import { TouchNumpad } from '../components/TouchNumpad'
 import {
   playScanBeep,
@@ -397,7 +398,10 @@ export function POS(): React.JSX.Element {
                     {isExpired ? 'EXPIRED' : cartItem ? `Available: ${available} / ${stock} ${p.base_unit}` : `Stock: ${stock} ${p.base_unit}`}
                   </span>
                 </div>
-                <p className="line-clamp-2 min-h-12 break-words text-base font-semibold leading-6 text-white">{p.name}</p>
+                <div className="flex gap-2.5 min-h-12 items-start overflow-hidden">
+                  <ProductImage src={p.image_path} alt={p.name} className="h-12 w-12 rounded-xl shrink-0" fallbackIconClass="h-5 w-5 text-slate-500" />
+                  <p className="line-clamp-2 break-words text-sm font-semibold leading-5 text-white">{p.name}</p>
+                </div>
                 {isExpired && <p className="truncate text-xs font-semibold text-red-400">Expired: {p.expiration_date}</p>}
                 <p className="mt-auto text-xl font-bold text-brand-400">{money(p.default_price_c)}</p>
               </button>

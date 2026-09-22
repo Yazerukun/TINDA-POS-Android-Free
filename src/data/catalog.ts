@@ -219,7 +219,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     has_expiration: Boolean(input.expiration_date),
     expiration_mode: input.expiration_date ? 'ITEM' : 'NONE',
     expiration_date: input.expiration_date ?? null,
-    image_path: null,
+    image_path: input.image_path ?? null,
     status: 'ACTIVE',
     notes: input.notes ?? null,
     units: [],
@@ -291,6 +291,7 @@ export async function updateProduct(id: number, input: Partial<ProductInput>): P
     if (input.expiration_mode !== undefined) patch.expiration_mode = input.expiration_mode
   }
   if (input.notes !== undefined) patch.notes = input.notes
+  if (input.image_path !== undefined) patch.image_path = input.image_path
   if (input.units !== undefined) {
     patch.units = normalizeUnits(text(patch.name ?? product.name), cents(patch.default_price_c ?? product.default_price_c), patch.barcode ?? product.barcode, input.units).map((unit) => ({ ...unit, product_id: id }))
     const activeBarcode = patch.barcode ?? product.barcode

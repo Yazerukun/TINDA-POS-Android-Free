@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Plus, Pencil, Trash2, RefreshCw, Boxes, Tags, Upload, PackagePlus, Download, ClipboardList, X, PackageMinus, ArrowDownUp, AlertTriangle, CheckCircle2, Check, Sparkles, ScanLine } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { Search, Plus, Pencil, Trash2, RefreshCw, Boxes, Tags, Upload, PackagePlus, Download, ClipboardList, X, PackageMinus, ArrowDownUp, AlertTriangle, CheckCircle2, Check, Sparkles, ScanLine, Camera, ImageIcon } from 'lucide-react'
 import type { Product, Category, Supplier, StockReceivingRecord, StockReceivingSource, InventoryMovement, WithdrawalReason, PriceReference } from '@shared/types'
 import { money } from '@shared/format'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -10,6 +10,8 @@ import { toastSuccess, toastError } from '../stores/toast'
 import { ProductExpiry, ExpirationList } from '../components/Expiration'
 import { PriceGuideModal } from '../components/PriceGuideModal'
 import { PriceReferenceCard } from '../components/ui/PriceReferenceCard'
+import { ProductImage } from '../components/ui/ProductImage'
+import { compressImageFile } from '../utils/image'
 import {
   createProductInput,
   editProductForm,
@@ -292,10 +294,13 @@ export function Inventory(): React.JSX.Element {
         <div className="grid grid-cols-1 gap-3 md:hidden">
           {filtered.map((p) => (
             <div key={p.id} className="card p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">{p.name}</p>
-                  <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <ProductImage src={p.image_path} alt={p.name} className="h-11 w-11 rounded-xl" fallbackIconClass="h-5 w-5 text-slate-500" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{p.name}</p>
+                    <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                  </div>
                 </div>
                 <StockBadge status={p.stock_status} />
               </div>
@@ -337,8 +342,13 @@ export function Inventory(): React.JSX.Element {
               {filtered.map(p => (
                 <tr key={p.id} className="hover:bg-ink-800 transition-colors">
                   <td className="p-4">
-                    <p className="font-semibold text-white">{p.name}</p>
-                    <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                    <div className="flex items-center gap-3">
+                      <ProductImage src={p.image_path} alt={p.name} className="h-10 w-10 rounded-xl" fallbackIconClass="h-5 w-5 text-slate-500" />
+                      <div>
+                        <p className="font-semibold text-white">{p.name}</p>
+                        <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="p-4"><StockBadge status={p.stock_status} /></td>
                   <td className="p-4">
@@ -729,14 +739,98 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
     } catch (e) { toastError('Add category failed', String((e as Error).message || e)) }
     finally { setCategoryBusy(false) }
   }
+  const [imageBusy, setImageBusy] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImagePick = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageBusy(true)
+    try {
+      const dataUrl = await compressImageFile(file, 320, 320, 0.82)
+      set({ image_path: dataUrl })
+      toastSuccess('Photo attached')
+    } catch (err) {
+      toastError('Photo processing failed', String((err as Error)?.message || err))
+    } finally {
+      setImageBusy(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const removeImage = () => {
+    set({ image_path: null })
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   return (
     <Modal open onClose={onClose} title={form.id ? 'Edit Product' : 'New Product'} maxWidth="max-w-lg" footer={
       <>
         <button onClick={onClose} className="btn-ghost">Cancel</button>
-        <button disabled={saving || categoryBusy} onClick={() => void submit()} className="btn-primary">Save</button>
+        <button disabled={saving || categoryBusy || imageBusy} onClick={() => void submit()} className="btn-primary">Save</button>
       </>
     }>
       <form onSubmit={(e) => { e.preventDefault(); void submit() }} className="grid grid-cols-2 gap-3">
+        {/* Product Photo Upload Section */}
+        <div className="col-span-2">
+          <label className="label mb-1.5 block">Product Photo (Optional)</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => void handleImagePick(e)}
+          />
+          {f.image_path ? (
+            <div className="flex items-center gap-3 rounded-xl border border-ink-line bg-ink-950/60 p-2.5">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-ink-line bg-ink-900">
+                <img src={f.image_path} alt="Product preview" className="h-full w-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-slate-200">Photo Attached</p>
+                <p className="text-[11px] text-slate-500">Compressed & ready for counter display</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={imageBusy}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn-ghost-2 px-2.5 py-1 text-xs font-bold text-brand-400 hover:text-brand-300"
+                  >
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="btn-ghost-2 px-2.5 py-1 text-xs font-bold text-danger-400 hover:text-danger-300"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={imageBusy}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink-line bg-ink-950/40 p-4 text-xs font-semibold text-slate-400 hover:border-brand-500/40 hover:text-brand-400 transition active:scale-98"
+            >
+              {imageBusy ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin text-brand-400" />
+                  <span>Processing Photo...</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="h-4 w-4 text-brand-400" />
+                  <span>Take Photo or Choose Image</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
         <div className="col-span-2">
           <label className="label">Name *</label>
           <input required value={f.name} onChange={(e) => set({ name: e.target.value })} className="input w-full" />

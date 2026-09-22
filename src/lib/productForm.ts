@@ -29,6 +29,7 @@ export interface ProductFormData {
   description: string | null
   supplier_id: number | null
   notes: string | null
+  image_path?: string | null
   units: ProductUnitInput[]
   expiration_mode?: ProductInput['expiration_mode']
   expiration_date?: string | null
@@ -64,6 +65,7 @@ export function newProductForm(defaultLowStock = 5): ProductFormData {
     description: null,
     supplier_id: null,
     notes: null,
+    image_path: null,
     units: [],
     expiration_mode: 'NONE', expiration_date: null
   }
@@ -87,6 +89,7 @@ export function editProductForm(product: Product): ProductFormData {
     description: product.description,
     supplier_id: product.supplier_id,
     notes: product.notes,
+    image_path: product.image_path ?? null,
     expiration_mode: product.expiration_date ? 'ITEM' : 'NONE',
     expiration_date: product.expiration_date ?? null,
     current_stock: product.stock,
@@ -127,6 +130,7 @@ export function updateProductInput(form: ProductFormData): Partial<ProductInput>
     description: form.description,
     supplier_id: form.supplier_id,
     notes: form.notes,
+    image_path: form.image_path ?? null,
     has_expiration: hasExpiry,
     expiration_mode: hasExpiry ? 'ITEM' : 'NONE',
     expiration_date: form.expiration_date || null,
@@ -157,6 +161,7 @@ export function createProductInput(form: ProductFormData): ProductInput {
     expiration_mode: hasExpiry ? 'ITEM' : 'NONE',
     expiration_date: form.expiration_date || null,
     notes: form.notes,
+    image_path: form.image_path ?? null,
     units
   }
 }

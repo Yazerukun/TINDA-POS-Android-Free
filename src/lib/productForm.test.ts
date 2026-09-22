@@ -168,4 +168,29 @@ describe('v1.0.7 product form helpers', () => {
     expect(updatePayload.expiration_mode).toBe('NONE')
     expect(updatePayload.expiration_date).toBeNull()
   })
+
+  it('handles image_path in new, edit, create, and update payloads', () => {
+    // 1. new product starts with null image_path
+    const fresh = newProductForm()
+    expect(fresh.image_path).toBeNull()
+
+    // 2. create payload carries image_path data
+    const withImg = { ...fresh, name: 'Safeguard White', image_path: 'data:image/webp;base64,mockImageData123' }
+    const createPayload = createProductInput(withImg)
+    expect(createPayload.image_path).toBe('data:image/webp;base64,mockImageData123')
+
+    // 3. edit form pre-fills image_path from existing product
+    const existingWithPhoto: Product = { ...baseProduct, image_path: 'data:image/webp;base64,savedPhoto456' }
+    const editForm = editProductForm(existingWithPhoto)
+    expect(editForm.image_path).toBe('data:image/webp;base64,savedPhoto456')
+
+    // 4. update payload preserves or updates image_path
+    const updatePayload = updateProductInput(editForm)
+    expect(updatePayload.image_path).toBe('data:image/webp;base64,savedPhoto456')
+
+    // 5. removing image sets image_path to null in update
+    const clearedForm = { ...editForm, image_path: null }
+    const clearedPayload = updateProductInput(clearedForm)
+    expect(clearedPayload.image_path).toBeNull()
+  })
 })

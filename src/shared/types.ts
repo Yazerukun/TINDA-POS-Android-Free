@@ -121,6 +121,7 @@ export interface ProductInput {
   expiration_mode?: ExpirationMode
   expiration_date?: string | null
   notes: string | null
+  image_path?: string | null
   units: { name: string; conversion_to_base: number; barcode: string | null; selling_price_c: number; is_default: boolean }[]
   initial_stock_base?: number
 }

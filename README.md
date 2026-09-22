@@ -6,19 +6,19 @@
 
 **Fast, 100% offline, sign-language-friendly Point of Sale and Inventory System designed for Philippine sari-sari stores, minimarts, and retail counters on Android phones and tablets.**
 
-### v1.0.36 Stable · Partial Refunds, PWD/Senior Discounts & Subcategory System
+### v1.0.37 Stable · Product Photo Upload, Fast Counter Thumbnails & Zero-Bloat Compression
 
 [![Android Version](https://img.shields.io/badge/Android-7.0%2B%20(API%2024%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
-[![Release](https://img.shields.io/badge/Release-v1.0.36%20Stable-2563EB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.36)
+[![Release](https://img.shields.io/badge/Release-v1.0.37%20Stable-2563EB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.37)
 [![Storage](https://img.shields.io/badge/Database-100%25%20Offline%20(Dexie)-F59E0B?style=for-the-badge&logo=sqlite&logoColor=white)](#-data-privacy--offline-first)
-[![Test Suite](https://img.shields.io/badge/Tests-109%2F109%20Passed-10B981?style=for-the-badge&logo=vitest&logoColor=white)](#-automated-testing)
+[![Test Suite](https://img.shields.io/badge/Tests-110%2F110%20Passed-10B981?style=for-the-badge&logo=vitest&logoColor=white)](#-automated-testing)
 [![License](https://img.shields.io/badge/License-Free%20for%20Small%20Business-8B5CF6?style=for-the-badge)](#-license)
 
 <br/>
 
-[📥 **Download Release APK (v1.0.36)**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.36/TindaPOS-Free-1.0.36.apk) &nbsp;•&nbsp; 
+[📥 **Download Release APK (v1.0.37)**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.37/TindaPOS-Free-1.0.37.apk) &nbsp;•&nbsp; 
 [📖 **User Manual**](release-docs/USERMANUAL.md) &nbsp;•&nbsp; 
-[🚀 **Release Notes**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.36) &nbsp;•&nbsp; 
+[🚀 **Release Notes**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.37) &nbsp;•&nbsp; 
 [🐛 **Report an Issue**](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
 
 ---
@@ -36,15 +36,17 @@ Built from the ground up to handle high-frequency everyday retail: scan barcodes
 
 ---
 
-## ⚡ What's New in v1.0.36
+## ⚡ What's New in v1.0.37
 
 | Feature / Improvement | What It Delivers at the Counter |
 | :--- | :--- |
-| 🔄 **Per-Piece Partial Refund** | Allows cashiers to refund partial quantities of sold items (e.g. customer bought 10 pieces, but only refunds 5). Uses an interactive stepper `[−] [qty] [+]` with real-time recalculation of refund totals. |
-| 🏷️ **PWD & Senior Auto-Discount (20%)** | 1-tap calculation of standard 20% Philippine statutory discount for PWD and Senior Citizens. Added quick selector pills (`No Disc.`, `Custom ₱`, `PWD 20%`, `Senior 20%`) with automatic re-computation when cart items update. |
-| 🗂️ **Nested Subcategory System** | Supports 2-level category hierarchy (e.g. **Household** ➔ *Zonrox*, *Dishwashing Liquid*). Includes clean accordion manager with inline `+ Sub` creation, and smart inventory filters that include all child categories. |
-| ⚡ **Category Live Refresh (Bug Fix)** | Resolved issue where adding or deleting categories required restarting or closing the app. The modal and pickers now update immediately and reactively. |
-| 🛡️ **Zero-Crash Dexie v4 Migration** | Clean additive migration introducing `parent_id` support while preserving all existing store databases without any data loss. |
+| 📸 **Product Photo Upload & Camera Capture** | Attach photos to products directly using the phone's camera or photo gallery in the Add/Edit Product modal. Includes live preview, change, and remove actions. |
+| ⚡ **Offline Canvas Auto-Compressor** | High-resolution photos are automatically resized to max 320×320px (~15–30KB) on device before saving. Prevents app lag, avoids database bloat, and guarantees rapid POS grid rendering. |
+| 🖼️ **Visual POS & Inventory Grid Thumbnails** | Product cards on the POS grid and inventory tables now display crisp product photos for instantaneous counter recognition by cashiers. |
+| 💾 **100% Universal Backup Compatibility** | Stored directly within the Dexie offline database, meaning all product photos are seamlessly backed up and restored via `.tinda-backup`. |
+| 🔄 **Per-Piece Partial Refund** | Refine quantities to refund per transaction item using an interactive stepper `[−] [qty] [+]`. |
+| 🏷️ **PWD & Senior Citizen Auto-Discount (20%)** | 1-tap statutory 20% discount calculation with dynamic cart total recalculation. |
+| 🗂️ **Nested Subcategories & Live Refresh** | 2-level category tree with real-time reactive modal updates without restarting the app. |
 
 ---
 
@@ -54,11 +56,11 @@ Download the official signed release package directly to your Android phone or t
 
 | Package Asset | Size | Checksum / Integrity | Target Devices |
 | :--- | :---: | :--- | :--- |
-| [**`TindaPOS-Free-1.0.36.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.36/TindaPOS-Free-1.0.36.apk) | **6.65 MB** | `5875AC33C0CC1A02892201D14FAD940BDF719D5B5B5A4395A4FE17F01B4FE181` | Android 7.0 (Nougat) to Android 15+ |
-| [**`SHA256SUMS-v1.0.36.txt`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.36/SHA256SUMS-v1.0.36.txt) | 92 B | Official SHA-256 hash manifest | Checksum verification |
+| [**`TindaPOS-Free-1.0.37.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.37/TindaPOS-Free-1.0.37.apk) | **6.66 MB** | `0D5AD9338EE15B89B332AF49DE9B90BBB0E7806CBA8938E7483CBB6A99A1D570` | Android 7.0 (Nougat) to Android 15+ |
+| [**`SHA256SUMS-v1.0.37.txt`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.37/SHA256SUMS-v1.0.37.txt) | 92 B | Official SHA-256 hash manifest | Checksum verification |
 
 > [!NOTE]
-> **Upgrading from Earlier Versions:** Installing `TindaPOS-Free-1.0.36.apk` over any previous version (v1.0.27 through v1.0.35) **fully preserves your sales history, inventory, customer ledger, and settings**. All official builds are cryptographically signed with the official persistent keystore.
+> **Upgrading from Earlier Versions:** Installing `TindaPOS-Free-1.0.37.apk` over any previous version (v1.0.27 through v1.0.36) **fully preserves your sales history, inventory, customer ledger, and settings**. All official builds are cryptographically signed with the official persistent keystore.
 
 ### System Requirements
 - **Operating System:** Android 7.0 (API level 24) or higher.
