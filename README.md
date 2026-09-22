@@ -6,19 +6,19 @@
 
 **Fast, 100% offline, sign-language-friendly Point of Sale and Inventory System designed for Philippine sari-sari stores, minimarts, and retail counters on Android phones and tablets.**
 
-### v1.0.35 Stable · Software Updater Stability & Zero-Crash Architecture
+### v1.0.36 Stable · Partial Refunds, PWD/Senior Discounts & Subcategory System
 
 [![Android Version](https://img.shields.io/badge/Android-7.0%2B%20(API%2024%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/latest)
-[![Release](https://img.shields.io/badge/Release-v1.0.35%20Stable-2563EB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.35)
+[![Release](https://img.shields.io/badge/Release-v1.0.36%20Stable-2563EB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.36)
 [![Storage](https://img.shields.io/badge/Database-100%25%20Offline%20(Dexie)-F59E0B?style=for-the-badge&logo=sqlite&logoColor=white)](#-data-privacy--offline-first)
 [![Test Suite](https://img.shields.io/badge/Tests-109%2F109%20Passed-10B981?style=for-the-badge&logo=vitest&logoColor=white)](#-automated-testing)
 [![License](https://img.shields.io/badge/License-Free%20for%20Small%20Business-8B5CF6?style=for-the-badge)](#-license)
 
 <br/>
 
-[📥 **Download Release APK (v1.0.35)**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.35/TindaPOS-Free-1.0.35.apk) &nbsp;•&nbsp; 
+[📥 **Download Release APK (v1.0.36)**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.36/TindaPOS-Free-1.0.36.apk) &nbsp;•&nbsp; 
 [📖 **User Manual**](release-docs/USERMANUAL.md) &nbsp;•&nbsp; 
-[🚀 **Release Notes**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.35) &nbsp;•&nbsp; 
+[🚀 **Release Notes**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/tag/v1.0.36) &nbsp;•&nbsp; 
 [🐛 **Report an Issue**](https://github.com/Yazerukun/TINDA-POS-Android-Free/issues)
 
 ---
@@ -36,21 +36,15 @@ Built from the ground up to handle high-frequency everyday retail: scan barcodes
 
 ---
 
-## ⚡ What's New in v1.0.35
+## ⚡ What's New in v1.0.36
 
-| Enhancement | What It Delivers at the Counter |
+| Feature / Improvement | What It Delivers at the Counter |
 | :--- | :--- |
-| 🛡️ **Permanent In-App Updater Crash Fix (React #310)** | Completely resolved React Error #310 during update installation. All hook allocations across all UI views and modals now execute unconditionally at the component root level for rock-solid stability. |
-| 🚀 **Hardened Package Installer Flow** | Smooth, resilient package installer launch from the Home TopBar Bell notification, Software Update Modal, and Settings tab without view interrupts or activity crashes. |
-| 💾 **Persistent Downloaded Update Storage** | Verified APK assets are recorded in persistent local storage with fail-safe fallback names, ensuring downloaded updates can be installed instantly even after app restarts. |
-| 🛡️ **Page-Level Error Boundary Shield** | Wrapped screen routers with isolated boundary protection, ensuring the app shell, navigation bars, and update handlers remain 100% operational in any state. |
-| 🔔 **Autonomous Zero-Tap Update Alerts** | 10-minute background check on boot, focus, and internet reconnect with emerald radar pulse on the Home TopBar Bell without touching the screen. |
-| 💬 **1-Tap Customer Utang Statement Sharing** | One-tap payment reminder and statement sharing (`navigator.share`) directly to SMS, Messenger, WhatsApp, or Viber with customer credit balance and polite reminder. |
-| ⚡ **POS "+ Quick Add Product" at Counter** | Instant counter-side product registration directly inside POS for unregistered or newly scanned items without leaving the checkout flow. |
-| 📈 **Live Profit Margin & Markup Calculator** | Real-time unit profit, profit margin %, and markup % calculations in product management with below-cost alerts. |
-| 📊 **Dashboard Payment Split & Top 5 Fast Movers** | Multi-segment payment breakdown (Cash, GCash, Maya, Store Credit) and Top 5 fast-moving items ranked today with units sold and revenue. |
-| 🧾 **GCash & Maya Account Lines on Receipts** | Configurable e-wallet account numbers printed directly on 58mm/80mm thermal receipts and digital slips. |
-| 💾 **1-Tap Universal Database Backup Sharing** | Seamless `.tinda-backup` file sharing via native Android share sheet to Google Drive, email, or messaging apps. |
+| 🔄 **Per-Piece Partial Refund** | Allows cashiers to refund partial quantities of sold items (e.g. customer bought 10 pieces, but only refunds 5). Uses an interactive stepper `[−] [qty] [+]` with real-time recalculation of refund totals. |
+| 🏷️ **PWD & Senior Auto-Discount (20%)** | 1-tap calculation of standard 20% Philippine statutory discount for PWD and Senior Citizens. Added quick selector pills (`No Disc.`, `Custom ₱`, `PWD 20%`, `Senior 20%`) with automatic re-computation when cart items update. |
+| 🗂️ **Nested Subcategory System** | Supports 2-level category hierarchy (e.g. **Household** ➔ *Zonrox*, *Dishwashing Liquid*). Includes clean accordion manager with inline `+ Sub` creation, and smart inventory filters that include all child categories. |
+| ⚡ **Category Live Refresh (Bug Fix)** | Resolved issue where adding or deleting categories required restarting or closing the app. The modal and pickers now update immediately and reactively. |
+| 🛡️ **Zero-Crash Dexie v4 Migration** | Clean additive migration introducing `parent_id` support while preserving all existing store databases without any data loss. |
 
 ---
 
@@ -60,11 +54,11 @@ Download the official signed release package directly to your Android phone or t
 
 | Package Asset | Size | Checksum / Integrity | Target Devices |
 | :--- | :---: | :--- | :--- |
-| [**`TindaPOS-Free-1.0.35.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.35/TindaPOS-Free-1.0.35.apk) | **6.98 MB** | `5875ac33c0cc1a02892201d14fad940bdf719d5b5b5a4395a4fe17f01b4fe181` | Android 7.0 (Nougat) to Android 15+ |
-| [**`SHA256SUMS-v1.0.35.txt`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.35/SHA256SUMS-v1.0.35.txt) | 92 B | Official SHA-256 hash manifest | Checksum verification |
+| [**`TindaPOS-Free-1.0.36.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.36/TindaPOS-Free-1.0.36.apk) | **6.65 MB** | `5875AC33C0CC1A02892201D14FAD940BDF719D5B5B5A4395A4FE17F01B4FE181` | Android 7.0 (Nougat) to Android 15+ |
+| [**`SHA256SUMS-v1.0.36.txt`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.36/SHA256SUMS-v1.0.36.txt) | 92 B | Official SHA-256 hash manifest | Checksum verification |
 
 > [!NOTE]
-> **Upgrading from Earlier Versions:** Installing `TindaPOS-Free-1.0.35.apk` over any previous version (v1.0.27 through v1.0.34) **fully preserves your sales history, inventory, customer ledger, and settings**. All official builds are cryptographically signed with the official persistent keystore.
+> **Upgrading from Earlier Versions:** Installing `TindaPOS-Free-1.0.36.apk` over any previous version (v1.0.27 through v1.0.35) **fully preserves your sales history, inventory, customer ledger, and settings**. All official builds are cryptographically signed with the official persistent keystore.
 
 ### System Requirements
 - **Operating System:** Android 7.0 (API level 24) or higher.
@@ -96,15 +90,17 @@ flowchart LR
 - **Built-in Camera Barcode Scanner:** Scan UPC, EAN, or custom barcodes directly with your phone's camera.
 - **Selling Units (Tingi / Multi-Unit Retail):** Sell items individually, in packs, or by wholesale cases with automatic stock conversion (e.g., 1 Box = 24 Pieces).
 - **Hold & Resume Carts:** Hold a customer's cart while they pick up another item, ring up another customer, and resume with one tap.
-- **Itemized & Cart Discounts:** Apply percentage or fixed-peso senior/PWD/suki discounts with audit logging.
+- **Itemized & Cart Discounts:** Quick-select PWD & Senior 20% discounts or custom fixed-peso discounts with live recalculation.
 
 ### 2. 🤝 Customer Utang & Store Credit Ledger
 - **Inline POS Charging:** Select a customer directly on checkout to charge store credit.
 - **Customer Directory:** Track customer phone numbers, addresses, personal credit limits, and total outstanding balances.
 - **Credit Limit Safeguards:** Immediate warnings if an order exceeds the customer's credit limit.
 - **Fast Settlements:** Accept partial or full cash payments against outstanding balances with automatic shift register cash-in logging.
+- **1-Tap Share Reminders:** Share statement reminders directly to SMS, Messenger, WhatsApp, or Viber.
 
 ### 3. 📦 Inventory & Shelf-Life Management
+- **Hierarchical Categories:** Main categories and subcategories with intuitive management and drilldown.
 - **Per-Item Expiration:** Track expiration dates on perishable items. Products without expiration dates remain 100% sellable with zero blockers.
 - **Low Stock Warnings:** Visual alerts when inventory drops below your customizable threshold.
 - **Fast Restock & Withdrawal:** Add new stock with supplier purchase cost tracking or record damaged/expired withdrawals.
@@ -155,13 +151,13 @@ flowchart LR
 │                    TINDA POS Mobile Shell                   │
 ├──────────────────────────────┬──────────────────────────────┤
 │  Frontend (React + Vite)     │  Native Bridge (Capacitor)   │
-│  • React 18 + TypeScript     │  • Bluetooth Serial ESC/POS  │
+│  • React 19 + TypeScript     │  • Bluetooth Serial ESC/POS  │
 │  • Tailwind CSS Dark Theme   │  • Camera Barcode Scanner    │
 │  • Lucide React Icons        │  • Native In-App APK Updater │
 │  • Zustand State Stores      │  • File System Storage       │
 ├──────────────────────────────┴──────────────────────────────┤
 │                    Data Storage Layer                       │
-│  • Dexie.js (IndexedDB Local Database)                      │
+│  • Dexie.js (IndexedDB Local Database v4)                   │
 │  • Bidirectional .tinda-backup Exchange (Android <-> PC)   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -177,12 +173,12 @@ npm test
 ```
 
 ```text
-Test Files  17 passed (17)
-     Tests  107 passed (107)
-  Duration  ~12s
+Test Files  18 passed (18)
+     Tests  109 passed (109)
+  Duration  ~20s
 ```
 
-Suites cover cash counts, hold-and-resume cart flows, price reference matching, refund calculations, customer utang tracking, product form payloads, and Dexie database migrations.
+Suites cover cash counts, hold-and-resume cart flows, price reference matching, partial refund calculations, PWD/Senior discounts, customer utang tracking, product form payloads, subcategories, and Dexie database migrations.
 
 ---
 
