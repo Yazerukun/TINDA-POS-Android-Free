@@ -42,13 +42,13 @@ export function Sidebar(): React.JSX.Element {
   const visible = NAV.filter((n) => (user ? hasPermission(user.roles, n.permission) : false))
 
   return (
-    <aside className="hidden w-16 md:w-56 shrink-0 flex-col border-r border-ink-line bg-ink-900 sm:flex transition-all duration-300">
+    <aside className="hidden w-16 md:w-56 shrink-0 flex-col border-r border-slate-200 bg-white sm:flex transition-all duration-300 shadow-sm">
       <div className="flex items-center justify-center md:justify-start gap-2.5 px-0 py-4 md:px-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-sm font-black text-white shadow-card">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-sm font-black text-white shadow-sm">
           TP
         </div>
         <div className="hidden min-w-0 md:block">
-          <p className="truncate text-sm font-bold leading-tight text-white">TINDA POS</p>
+          <p className="truncate text-sm font-bold leading-tight text-slate-900">TINDA POS</p>
           <p className="truncate text-[11px] text-slate-500">{settings?.store_name ?? 'Sari-Sari Store'}</p>
         </div>
       </div>
@@ -63,10 +63,10 @@ export function Sidebar(): React.JSX.Element {
             key={n.key}
             onClick={() => setPage(n.key)}
             title={n.label}
-            className={`group flex w-full items-center justify-center md:justify-start gap-2.5 rounded-lg p-2 text-sm font-medium transition-all ${
+            className={`group flex w-full items-center justify-center md:justify-start gap-2.5 rounded-xl p-2 text-sm font-medium transition-all ${
               page === n.key
-                ? 'bg-brand-600/15 text-brand-400 border-l-2 border-brand-500'
-                : 'text-slate-400 hover:bg-ink-800 hover:text-slate-200 border-l-2 border-transparent'
+                ? 'bg-brand-50 text-brand-700 font-bold border-l-4 border-brand-600 shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent'
             }`}
           >
             <div className={`${page === n.key ? 'animate-pop' : ''}`}>
@@ -77,13 +77,13 @@ export function Sidebar(): React.JSX.Element {
         ))}
       </nav>
 
-      <div className="border-t border-ink-line px-2 py-3 md:px-3">
+      <div className="border-t border-slate-200 px-2 py-3 md:px-3">
         <div className="mb-2 flex items-center justify-center md:justify-start gap-2.5 md:px-1">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-700 text-xs font-bold text-slate-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 border border-slate-200">
             {(user?.full_name || 'U').slice(0, 1).toUpperCase()}
           </div>
           <div className="hidden min-w-0 md:block">
-            <p className="truncate text-xs font-semibold text-slate-200">{user?.full_name}</p>
+            <p className="truncate text-xs font-semibold text-slate-800">{user?.full_name}</p>
             <p className="text-[10px] uppercase text-slate-500">
               {user?.roles.join(' · ')}
             </p>

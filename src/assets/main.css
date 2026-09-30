@@ -16,75 +16,75 @@
     height: 100%;
   }
   body {
-    @apply bg-ink-950 text-slate-200 antialiased;
+    @apply bg-slate-50 text-slate-800 antialiased;
     user-select: none;
   }
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-thumb {
-    @apply rounded-full bg-ink-700;
+    @apply rounded-full bg-slate-300;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-ink-750;
+    @apply bg-slate-400;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 min-h-[44px] text-sm font-semibold transition
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 min-h-[44px] text-sm font-semibold transition
       active:scale-[.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-card;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm active:bg-brand-800;
   }
   .btn-secondary {
-    @apply btn bg-ink-700 text-slate-100 hover:bg-ink-750 border border-ink-line;
+    @apply btn bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm active:bg-slate-100;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-slate-300 hover:bg-ink-800 hover:text-white;
+    @apply btn bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900;
   }
   .btn-ghost-2 {
-    @apply btn bg-ink-800 text-slate-300 hover:bg-ink-700 hover:text-white border border-ink-line;
+    @apply btn bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-200;
   }
   .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-500;
+    @apply btn bg-danger-600 text-white hover:bg-danger-500 shadow-sm;
   }
   .btn-gold {
-    @apply btn bg-gold-500 text-ink-950 hover:bg-gold-400;
+    @apply btn bg-gold-500 text-slate-900 hover:bg-gold-400 shadow-sm font-bold;
   }
   .card {
-    @apply rounded-xl bg-ink-850 border border-ink-line shadow-card;
+    @apply rounded-xl bg-white border border-slate-200 shadow-card text-slate-800;
   }
   .input {
-    @apply w-full rounded-lg border border-ink-line bg-ink-900 px-3 py-2 min-h-[44px] text-sm text-slate-100
-      placeholder-slate-500 focus:border-brand-500/70 focus:ring-2 focus:ring-brand-500/25
-      focus:outline-none disabled:opacity-50;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2 min-h-[44px] text-sm text-slate-900
+      placeholder-slate-400 focus:border-brand-500/70 focus:ring-2 focus:ring-brand-500/20
+      focus:outline-none disabled:opacity-50 disabled:bg-slate-50;
   }
   .label {
-    @apply mb-1 block text-xs font-medium tracking-wide text-slate-400;
+    @apply mb-1 block text-xs font-semibold tracking-wide text-slate-600;
   }
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold;
   }
   .table-th {
-    @apply px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+    @apply px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50/80;
   }
   .table-td {
-    @apply px-3 py-2.5 text-sm text-slate-200;
+    @apply px-3 py-2.5 text-sm text-slate-700;
   }
   .table-row {
-    @apply border-t border-ink-line transition-colors hover:bg-ink-800/50;
+    @apply border-t border-slate-100 transition-colors hover:bg-slate-50/70;
   }
   .modal-overlay {
-    @apply fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/70 sm:p-4 backdrop-blur-sm;
+    @apply fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/40 sm:p-4 backdrop-blur-sm;
   }
   .modal-panel {
-    @apply card max-h-[95vh] sm:max-h-[90vh] w-full overflow-y-auto rounded-b-none sm:rounded-xl rounded-t-2xl p-4 sm:p-6 shadow-pop animate-bottom-sheet sm:animate-pop border-b-0 sm:border-b;
+    @apply card bg-white max-h-[95vh] sm:max-h-[90vh] w-full overflow-y-auto rounded-b-none sm:rounded-2xl rounded-t-2xl p-4 sm:p-6 shadow-pop animate-bottom-sheet sm:animate-pop border-slate-200;
   }
   .kbd {
-    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-ink-line bg-ink-800 px-1 text-[10px] font-semibold text-slate-400;
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-slate-200 bg-slate-100 px-1 text-[10px] font-semibold text-slate-600;
   }
   .developer-card {
     @apply relative overflow-hidden bg-gradient-to-br from-brand-600/20 via-ink-900 to-ink-950;

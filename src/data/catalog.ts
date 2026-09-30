@@ -199,6 +199,8 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     has_expiration: Boolean(input.has_expiration),
     expiration_mode: input.expiration_mode ?? (input.has_expiration ? 'ITEM' : 'NONE'),
     expiration_date: input.expiration_date ?? null,
+    wholesale_price_c: input.wholesale_price_c != null ? cents(input.wholesale_price_c) : null,
+    wholesale_min_qty: input.wholesale_min_qty != null ? Math.max(1, Math.trunc(num(input.wholesale_min_qty))) : null,
     image_path: null,
     status: 'ACTIVE',
     notes: input.notes ?? null,
@@ -246,6 +248,8 @@ export async function updateProduct(id: number, input: Partial<ProductInput>): P
   if (input.base_unit !== undefined && text(input.base_unit)) patch.base_unit = text(input.base_unit)
   if (input.purchase_cost_c !== undefined) patch.purchase_cost_c = cents(input.purchase_cost_c)
   if (input.default_price_c !== undefined) patch.default_price_c = cents(input.default_price_c)
+  if (input.wholesale_price_c !== undefined) patch.wholesale_price_c = input.wholesale_price_c != null ? cents(input.wholesale_price_c) : null
+  if (input.wholesale_min_qty !== undefined) patch.wholesale_min_qty = input.wholesale_min_qty != null ? Math.max(1, Math.trunc(num(input.wholesale_min_qty))) : null
   if (input.low_stock_threshold !== undefined) patch.low_stock_threshold = num(input.low_stock_threshold)
   if (input.supplier_id !== undefined) patch.supplier_id = input.supplier_id
   if (input.has_expiration !== undefined) patch.has_expiration = Boolean(input.has_expiration)

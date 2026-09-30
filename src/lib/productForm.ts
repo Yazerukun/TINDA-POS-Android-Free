@@ -24,6 +24,8 @@ export interface ProductFormData {
   base_unit: string
   purchase_cost_c: number
   default_price_c: number
+  wholesale_price_c?: number | null
+  wholesale_min_qty?: number | null
   low_stock_threshold: number
   initial_stock_base: number
   description: string | null
@@ -59,6 +61,8 @@ export function newProductForm(defaultLowStock = 5): ProductFormData {
     base_unit: 'pc',
     purchase_cost_c: 0,
     default_price_c: 0,
+    wholesale_price_c: null,
+    wholesale_min_qty: null,
     low_stock_threshold: defaultLowStock,
     initial_stock_base: 0,
     description: null,
@@ -82,6 +86,8 @@ export function editProductForm(product: Product): ProductFormData {
     base_unit: product.base_unit,
     purchase_cost_c: product.purchase_cost_c,
     default_price_c: product.default_price_c,
+    wholesale_price_c: product.wholesale_price_c ?? null,
+    wholesale_min_qty: product.wholesale_min_qty ?? null,
     low_stock_threshold: product.low_stock_threshold,
     initial_stock_base: 0,
     description: product.description,
@@ -122,6 +128,8 @@ export function updateProductInput(form: ProductFormData): Partial<ProductInput>
     base_unit: form.base_unit,
     purchase_cost_c: form.purchase_cost_c,
     default_price_c: form.default_price_c,
+    wholesale_price_c: form.wholesale_price_c,
+    wholesale_min_qty: form.wholesale_min_qty,
     low_stock_threshold: form.low_stock_threshold,
     description: form.description,
     supplier_id: form.supplier_id,
@@ -145,6 +153,8 @@ export function createProductInput(form: ProductFormData): ProductInput {
     base_unit: form.base_unit,
     purchase_cost_c: form.purchase_cost_c,
     default_price_c: form.default_price_c,
+    wholesale_price_c: form.wholesale_price_c,
+    wholesale_min_qty: form.wholesale_min_qty,
     low_stock_threshold: form.low_stock_threshold,
     initial_stock_base: form.initial_stock_base,
     description: form.description,

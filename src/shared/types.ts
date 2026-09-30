@@ -97,6 +97,8 @@ export interface Product {
   batches?: StockBatch[]
   sellable_stock?: number
   image_path: string | null
+  wholesale_price_c?: number | null
+  wholesale_min_qty?: number | null
   status: ProductStatus
   notes: string | null
   units: ProductUnit[]
@@ -114,6 +116,8 @@ export interface ProductInput {
   base_unit: string
   purchase_cost_c: number
   default_price_c: number
+  wholesale_price_c?: number | null
+  wholesale_min_qty?: number | null
   low_stock_threshold?: number
   supplier_id: number | null
   has_expiration: boolean

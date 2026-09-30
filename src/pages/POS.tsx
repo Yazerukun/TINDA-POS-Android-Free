@@ -18,7 +18,9 @@ import {
   X,
   Share2,
   Printer,
-  ScanLine
+  ScanLine,
+  ArrowDownLeft,
+  QrCode
 } from 'lucide-react'
 import type { Product, Customer, Sale, Category, HeldSale } from '@shared/types'
 import { money } from '@shared/format'
@@ -26,6 +28,8 @@ import { Modal } from '../components/ui/Modal'
 import { ReceiptPaper } from '../components/ReceiptPaper'
 import { BarcodeScannerModal } from '../components/BarcodeScannerModal'
 import { TouchNumpad } from '../components/TouchNumpad'
+import { PettyCashModal } from '../components/PettyCashModal'
+import { DynamicQRModal } from '../components/DynamicQRModal'
 import {
   playScanBeep,
   playSuccessChime,
@@ -53,9 +57,31 @@ interface CartItem {
   unit_name: string
   qty: number
   unit_price_c: number
+  regular_price_c: number
+  wholesale_price_c?: number | null
+  wholesale_min_qty?: number | null
+  is_wholesale?: boolean
   cost_base_c: number
   stock_base: number
   conversion_to_base: number
+}
+
+function calculateItemPrice(
+  regularPrice: number,
+  wholesalePrice: number | null | undefined,
+  wholesaleMinQty: number | null | undefined,
+  qty: number
+): { unit_price_c: number; is_wholesale: boolean } {
+  if (
+    wholesalePrice != null &&
+    wholesalePrice > 0 &&
+    wholesaleMinQty != null &&
+    wholesaleMinQty > 0 &&
+    qty >= wholesaleMinQty
+  ) {
+    return { unit_price_c: wholesalePrice, is_wholesale: true }
+  }
+  return { unit_price_c: regularPrice, is_wholesale: false }
 }
 
 interface CartState {
@@ -81,31 +107,97 @@ export const usePosCart = create<CartState>((set) => ({
       const stock = saleStock(p)
       const ex = s.items.find((i) => i.product_id === p.id)
       if (stock < 1) return s
-      if (ex) return { items: s.items.map((i) => (i === ex ? { ...i, stock_base: stock, qty: Math.min(i.qty + 1, maxQuantity(stock, i.conversion_to_base)) } : i)) }
+      const regularPrice = p.default_price_c
+      const wsPrice = p.wholesale_price_c ?? null
+      const wsQty = p.wholesale_min_qty ?? null
+      if (ex) {
+        const nextQty = Math.min(ex.qty + 1, maxQuantity(stock, ex.conversion_to_base))
+        const pricing = calculateItemPrice(ex.regular_price_c || regularPrice, wsPrice, wsQty, nextQty)
+        return {
+          items: s.items.map((i) =>
+            i === ex
+              ? {
+                  ...i,
+                  stock_base: stock,
+                  qty: nextQty,
+                  unit_price_c: pricing.unit_price_c,
+                  is_wholesale: pricing.is_wholesale,
+                  wholesale_price_c: wsPrice,
+                  wholesale_min_qty: wsQty
+                }
+              : i
+          )
+        }
+      }
+      const initialPricing = calculateItemPrice(regularPrice, wsPrice, wsQty, 1)
       return {
-        items: [...s.items, {
-          product_id: p.id,
-          name: p.name,
-          unit_name: p.base_unit,
-          qty: 1,
-          unit_price_c: p.default_price_c,
-          cost_base_c: p.purchase_cost_c,
-          stock_base: stock,
-          conversion_to_base: 1
-        }]
+        items: [
+          ...s.items,
+          {
+            product_id: p.id,
+            name: p.name,
+            unit_name: p.base_unit,
+            qty: 1,
+            regular_price_c: regularPrice,
+            unit_price_c: initialPricing.unit_price_c,
+            wholesale_price_c: wsPrice,
+            wholesale_min_qty: wsQty,
+            is_wholesale: initialPricing.is_wholesale,
+            cost_base_c: p.purchase_cost_c,
+            stock_base: stock,
+            conversion_to_base: 1
+          }
+        ]
       }
     }),
   setQty: (product_id, qty) =>
-    set((s) => ({ items: s.items.map((i) => (i.product_id === product_id ? { ...i, qty: Math.min(Math.max(0, Number.isFinite(qty) ? qty : 0), maxQuantity(i.stock_base, i.conversion_to_base)) } : i)).filter((i) => i.qty > 0) })),
+    set((s) => ({
+      items: s.items
+        .map((i) => {
+          if (i.product_id !== product_id) return i
+          const nextQty = Math.min(
+            Math.max(0, Number.isFinite(qty) ? qty : 0),
+            maxQuantity(i.stock_base, i.conversion_to_base)
+          )
+          const pricing = calculateItemPrice(
+            i.regular_price_c || i.unit_price_c,
+            i.wholesale_price_c,
+            i.wholesale_min_qty,
+            nextQty
+          )
+          return {
+            ...i,
+            qty: nextQty,
+            unit_price_c: pricing.unit_price_c,
+            is_wholesale: pricing.is_wholesale
+          }
+        })
+        .filter((i) => i.qty > 0)
+    })),
   remove: (product_id) => set((s) => ({ items: s.items.filter((i) => i.product_id !== product_id) })),
   clear: () => set({ items: [], customer_id: null, discount_pesos: 0 }),
   setCustomer: (id) => set({ customer_id: id }),
   setDiscountPesos: (v) => set({ discount_pesos: Math.max(0, v) }),
-  replace: (items, discount_pesos) => set({ items, customer_id: null, discount_pesos }),
-  syncStocks: (products) => set((s) => {
-    const stocks = new Map(products.map(p => [p.id, saleStock(p)]))
-    return { items: s.items.map(item => ({ ...item, stock_base: stocks.get(item.product_id) ?? item.stock_base })) }
-  })
+  replace: (items, discount_pesos) =>
+    set({
+      items: items.map((i) => {
+        const reg = i.regular_price_c || i.unit_price_c
+        const ws = calculateItemPrice(reg, i.wholesale_price_c, i.wholesale_min_qty, i.qty)
+        return {
+          ...i,
+          regular_price_c: reg,
+          unit_price_c: ws.unit_price_c,
+          is_wholesale: ws.is_wholesale
+        }
+      }),
+      customer_id: null,
+      discount_pesos
+    }),
+  syncStocks: (products) =>
+    set((s) => {
+      const stocks = new Map(products.map((p) => [p.id, saleStock(p)]))
+      return { items: s.items.map((item) => ({ ...item, stock_base: stocks.get(item.product_id) ?? item.stock_base })) }
+    })
 }))
 
 export function POS(): React.JSX.Element {
@@ -119,6 +211,7 @@ export function POS(): React.JSX.Element {
   const categoryMenuRef = useRef<HTMLDivElement>(null)
   const cartItems = usePosCart((state) => state.items)
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [pettyCashOpen, setPettyCashOpen] = useState(false)
 
   const handleBarcodeScan = async (code: string) => {
     try {
@@ -245,17 +338,26 @@ export function POS(): React.JSX.Element {
             <button
               type="button"
               onClick={() => setScannerOpen(true)}
-              className="btn-primary flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3.5 shadow-md active:scale-95 transition"
+              className="btn-primary flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3.5 shadow-sm active:scale-95 transition"
               title="Scan barcode with camera"
             >
               <ScanLine className="h-5 w-5" />
               <span className="hidden sm:inline text-sm font-bold">Scan</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setPettyCashOpen(true)}
+              className="btn-secondary flex h-12 shrink-0 items-center gap-1.5 rounded-xl px-3 border border-slate-200 bg-white text-slate-700 shadow-sm active:scale-95 transition"
+              title="Petty Cash (Cash In / Out)"
+            >
+              <ArrowDownLeft className="h-5 w-5 text-purple-600" />
+              <span className="hidden sm:inline text-xs font-bold">Drawer</span>
+            </button>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
               onClick={() => chooseCategory('ALL')}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${catFilter === 'ALL' ? 'bg-brand-600 text-white' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${catFilter === 'ALL' ? 'bg-brand-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
             >
               All
             </button>
@@ -263,16 +365,16 @@ export function POS(): React.JSX.Element {
               <button
                 key={c.id}
                 onClick={() => chooseCategory(c.id)}
-                className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${catFilter === c.id ? 'bg-brand-600 text-white' : 'bg-ink-800 text-slate-300 hover:bg-ink-700'}`}
+                className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${catFilter === c.id ? 'bg-brand-600 text-white shadow-xs' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
               >
                 {c.name}
               </button>
             ))}
           </div>
         </div>
-        {error && <p className="mb-3 text-sm text-danger-400">{error}</p>}
-        <div className="grid min-h-0 flex-1 auto-rows-[160px] grid-cols-[repeat(auto-fill,minmax(min(100%,160px),1fr))] content-start gap-3 overflow-y-auto pb-24 md:pb-2">
-          {loading && Array.from({ length: 12 }).map((_, i) => <div key={i} className="card h-28 animate-pulse" />)}
+        {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
+        <div className="grid min-h-0 flex-1 auto-rows-[170px] grid-cols-[repeat(auto-fill,minmax(min(100%,160px),1fr))] content-start gap-3 overflow-y-auto pb-24 md:pb-2">
+          {loading && Array.from({ length: 12 }).map((_, i) => <div key={i} className="card h-28 animate-pulse bg-white border border-slate-200" />)}
           {!loading && products.length === 0 && (
             <div className="col-span-full py-12 text-center text-sm text-slate-500">No products found.</div>
           )}
@@ -283,6 +385,8 @@ export function POS(): React.JSX.Element {
             const blocked = p.stock - stock
             const low = available > 0 && available <= p.low_stock_threshold
             const out = available <= 0
+            const isExpSoon = p.has_expiration && p.expiration_date && p.expiration_date <= localDate(7)
+            const isExpired = p.has_expiration && p.expiration_date && p.expiration_date < localDate()
             return (
               <button
                 key={p.id}
@@ -298,17 +402,33 @@ export function POS(): React.JSX.Element {
                   }
                 }}
                 aria-disabled={out}
-                className="card group flex h-40 min-w-0 flex-col p-3 text-left transition hover:border-brand-500/50 aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
+                className="card group flex h-[170px] min-w-0 flex-col p-3 text-left transition hover:border-brand-500/50 hover:shadow-md bg-white border border-slate-200 shadow-sm rounded-xl aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
               >
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                  <span className="truncate text-xs font-bold text-brand-400">{p.sku}</span>
-                  <span className={`text-xs font-bold ${out ? 'text-red-400' : low ? 'text-amber-400' : 'text-slate-500'}`}>
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-x-1.5 gap-y-0.5">
+                  <span className="truncate text-xs font-bold text-brand-600">{p.sku}</span>
+                  <span className={`text-[11px] font-bold ${out ? 'text-rose-600' : low ? 'text-amber-600' : 'text-slate-500'}`}>
                     {blocked > 0 ? `Sellable: ${stock}` : cartItem ? `Available: ${available} / ${stock}` : `Stock: ${stock}`} {p.base_unit}
                   </span>
                 </div>
-                <p className="line-clamp-2 min-h-12 break-words text-base font-semibold leading-6 text-white">{p.name}</p>
-                {blocked > 0 && <p className="truncate text-xs text-red-400">{blocked} expired / undated</p>}
-                <p className="mt-auto text-xl font-bold text-brand-400">{money(p.default_price_c)}</p>
+                <p className="line-clamp-2 min-h-10 break-words text-sm font-bold leading-tight text-slate-900">{p.name}</p>
+                {/* Wholesale & Expiry Badges */}
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  {p.wholesale_price_c && p.wholesale_min_qty && (
+                    <span className="rounded bg-sky-50 text-sky-700 border border-sky-200 text-[10px] px-1.5 py-0.2 font-bold">
+                      {p.wholesale_min_qty}+ @ {money(p.wholesale_price_c)}
+                    </span>
+                  )}
+                  {isExpired ? (
+                    <span className="rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px] px-1.5 py-0.2 font-bold">
+                      Expired
+                    </span>
+                  ) : isExpSoon ? (
+                    <span className="rounded bg-amber-50 text-amber-700 border border-amber-200 text-[10px] px-1.5 py-0.2 font-bold">
+                      Near Expiry
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-auto text-lg font-black text-brand-600 tabular-nums">{money(p.default_price_c)}</p>
               </button>
             )
           })}
@@ -322,6 +442,11 @@ export function POS(): React.JSX.Element {
         onClose={() => setScannerOpen(false)}
         onScan={handleBarcodeScan}
         title="Scan Barcode to Add to Cart"
+      />
+
+      <PettyCashModal
+        open={pettyCashOpen}
+        onClose={() => setPettyCashOpen(false)}
       />
     </div>
   )
@@ -621,34 +746,45 @@ function CartBody({
           </p>
         )}
         {items.map((i) => (
-          <div key={i.product_id} className="rounded-lg border border-ink-line bg-ink-800/50 p-2.5">
+          <div key={i.product_id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
             <div className="flex items-start justify-between gap-2">
-              <p className="min-w-0 break-words text-base font-semibold leading-6 text-slate-200">{i.name}</p>
+              <div className="min-w-0">
+                <p className="break-words text-sm font-bold text-slate-900 leading-tight">{i.name}</p>
+                {i.is_wholesale ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-sky-50 text-sky-700 px-1.5 py-0.5 text-[10px] font-bold border border-sky-200 mt-1">
+                    Wholesale Applied ({money(i.unit_price_c)}/pc)
+                  </span>
+                ) : i.wholesale_min_qty ? (
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    Buy {i.wholesale_min_qty}+ for {money(i.wholesale_price_c || 0)}/ea
+                  </span>
+                ) : null}
+              </div>
               <button
                 onClick={() => usePosCart.getState().remove(i.product_id)}
-                className="shrink-0 text-slate-600 hover:text-danger-400"
+                className="shrink-0 text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-slate-100"
                 title="Remove"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => {
                     hapticTap()
                     usePosCart.getState().setQty(i.product_id, i.qty - 1)
                   }}
-                  className="btn-ghost-2 h-10 w-10 rounded-lg"
+                  className="btn-ghost-2 h-10 w-10 rounded-xl"
                   title="Decrease quantity"
                 >
-                  <Minus className="h-3.5 w-3.5" />
+                  <Minus className="h-4 w-4" />
                 </button>
                 <input
                   value={i.qty}
                   onChange={(e) => usePosCart.getState().setQty(i.product_id, parseInt(e.target.value || '0', 10))}
                   aria-label={`Quantity for ${i.name}`}
-                  className="h-10 w-14 rounded-lg border border-ink-line bg-ink-950 py-1 text-center text-base font-bold text-white"
+                  className="h-10 w-14 rounded-xl border border-slate-200 bg-slate-50 py-1 text-center text-base font-bold text-slate-900 focus:bg-white focus:border-brand-500"
                 />
                 <button
                   disabled={i.qty >= maxQuantity(i.stock_base, i.conversion_to_base)}
@@ -656,22 +792,22 @@ function CartBody({
                     hapticTap()
                     usePosCart.getState().setQty(i.product_id, i.qty + 1)
                   }}
-                  className="btn-ghost-2 h-10 w-10 rounded-lg disabled:opacity-30"
+                  className="btn-ghost-2 h-10 w-10 rounded-xl disabled:opacity-30"
                   title={
                     i.qty >= maxQuantity(i.stock_base, i.conversion_to_base)
                       ? `Only ${maxQuantity(i.stock_base, i.conversion_to_base)} remaining`
                       : 'Increase quantity'
                   }
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-4 w-4" />
                 </button>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-white">{money(i.unit_price_c * i.qty)}</p>
-                <p className="text-sm text-slate-400">@{money(i.unit_price_c)} / {i.unit_name}</p>
+                <p className="text-base font-black text-slate-900 tabular-nums">{money(i.unit_price_c * i.qty)}</p>
+                <p className="text-xs text-slate-500">@{money(i.unit_price_c)} / {i.unit_name}</p>
               </div>
             </div>
-            <p className={`mt-1 text-xs ${reservedBase(i) > i.stock_base ? 'text-danger-400' : 'text-slate-500'}`}>
+            <p className={`mt-1 text-xs ${reservedBase(i) > i.stock_base ? 'text-rose-600 font-semibold' : 'text-slate-400'}`}>
               Available: {availableBase(i.stock_base, i)} base units / {i.stock_base}
             </p>
           </div>
@@ -679,44 +815,44 @@ function CartBody({
       </div>
 
       {stockConflict && (
-        <div className="mx-4 mb-2 shrink-0 rounded-lg border border-danger-500/30 bg-danger-500/10 p-2 text-xs text-danger-300">
+        <div className="mx-4 mb-2 shrink-0 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700 font-semibold">
           Current stock changed. Please adjust the cart to the available quantity before checkout.
         </div>
       )}
 
       {/* Totals & Utang Selector */}
-      <div className="shrink-0 space-y-2 border-t border-ink-line px-4 py-2.5 text-base bg-ink-900">
-        <div className="flex items-center justify-between text-slate-400">
+      <div className="shrink-0 space-y-2 border-t border-slate-200 px-4 py-3 text-base bg-white">
+        <div className="flex items-center justify-between text-slate-500 text-sm">
           <span>Customer</span>
           <button
             onClick={onOpenCustomer}
-            className="flex items-center gap-1 text-brand-400 hover:text-brand-300 font-medium"
+            className="flex items-center gap-1 text-brand-600 hover:text-brand-700 font-bold"
           >
             <User className="h-3.5 w-3.5" /> Select (utang)
           </button>
         </div>
-        <div className="flex items-center justify-between text-slate-400">
+        <div className="flex items-center justify-between text-slate-500 text-sm">
           <span>Subtotal</span>
-          <span className="text-slate-200">{money(subtotal)}</span>
+          <span className="text-slate-800 font-semibold">{money(subtotal)}</span>
         </div>
-        <div className="flex items-center justify-between text-slate-400">
+        <div className="flex items-center justify-between text-slate-500 text-sm">
           <span>Discount (₱)</span>
           <input
             type="number"
             min={0}
             value={discount_pesos}
             onChange={(e) => usePosCart.getState().setDiscountPesos((parseFloat(e.target.value) || 0) * 100)}
-            className="w-24 rounded-lg border border-ink-line bg-ink-950 px-2 py-1 text-right text-sm text-slate-200"
+            className="w-24 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-right text-sm font-bold text-slate-800 focus:bg-white"
           />
         </div>
-        <div className="flex justify-between border-t border-ink-line pt-1.5">
-          <span className="font-bold text-white">TOTAL</span>
-          <span className="text-2xl font-bold text-brand-400">{money(total)}</span>
+        <div className="flex justify-between border-t border-slate-100 pt-2">
+          <span className="font-bold text-slate-900">TOTAL</span>
+          <span className="text-2xl font-black text-brand-600 tabular-nums">{money(total)}</span>
         </div>
       </div>
 
       {/* Action Buttons: Hold, Clear, CHECKOUT */}
-      <div className={`shrink-0 border-t border-ink-line bg-ink-900 px-4 pt-2.5 ${isMobile ? 'pb-[calc(1.25rem+var(--saib))]' : 'pb-4'}`}>
+      <div className={`shrink-0 border-t border-slate-200 bg-white px-4 pt-2.5 ${isMobile ? 'pb-[calc(1.25rem+var(--saib))]' : 'pb-4'}`}>
         <div className="grid grid-cols-2 gap-2">
           <button
             disabled={items.length === 0}
@@ -753,6 +889,7 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
   const [cash, setCash] = useState<string>(cashInputFromCents(total))
   const [reference, setReference] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [qrModalOpen, setQrModalOpen] = useState(false)
   const [done, setDone] = useState<{ sale: Sale; receipt: string[]; print: PrintResult } | null>(null)
   const [printing, setPrinting] = useState(false)
   const setPage = useNav((state) => state.setPage)
@@ -841,11 +978,11 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
         </div>
       }>
         <div className="mb-3 text-center">
-          <Check className="mx-auto mb-2 h-16 w-16 text-emerald-400 animate-pop" />
-          <p className="text-2xl font-bold text-white tabular-nums">{money(done.sale.total_c)}</p>
-          <p className="text-sm text-slate-400">{done.sale.transaction_no}</p>
+          <Check className="mx-auto mb-2 h-16 w-16 text-emerald-600 animate-pop" />
+          <p className="text-3xl font-black text-slate-900 tabular-nums">{money(done.sale.total_c)}</p>
+          <p className="text-sm font-semibold text-slate-500">{done.sale.transaction_no}</p>
         </div>
-        <p className={`mb-3 rounded-lg border p-2 text-xs ${done.print.ok ? 'border-emerald-500/30 text-emerald-300' : 'border-amber-500/30 text-amber-300'}`}>{done.print.message}</p>
+        <p className={`mb-3 rounded-xl border p-2.5 text-xs font-semibold ${done.print.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>{done.print.message}</p>
         <ReceiptPaper lines={done.receipt} />
       </Modal>
     )
@@ -870,25 +1007,25 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
     }>
       <div className="space-y-3">
         {/* Compact Total Due Header */}
-        <div className="flex items-center justify-between rounded-xl border border-ink-line bg-ink-950 px-4 py-2.5">
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Due</span>
-            <p className="text-xs text-slate-400">Subtotal {money(subtotal)} {discount_pesos > 0 ? `· Disc -${money(discount_pesos)}` : ''}</p>
+            <p className="text-xs text-slate-500">Subtotal {money(subtotal)} {discount_pesos > 0 ? `· Disc -${money(discount_pesos)}` : ''}</p>
           </div>
-          <p className="text-3xl font-black text-brand-400 tabular-nums">{money(total)}</p>
+          <p className="text-3xl font-black text-brand-600 tabular-nums">{money(total)}</p>
         </div>
 
         {/* Sleek Segmented Payment Method Bar */}
-        <div className="grid grid-cols-4 gap-1 rounded-xl border border-ink-line bg-ink-950 p-1">
+        <div className="grid grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
           {methods.map((m) => (
             <button
               key={m.key}
               type="button"
               onClick={() => setMethod(m.key)}
-              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-xs font-semibold transition active:scale-95 ${
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-xs font-bold transition active:scale-95 ${
                 method === m.key
                   ? 'bg-brand-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:bg-ink-900 hover:text-white'
+                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
             >
               {m.icon}
@@ -901,15 +1038,15 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
           <div className="space-y-2">
             {/* Side-by-Side Cash Received & Sukli */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-ink-line bg-ink-950 px-3 py-1.5">
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-xs">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cash Received</span>
-                <p className="text-xl font-black text-white tabular-nums">
+                <p className="text-xl font-black text-slate-900 tabular-nums">
                   {cash ? `₱${cash}` : '₱0'}
                 </p>
               </div>
-              <div className={`rounded-xl border px-3 py-1.5 ${change >= 0 ? 'border-brand-500/30 bg-brand-500/10' : 'border-danger-500/30 bg-danger-500/10'}`}>
+              <div className={`rounded-xl border px-3 py-2 shadow-xs ${change >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Change (sukli)</span>
-                <p className={`tabular-nums ${change >= 0 ? 'text-xl font-black text-brand-300' : 'mt-0.5 text-xs font-bold text-danger-400'}`}>
+                <p className={`tabular-nums ${change >= 0 ? 'text-xl font-black text-emerald-700' : 'mt-0.5 text-xs font-bold text-rose-700'}`}>
                   {change >= 0 ? money(change) : `Lacking ${money(Math.abs(change))}`}
                 </p>
               </div>
@@ -924,14 +1061,48 @@ function CheckoutModal({ subtotal, total, onClose }: { subtotal: number; total: 
         )}
 
         {(method === 'GCASH' || method === 'MAYA') && (
-          <div>
-            <label className="mb-1 block text-xs text-slate-400">Reference No.</label>
-            <input value={reference} onChange={(e) => setReference(e.target.value)} className="input w-full" placeholder="e.g. 1234-5678" />
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setQrModalOpen(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-sky-300 bg-sky-50 py-3.5 text-sm font-bold text-sky-700 hover:bg-sky-100 transition active:scale-98 shadow-sm"
+            >
+              <QrCode className="h-5 w-5 text-sky-600" />
+              <span>Open {method === 'GCASH' ? 'GCash' : 'Maya'} QR Code ({money(total)})</span>
+            </button>
+
+            <div>
+              <label className="label">Reference No.</label>
+              <input
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                className="input w-full font-mono text-sm"
+                placeholder="e.g. 1029384756"
+              />
+            </div>
+
+            {qrModalOpen && (
+              <DynamicQRModal
+                open={qrModalOpen}
+                method={method}
+                totalC={total}
+                reference={reference}
+                onReferenceChange={setReference}
+                onClose={() => setQrModalOpen(false)}
+                onConfirm={() => {
+                  setQrModalOpen(false)
+                  void doCheckout()
+                }}
+                submitting={submitting}
+              />
+            )}
           </div>
         )}
 
         {method === 'UTANG' && (
-          <p className="text-xs text-amber-400">This sale will be charged to the selected customer&apos;s utang account.</p>
+          <p className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
+            This sale will be charged to the selected customer&apos;s utang account.
+          </p>
         )}
       </div>
     </Modal>

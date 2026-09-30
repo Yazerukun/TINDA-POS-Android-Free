@@ -29,28 +29,28 @@ export function Login(): React.JSX.Element {
   }
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-ink-950 p-6">
-      <div className="card w-full max-w-sm p-6 sm:p-8">
+    <div className="flex h-screen w-screen items-center justify-center bg-slate-50 p-6">
+      <div className="card w-full max-w-sm p-6 sm:p-8 bg-white border border-slate-200 shadow-xl rounded-2xl">
         <div className="mb-5 flex flex-col items-center text-center">
           <div className="relative animate-float-slow mb-1">
             <img
               src={tindaLogo}
               alt="TINDA POS"
-              className="h-32 w-auto max-w-[200px] object-contain animate-neon-pulse"
+              className="h-32 w-auto max-w-[220px] object-contain drop-shadow-sm"
             />
           </div>
-          <p className="text-xs text-slate-400">Offline POS for Sari-Sari Stores</p>
+          <p className="text-xs font-semibold text-slate-500">Offline POS for Sari-Sari Stores</p>
           <ConnectionStatus className="mt-2.5" />
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-ink-900 p-1">
+        <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200">
           {(['password', 'pin'] as const).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => { setMode(m); setError(null) }}
-              className={`rounded-md py-1.5 text-sm font-semibold transition ${
-                mode === m ? 'bg-ink-750 text-white' : 'text-slate-400 hover:text-slate-200'
+              className={`rounded-lg py-1.5 text-sm font-semibold transition ${
+                mode === m ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               {m === 'password' ? 'Password' : 'Quick PIN'}

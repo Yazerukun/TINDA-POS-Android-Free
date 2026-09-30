@@ -16,13 +16,13 @@ export default {
       },
       colors: {
         ink: {
-          950: '#0a0d0f',
-          900: '#111418',
-          850: '#15191f',
-          800: '#1a1f26',
-          750: '#1f252d',
-          700: '#252c36',
-          line: '#2a313c'
+          950: '#f8fafc',
+          900: '#ffffff',
+          850: '#ffffff',
+          800: '#f1f5f9',
+          750: '#e2e8f0',
+          700: '#cbd5e1',
+          line: '#e2e8f0'
         },
         brand: {
           50: '#ecfdf5',
@@ -30,7 +30,9 @@ export default {
           400: '#34d399',
           500: '#10b981',
           600: '#059669',
-          700: '#047857'
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b'
         },
         gold: {
           300: '#fcd34d',
@@ -40,9 +42,9 @@ export default {
         },
         warn: { 400: '#fbbf24', 500: '#f59e0b' },
         danger: { 400: '#f87171', 500: '#ef4444', 600: '#dc2626' },
-        primary: { DEFAULT: '#10b981', hover: '#059669', active: '#047857' },
-        surface: '#15191f',
-        background: '#0a0d0f'
+        primary: { DEFAULT: '#059669', hover: '#047857', active: '#065f46' },
+        surface: '#ffffff',
+        background: '#f8fafc'
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
@@ -52,8 +54,8 @@ export default {
         xl2: '1rem'
       },
       boxShadow: {
-        card: '0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.25)',
-        pop: '0 8px 30px rgba(0,0,0,.5)',
+        card: '0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.07)',
+        pop: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
         glow: '0 0 0 3px rgba(16,185,129,.25)'
       },
       keyframes: {

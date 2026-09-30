@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Plus, Pencil, Trash2, RefreshCw, Boxes, Tags, Upload, PackagePlus, Download, ClipboardList, X, PackageMinus, ArrowDownUp, AlertTriangle, CheckCircle2, Check, Sparkles, ScanLine } from 'lucide-react'
 import type { Product, Category, Supplier, StockReceivingRecord, StockReceivingSource, InventoryMovement, WithdrawalReason, PriceReference } from '@shared/types'
 import { money } from '@shared/format'
+import { expirationStatus } from '@shared/expiration'
 import { PageHeader } from '../components/ui/PageHeader'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Modal } from '../components/ui/Modal'
@@ -24,7 +25,7 @@ export function Inventory(): React.JSX.Element {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [q, setQ] = useState('')
-  const [catFilter, setCatFilter] = useState<number | 'ALL' | 'LOW' | 'OUT'>('ALL')
+  const [catFilter, setCatFilter] = useState<number | 'ALL' | 'LOW' | 'OUT' | 'EXPIRED'>('ALL')
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<ProductFormData | null>(null)
   const [managingCategories, setManagingCategories] = useState(false)
@@ -69,13 +70,20 @@ export function Inventory(): React.JSX.Element {
     return () => { ++state.sequence; unsubscribe(); window.removeEventListener('focus', refresh); window.clearInterval(timer) }
   }, [load])
 
-  const chooseFilter = (filter: number | 'ALL' | 'LOW' | 'OUT') => setCatFilter(filter)
+  const chooseFilter = (filter: number | 'ALL' | 'LOW' | 'OUT' | 'EXPIRED') => setCatFilter(filter)
+
+  const isExpiringAlert = (p: Product) => {
+    if (!p.expiration_date) return false
+    const st = expirationStatus(p.expiration_date)
+    return st === 'EXPIRED' || st === 'SOON' || st === 'NEAR'
+  }
 
   const filtered = useMemo(() => {
     let list = products
     if (q) list = list.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) || (p.barcode || '').toLowerCase().includes(q.toLowerCase()) || p.sku.toLowerCase().includes(q.toLowerCase()))
     if (catFilter === 'LOW') list = list.filter((p) => p.stock > 0 && p.stock <= p.low_stock_threshold)
     else if (catFilter === 'OUT') list = list.filter((p) => p.stock <= 0)
+    else if (catFilter === 'EXPIRED') list = list.filter(isExpiringAlert)
     else if (catFilter !== 'ALL') list = list.filter((p) => p.category_id === catFilter)
     return list
   }, [products, q, catFilter])
@@ -83,7 +91,8 @@ export function Inventory(): React.JSX.Element {
   const totalValue = products.reduce((s, p) => s + p.stock * p.purchase_cost_c, 0)
   const lowCount = products.filter((p) => p.stock > 0 && p.stock <= p.low_stock_threshold).length
   const outCount = products.filter((p) => p.stock <= 0).length
-  const alertCount = lowCount + outCount
+  const expiredCount = products.filter(isExpiringAlert).length
+  const alertCount = lowCount + outCount + expiredCount
 
   const archive = async (id: number) => {
     if (!confirm('Archive this product?')) return
@@ -173,8 +182,9 @@ export function Inventory(): React.JSX.Element {
           { value: 'ALL' as const, label: 'All' },
           ...categories.map((category) => ({ value: category.id, label: category.name })),
           { value: 'LOW' as const, label: lowCount ? `Low (${lowCount})` : 'Low stock' },
-          { value: 'OUT' as const, label: outCount ? `Out (${outCount})` : 'Out of stock' }
-        ] as { value: number | 'ALL' | 'LOW' | 'OUT'; label: string }[]).map((item) => (
+          { value: 'OUT' as const, label: outCount ? `Out (${outCount})` : 'Out of stock' },
+          { value: 'EXPIRED' as const, label: expiredCount ? `Expiring (${expiredCount})` : 'Expiring' }
+        ] as { value: number | 'ALL' | 'LOW' | 'OUT' | 'EXPIRED'; label: string }[]).map((item) => (
           <button
             key={String(item.value)}
             type="button"
@@ -291,6 +301,11 @@ export function Inventory(): React.JSX.Element {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-white">{p.name}</p>
                   <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                  {p.wholesale_price_c && p.wholesale_min_qty ? (
+                    <span className="mt-1 inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/20">
+                      Wholesale: {money(p.wholesale_price_c)} ({p.wholesale_min_qty}+)
+                    </span>
+                  ) : null}
                 </div>
                 <StockBadge status={p.stock_status} />
               </div>
@@ -334,6 +349,11 @@ export function Inventory(): React.JSX.Element {
                   <td className="p-4">
                     <p className="font-semibold text-white">{p.name}</p>
                     <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                    {p.wholesale_price_c && p.wholesale_min_qty ? (
+                      <span className="mt-1 inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/20">
+                        Wholesale: {money(p.wholesale_price_c)} ({p.wholesale_min_qty}+)
+                      </span>
+                    ) : null}
                   </td>
                   <td className="p-4"><StockBadge status={p.stock_status} /></td>
                   <td className="p-4">
@@ -699,6 +719,36 @@ function ProductModal({ form, categories, onSave, onClose }: { form: ProductForm
         <div>
           <label className="label">Selling Price (₱)</label>
           <input type="number" min={0} value={f.default_price_c / 100} onChange={(e) => set({ default_price_c: Math.round(parseFloat(e.target.value || '0') * 100) })} className="input w-full" />
+        </div>
+        <div>
+          <label className="label">Wholesale Price (₱) <span className="text-xs text-slate-400 font-normal">(Optional)</span></label>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            placeholder="e.g. 95.00"
+            value={f.wholesale_price_c != null ? f.wholesale_price_c / 100 : ''}
+            onChange={(e) => {
+              const val = e.target.value
+              set({ wholesale_price_c: val === '' ? null : Math.round(parseFloat(val || '0') * 100) })
+            }}
+            className="input w-full"
+          />
+        </div>
+        <div>
+          <label className="label">Min Wholesale Qty <span className="text-xs text-slate-400 font-normal">(e.g. 6, 12)</span></label>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            placeholder="e.g. 6"
+            value={f.wholesale_min_qty != null ? f.wholesale_min_qty : ''}
+            onChange={(e) => {
+              const val = e.target.value
+              set({ wholesale_min_qty: val === '' ? null : Math.max(1, parseInt(val || '1', 10)) })
+            }}
+            className="input w-full"
+          />
         </div>
         {priceRef && (
           <div className="col-span-2">

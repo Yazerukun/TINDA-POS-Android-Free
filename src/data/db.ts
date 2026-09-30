@@ -120,6 +120,10 @@ class TindaDatabase extends Dexie {
     this.version(3).stores({
       priceReferences: '++id, product_id, barcode, product_name, brand, category, source_name, last_synced_at'
     })
+    // v4 adds wholesale pricing and expiration date index for TINDA POS v1.0.43 parity.
+    this.version(4).stores({
+      products: '++id, name, sku, barcode, category_id, status, updated_at, supplier_id, expiration_date, wholesale_price_c'
+    })
   }
 }
 
