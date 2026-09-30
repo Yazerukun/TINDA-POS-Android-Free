@@ -7,6 +7,7 @@ import type {
   ExportResult,
   Product,
   ReadReport,
+  Refund,
   ReportSummary,
   Sale,
   SalesReportRow,

@@ -138,7 +138,7 @@ cd android && ./gradlew assembleRelease
 - [x] **Clean Modern White Theme:** Verified on all primary screens (POS, Dashboard, Inventory, Utang, Login).
 - [x] **Branding & Assets:** 512x512 vector-sharp app icon and logo deployed to all Android mipmap densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
 - [x] **Release Artifact:** `TindaPOS-Free-1.0.43.apk` assembled and signed (5.9 MB).
-  - **SHA-256:** `0d43807ca485fee9631c5a26719aadc8ceb9d0f374aea3eec5c169b6a9be632d`
+  - **SHA-256:** `147af5bf65d5d6fd0b8cfab3099eef80e2ab2a6570de1f680b776d8f77faf2ce`
 
 ---
 

@@ -55,7 +55,7 @@ Get the official release package from the [Releases page](https://github.com/Yaz
 
 | File | Size | SHA-256 Checksum | Purpose |
 | :--- | :--- | :--- | :--- |
-| [**`TindaPOS-Free-1.0.43.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.43/TindaPOS-Free-1.0.43.apk) | 5.9 MB | `0d43807ca485fee9631c5a26719aadc8ceb9d0f374aea3eec5c169b6a9be632d` | **Recommended**. Official signed release APK for Android phones and tablets. |
+| [**`TindaPOS-Free-1.0.43.apk`**](https://github.com/Yazerukun/TINDA-POS-Android-Free/releases/download/v1.0.43/TindaPOS-Free-1.0.43.apk) | 5.9 MB | `147af5bf65d5d6fd0b8cfab3099eef80e2ab2a6570de1f680b776d8f77faf2ce` | **Recommended**. Official signed release APK for Android phones and tablets. |
 
 > [!NOTE]
 > **Data Preservation on Upgrades:** Installing a newer APK over an existing version **preserves all your store records, sales, inventory, and settings**. All official releases are signed with the same persistent key (`CN=TINDA POS Free`).
