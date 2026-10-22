@@ -611,3 +611,29 @@ export interface PriceSyncResult {
   message: string
   is_offline?: boolean
 }
+
+export type LicenseTier = 'COMMUNITY' | 'VIP_PRO' | 'VIP_DEMO'
+
+export interface LicenseStatus {
+  tier: LicenseTier
+  isVip: boolean
+  isDemo?: boolean
+  demoExpiresAt?: string | null
+  machineId: string
+  activatedAt: string | null
+  customerName: string | null
+  licenseKey: string | null
+  statusMessage: string
+}
+
+export interface StoredLicensePayload {
+  version: number
+  tier: LicenseTier
+  machineId: string
+  licenseKey: string
+  customerName: string | null
+  activatedAt: string
+  demoExpiresAt?: string | null
+  tamperProofHash: string
+}
+

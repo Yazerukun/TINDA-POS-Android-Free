@@ -18,19 +18,22 @@ import { Reports } from '../pages/Reports'
 import { Backup } from '../pages/Backup'
 import { Settings } from '../pages/Settings'
 import { More } from '../pages/More'
+import { useLicenseStore } from '../stores/license'
 import { ExpirationAlerts } from '../components/Expiration'
 
 export function Shell(): React.JSX.Element {
   const { user } = useAuth()
   const { load } = useSettings()
+  const { init: initLicense } = useLicenseStore()
   const { page } = useNav()
 
   useEffect(() => {
     load().catch(() => console.error('settings load failed'))
-  }, [load])
+    initLicense().catch(() => console.error('license init failed'))
+  }, [load, initLicense])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-ink-950">
+    <div className="flex h-screen w-screen overflow-hidden bg-white">
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col pb-[calc(3.5rem+var(--saib))] sm:pb-0">
         <MobileTopBar />
@@ -48,6 +51,7 @@ export function Shell(): React.JSX.Element {
         {user && page === 'backup' && <Backup />}
         {user && page === 'settings' && <Settings defaultTab="HOME" />}
         {user && page === 'printer' && <Settings defaultTab="RECEIPT" />}
+        {user && page === 'license' && <Settings defaultTab="LICENSE" />}
         {user && page === 'update' && <Settings defaultTab="ABOUT" />}
         {user && page === 'more' && <More />}
         </div>

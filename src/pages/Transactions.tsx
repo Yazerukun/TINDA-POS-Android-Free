@@ -46,8 +46,8 @@ export function Transactions(): React.JSX.Element {
     <div className="px-4 pt-3 pb-8 max-w-lg mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black text-white">Transactions</h1>
-          <p className="text-xs text-slate-400">{rows.length} shown · net <span className="font-bold text-brand-400">{money(total)}</span></p>
+          <h1 className="text-xl font-black text-slate-950">Transactions</h1>
+          <p className="text-xs font-semibold text-slate-600">{rows.length} shown · net <span className="font-black text-emerald-700">{money(total)}</span></p>
         </div>
       </div>
 
@@ -60,10 +60,10 @@ export function Transactions(): React.JSX.Element {
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void load()}
               placeholder="Receipt #, product…"
-              className="input w-full pl-9 text-sm py-2"
+              className="input w-full pl-9 text-sm py-2 border-2 border-slate-300 font-medium text-slate-950 focus:border-emerald-600"
             />
           </div>
-          <select value={status} onChange={(e) => { setStatus(e.target.value); setTimeout(() => void load(), 0) }} className="input text-xs py-2 w-32 shrink-0">
+          <select value={status} onChange={(e) => { setStatus(e.target.value); setTimeout(() => void load(), 0) }} className="input text-xs py-2 w-32 shrink-0 border-2 border-slate-300 font-bold text-slate-800">
             <option value="">All status</option>
             <option value="COMPLETED">Completed</option>
             <option value="REFUNDED">Refunded</option>
@@ -72,8 +72,8 @@ export function Transactions(): React.JSX.Element {
           </select>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5" />
-          <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5" />
+          <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5 border-2 border-slate-300 font-semibold text-slate-800" />
+          <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setTimeout(() => void load(), 0) }} className="input w-full text-xs py-1.5 border-2 border-slate-300 font-semibold text-slate-800" />
         </div>
       </div>
 
@@ -84,26 +84,26 @@ export function Transactions(): React.JSX.Element {
       ) : (
         <div className="space-y-2.5">
           {rows.map(s => (
-            <div key={s.id} className="card p-3.5 hover:border-ink-600 transition-colors">
+            <div key={s.id} className="card border-2 border-slate-200 bg-white p-3.5 shadow-sm hover:border-emerald-500 transition-colors">
               <div className="flex justify-between items-start mb-1.5">
                 <div>
-                  <span className="font-bold text-brand-400 text-sm">{s.transaction_no}</span>
-                  <p className="text-xs text-slate-400">{shortDateTime(s.created_at)}</p>
+                  <span className="font-black text-emerald-700 text-sm">{s.transaction_no}</span>
+                  <p className="text-xs text-slate-600 font-medium">{shortDateTime(s.created_at)}</p>
                 </div>
-                <p className="font-bold tabular-nums text-white text-base">{money(s.total_c)}</p>
+                <p className="font-black tabular-nums text-slate-950 text-base">{money(s.total_c)}</p>
               </div>
-              <div className="flex justify-between items-center pt-2 border-t border-ink-line/60">
+              <div className="flex justify-between items-center pt-2 border-t border-slate-100">
                 <div className="min-w-0 flex-1 pr-2">
-                  <p className="text-xs text-slate-400 truncate mb-1">{s.cashier_name} {s.customer_name ? `· ${s.customer_name}` : ''}</p>
+                  <p className="text-xs text-slate-600 font-medium truncate mb-1">{s.cashier_name} {s.customer_name ? `· ${s.customer_name}` : ''}</p>
                   <div><StatusBadge status={s.status} /></div>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => setView(s)} className="btn-ghost-2 p-2 rounded-lg text-slate-300 hover:text-white" title="View"><Eye className="h-4 w-4" /></button>
+                  <button onClick={() => setView(s)} className="btn-secondary p-2 rounded-lg border-2 border-slate-200 text-slate-800 hover:bg-slate-50" title="View"><Eye className="h-4 w-4" /></button>
                   {(s.status === 'COMPLETED' || s.status === 'PARTIALLY_REFUNDED') && (
-                    <button onClick={() => setRefund(s)} className="btn-ghost-2 p-2 rounded-lg text-amber-400 hover:text-amber-300" title="Refund"><RotateCcw className="h-4 w-4" /></button>
+                    <button onClick={() => setRefund(s)} className="btn-secondary p-2 rounded-lg border-2 border-slate-200 text-amber-600 hover:bg-slate-50" title="Refund"><RotateCcw className="h-4 w-4" /></button>
                   )}
                   {s.status === 'COMPLETED' && (
-                    <button onClick={() => setVoider(s)} className="btn-ghost-2 p-2 rounded-lg text-danger-400 hover:text-danger-300" title="Void"><Ban className="h-4 w-4" /></button>
+                    <button onClick={() => setVoider(s)} className="btn-secondary p-2 rounded-lg border-2 border-slate-200 text-danger-600 hover:bg-slate-50" title="Void"><Ban className="h-4 w-4" /></button>
                   )}
                 </div>
               </div>
@@ -140,25 +140,25 @@ function ViewSale({ sale, onClose }: { sale: Sale; onClose: () => void }): React
       <Modal open onClose={onClose} title={sale.transaction_no} maxWidth="max-w-md" footer={
         <><button onClick={() => void openReceiptPreview()} className="btn-ghost flex items-center gap-2"><ReceiptText className="h-4 w-4" /> View Receipt</button><button onClick={() => void print()} className="btn-primary flex items-center gap-2"><Printer className="h-4 w-4" /> Print Receipt</button></>
       }>
-      <div className="mb-3 flex justify-between text-sm text-slate-400">
+      <div className="mb-3 flex justify-between text-sm font-semibold text-slate-600">
         <span>{shortDateTime(sale.created_at)}</span><span>{sale.cashier_name}</span>
       </div>
-      {sale.customer_name && <p className="mb-2 text-sm text-slate-400">Customer: <span className="text-slate-200">{sale.customer_name}</span></p>}
-      <div className="max-h-56 space-y-1 overflow-y-auto">
+      {sale.customer_name && <p className="mb-2 text-sm text-slate-600 font-semibold">Customer: <span className="text-slate-950 font-bold">{sale.customer_name}</span></p>}
+      <div className="max-h-56 space-y-1.5 overflow-y-auto">
         {sale.items.map((i) => (
-          <div key={i.id} className="flex justify-between rounded-lg border border-ink-line px-3 py-1.5 text-sm">
-            <span className="text-slate-300">{i.product_name} <span className="text-slate-500">×{i.qty} {i.unit_name}</span>{i.refunded_qty_base > 0 && <span className="ml-1 text-amber-400">(ref {i.refunded_qty_base})</span>}</span>
-            <span className="font-bold text-slate-200">{money(i.subtotal_c)}</span>
+          <div key={i.id} className="flex justify-between items-center rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm">
+            <span className="text-slate-950 font-bold">{i.product_name} <span className="text-slate-600 font-semibold">×{i.qty} {i.unit_name}</span>{i.refunded_qty_base > 0 && <span className="ml-1 text-amber-700 font-bold">(ref {i.refunded_qty_base})</span>}</span>
+            <span className="font-black text-slate-950">{money(i.subtotal_c)}</span>
           </div>
         ))}
       </div>
-      <div className="mt-3 space-y-1 border-t border-ink-line pt-2 text-sm">
-        <div className="flex justify-between text-slate-400"><span>Subtotal</span><span>{money(sale.subtotal_c)}</span></div>
-        {sale.discount_c > 0 && <div className="flex justify-between text-slate-400"><span>Discount</span><span>-{money(sale.discount_c)}</span></div>}
-        <div className="flex justify-between font-bold text-white"><span>Total</span><span>{money(sale.total_c)}</span></div>
+      <div className="mt-3 space-y-1.5 border-t-2 border-slate-200 pt-2 text-sm">
+        <div className="flex justify-between text-slate-700 font-semibold"><span>Subtotal</span><span>{money(sale.subtotal_c)}</span></div>
+        {sale.discount_c > 0 && <div className="flex justify-between text-slate-700 font-semibold"><span>Discount</span><span>-{money(sale.discount_c)}</span></div>}
+        <div className="flex justify-between font-black text-lg text-slate-950 border-t border-slate-200 pt-1"><span>Total</span><span className="text-emerald-700">{money(sale.total_c)}</span></div>
         <div className="space-y-0.5 pt-1">
           {sale.payments.map((p, i) => (
-            <div key={i} className="flex justify-between text-xs text-slate-500"><span>{p.method}</span><span>{money(p.amount_c)}</span></div>
+            <div key={i} className="flex justify-between text-xs font-semibold text-slate-500"><span>{p.method}</span><span>{money(p.amount_c)}</span></div>
           ))}
         </div>
       </div>

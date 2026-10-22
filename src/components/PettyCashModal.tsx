@@ -73,7 +73,7 @@ export function PettyCashModal({ open, onClose, onDone }: PettyCashModalProps): 
             }`}
           >
             <ArrowDownLeft className="h-4 w-4" />
-            <span>Cash In (Dugang Sukli)</span>
+            <span>Cash In (Add Change / Float)</span>
           </button>
           <button
             type="button"
@@ -85,7 +85,7 @@ export function PettyCashModal({ open, onClose, onDone }: PettyCashModalProps): 
             }`}
           >
             <ArrowUpRight className="h-4 w-4" />
-            <span>Cash Out (Gasto/Kuha)</span>
+            <span>Cash Out (Payout / Expense)</span>
           </button>
         </div>
 
@@ -127,7 +127,7 @@ export function PettyCashModal({ open, onClose, onDone }: PettyCashModalProps): 
             type="text"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder={type === 'CASH_IN' ? 'e.g. Dugang barya/sensilyo sa kaha' : 'e.g. Palit snack, load, o bayad kuryente'}
+            placeholder={type === 'CASH_IN' ? 'e.g., Additional coins or drawer float' : 'e.g., Supplier payout, snacks, or emergency withdrawal'}
             className="input"
             required
           />

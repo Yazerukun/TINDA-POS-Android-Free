@@ -328,10 +328,19 @@ export async function importUniversalBackup(text: string): Promise<{
     const rows = byName.get(canonical)
     if (rows && rows.length > 0) {
       const normalized = rows.map((r) => {
-        if ('is_active' in r) {
-          return { ...r, is_active: r.is_active === 0 || r.is_active === false ? false : true }
+        const item: Record<string, unknown> = { ...r }
+        if (canonical === 'customers') {
+          item.full_name = item.full_name || item.name || 'Customer'
+          item.balance_c = typeof item.balance_c === 'number' ? item.balance_c : Number(item.balance_c) || 0
+          item.credit_limit_c = typeof item.credit_limit_c === 'number' ? item.credit_limit_c : Number(item.credit_limit_c) || 0
         }
-        return r
+        if (canonical === 'suppliers') {
+          item.status = item.status === 'ARCHIVED' || item.is_active === 0 ? 'ARCHIVED' : 'ACTIVE'
+        }
+        if ('is_active' in item) {
+          item.is_active = item.is_active === 0 || item.is_active === false ? false : true
+        }
+        return item
       })
       targets.push({ table: dexie as DataTableName, rows: normalized })
     }

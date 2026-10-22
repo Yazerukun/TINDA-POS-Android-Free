@@ -52,43 +52,43 @@ export function Customers(): React.JSX.Element {
     <div className="px-4 pt-3 pb-8 max-w-lg mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black text-white">Customers</h1>
-          <p className="text-xs text-slate-400">{rows.length} active customers</p>
+          <h1 className="text-xl font-black text-slate-950 tracking-tight">Customers</h1>
+          <p className="text-xs text-slate-600 font-semibold">{rows.length} active customers</p>
         </div>
-        <button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl">
+        <button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs">
           <Plus className="h-4 w-4" /> New Customer
         </button>
       </div>
 
       <div className="relative w-full">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customers…" className="input w-full pl-9 text-sm py-2" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customers…" className="input w-full pl-9 text-sm py-2 bg-slate-50 border-2 border-slate-200 text-slate-950 font-medium rounded-xl" />
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="card h-28 animate-pulse" />)}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="card h-28 animate-pulse bg-slate-100 rounded-2xl" />)}</div>
       ) : filtered.length === 0 ? (
-        <EmptyState title="No customers" message="Add customers to sell on utang (credit)." icon={<Users className="h-7 w-7" />} action={<button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary">New Customer</button>} />
+        <EmptyState title="No customers" message="Add customers to sell on utang (credit)." icon={<Users className="h-7 w-7 text-slate-400" />} action={<button onClick={() => setEditing({ id: null, full_name: '', nickname: '', phone: '', address: '', credit_limit_c: 100000 })} className="btn-primary bg-emerald-600 text-white font-bold">New Customer</button>} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((c) => (
-            <div key={c.id} className="card p-4 flex flex-col justify-between hover:bg-ink-800 transition">
+            <div key={c.id} className="card p-4 flex flex-col justify-between bg-white border-2 border-slate-200 rounded-2xl shadow-sm hover:border-emerald-300 transition">
               <div className="flex justify-between items-start mb-2">
                 <div className="min-w-0 pr-2">
-                  <p className="font-bold text-white truncate text-base">{c.full_name}</p>
-                  {c.nickname && <p className="text-sm text-slate-400 truncate">"{c.nickname}"</p>}
-                  {c.phone && <p className="text-xs text-slate-500 truncate mt-0.5">{c.phone}</p>}
+                  <p className="font-black text-slate-950 truncate text-base">{c.full_name}</p>
+                  {c.nickname && <p className="text-xs text-slate-600 font-semibold truncate">"{c.nickname}"</p>}
+                  {c.phone && <p className="text-xs text-slate-500 font-mono truncate mt-0.5">{c.phone}</p>}
                 </div>
-                <button onClick={() => setEditing({ id: c.id, full_name: c.full_name, nickname: c.nickname ?? '', phone: c.phone ?? '', address: c.address ?? '', credit_limit_c: c.credit_limit_c })} className="btn-ghost-2 shrink-0 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-white" title="Edit"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => setEditing({ id: c.id, full_name: c.full_name, nickname: c.nickname ?? '', phone: c.phone ?? '', address: c.address ?? '', credit_limit_c: c.credit_limit_c })} className="btn-ghost-2 shrink-0 h-10 w-10 p-0 flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-950 hover:bg-slate-100 transition" title="Edit"><Pencil className="h-4 w-4" /></button>
               </div>
-              <div className="mt-2 flex justify-between items-end">
+              <div className="mt-2 flex justify-between items-end pt-2 border-t border-slate-100">
                 <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Balance</p>
-                  <p className={`text-xl font-black tabular-nums leading-none mt-1 ${c.balance_c > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{money(c.balance_c)}</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Balance</p>
+                  <p className={`text-xl font-black tabular-nums leading-none mt-1 ${c.balance_c > 0 ? 'text-amber-600' : 'text-emerald-700'}`}>{money(c.balance_c)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Limit</p>
-                  <p className="text-sm font-semibold tabular-nums text-slate-300 mt-1">{money(c.credit_limit_c)}</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-wider">Limit</p>
+                  <p className="text-sm font-black tabular-nums text-slate-800 mt-1">{money(c.credit_limit_c)}</p>
                 </div>
               </div>
             </div>

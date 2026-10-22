@@ -236,8 +236,8 @@ export function Reports(): React.JSX.Element {
                 <tbody>
                   {inv.rows.map((p, i) => (
                     <tr key={i}>
-                      <td className="text-slate-200">{p.name}</td>
-                      <td className="text-right text-slate-300 tabular-nums">{p.stock} {p.base_unit}</td>
+                      <td className="text-slate-900 font-bold">{p.name}</td>
+                      <td className="text-right text-slate-900 font-bold tabular-nums">{p.stock} {p.base_unit}</td>
                       <td colSpan={2}></td>
                     </tr>
                   ))}
@@ -251,11 +251,11 @@ export function Reports(): React.JSX.Element {
 
       {(tab === 'X' || tab === 'Z') && !read && (
         <div role="status">
-          <p>{readError ? (tab === 'Z' ? 'Hindi ma-load ang Z-Read. Tiyaking may bukas na shift sa account na ito.' : 'Hindi ma-load ang X-Read. Tiyaking may bukas na shift sa account na ito.') : (tab === 'Z' ? 'Loading Z-Read...' : 'Loading X-Read...')}</p>
+          <p>{readError ? (tab === 'Z' ? 'Unable to load Z-Read. Ensure an active shift is open on this account.' : 'Unable to load X-Read. Ensure an active shift is open on this account.') : (tab === 'Z' ? 'Loading Z-Read...' : 'Loading X-Read...')}</p>
           {readError && (
             <>
-              <p className="mt-2 text-sm text-slate-400">{readError}</p>
-              <button className="btn-ghost mt-3" title="Refresh" onClick={() => setReadRevision((n) => n + 1)}>
+              <p className="mt-2 text-sm text-slate-600">{readError}</p>
+              <button className="btn-secondary mt-3 border-2 border-slate-200 text-slate-800" title="Refresh" onClick={() => setReadRevision((n) => n + 1)}>
                 <RefreshCw className="h-4 w-4" />
               </button>
             </>
@@ -268,27 +268,27 @@ export function Reports(): React.JSX.Element {
           {/* Mobile Z-Read Cards */}
           <div className="grid grid-cols-1 gap-2.5 md:hidden">
             {history.map((z) => (
-              <div key={z.id} className="card p-3.5 flex flex-col gap-2.5">
+              <div key={z.id} className="card border-2 border-slate-200 bg-white p-3.5 flex flex-col gap-2.5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-sm tracking-wide">{z.report_no}</span>
-                      <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                      <span className="font-black text-slate-950 text-sm tracking-wide">{z.report_no}</span>
+                      <span className="rounded-md bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 text-[10px] font-black text-emerald-800">
                         FINALIZED
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{shortDateTime(z.finalized_at)}</p>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">{shortDateTime(z.finalized_at)}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Net Sales</span>
-                    <span className="font-mono text-base font-black text-emerald-400 tabular-nums">
+                    <span className="text-[10px] uppercase font-bold text-slate-600 block">Net Sales</span>
+                    <span className="font-mono text-base font-black text-emerald-700 tabular-nums">
                       {money(z.snapshot?.net_sales_c ?? 0)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-ink-line/60 pt-2 text-xs text-slate-400">
-                  <span className="truncate">Cashier: <strong className="text-slate-200">{z.snapshot?.cashier_name || z.finalized_by_name || 'Cashier'}</strong></span>
+                <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs text-slate-600">
+                  <span className="truncate">Cashier: <strong className="text-slate-950 font-bold">{z.snapshot?.cashier_name || z.finalized_by_name || 'Cashier'}</strong></span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => setZPreview(z)}
@@ -390,9 +390,9 @@ export function Reports(): React.JSX.Element {
                 <tbody>
                   {utang.rows.map((c, i) => (
                     <tr key={i}>
-                      <td className="text-slate-200">{c.full_name}</td>
-                      <td className="text-right text-slate-400 tabular-nums">{money(c.credit_limit_c)}</td>
-                      <td className={`text-right font-bold tabular-nums ${c.balance_c > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{money(c.balance_c)}</td>
+                      <td className="text-slate-950 font-bold">{c.full_name}</td>
+                      <td className="text-right text-slate-700 font-semibold tabular-nums">{money(c.credit_limit_c)}</td>
+                      <td className={`text-right font-black tabular-nums ${c.balance_c > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>{money(c.balance_c)}</td>
                     </tr>
                   ))}
                   {utang.rows.length === 0 && <tr><td colSpan={3} className="py-8 text-center text-slate-500">No outstanding balances.</td></tr>}
@@ -458,29 +458,29 @@ function CashCountPanel(): React.JSX.Element {
   const tallyPreview=():CashCountRecord=>({id:0,shift_id:0,user_id:0,cashier_name:cashierName,business_date:todayKey(),starting_cash_c:expected,expected_cash_c:expected,actual_cash_c:actual,difference_c:diff,status,denominations:q,notes:notes||null,created_at:new Date().toLocaleString('en-PH')})
   const save=async()=>{try{const rec=await window.api.reports.cashCount({quantities:q,notes});toastSuccess('Cash Count saved');setLastSaved(rec);setSaved(await window.api.reports.cashCounts())}catch(e){toastError('Cash Count failed',String((e as Error).message||e))}}
   const printRecord=async(rec:CashCountRecord)=>{setBusy(true);try{const res=await window.api.reports.cashCountPrint(rec.id);if(res.ok){toastSuccess(res.message)}else{toastError('Unable to print Cash Count. The Cash Count was saved successfully. You can try printing it again from Cash Count History.',res.message)}}catch(e){toastError('Unable to print Cash Count. The Cash Count was saved successfully. You can try printing it again from Cash Count History.',String((e as Error).message||e))}finally{setBusy(false)}}
-  return <div><div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3"><Stat label="Expected Cash" v={money(expected)}/><Stat label="Actual Cash" v={money(actual)}/><Stat label={`Difference · ${status}`} v={money(diff)}/></div><div className="card p-4"><h3 className="mb-3 font-bold">Count bills and coins</h3>{labels.map((l,i)=><div className="mb-2 grid grid-cols-[minmax(0,1fr)_84px_minmax(0,1fr)] items-center gap-3" key={l}><span className="whitespace-nowrap text-left text-sm font-medium text-slate-200 select-none">{l}</span><input className="input h-10 w-full min-h-0 text-center font-bold tabular-nums px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="number" inputMode="numeric" min="0" step="1" value={q[i]??0} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=0){const a=[...q];a[i]=n;setQ(a)}}}/><span className="whitespace-nowrap text-right text-sm font-semibold tabular-nums pr-2 text-slate-100">{money((q[i]??0)*(den[i]??0))}</span></div>)}<textarea className="input mt-3 w-full" placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)}/><div className="mt-3 flex flex-wrap gap-2"><button className="btn-primary" onClick={()=>void save()}>Save Cash Count</button><button className="btn-primary flex items-center gap-1" disabled={busy} onClick={()=>lastSaved?void printRecord(lastSaved):null} title={lastSaved?'Print the last saved Cash Count':'Save a cash count first to print it'}><Printer className="h-4 w-4"/>Print</button><button className="btn-ghost flex items-center gap-1" onClick={()=>setPreview(tallyPreview())}><Eye className="h-4 w-4"/>Print Preview</button></div><p className="mt-2 text-xs text-slate-500">Print prints the last saved Cash Count using the configured receipt printer. Preview shows exactly what the printer receives.</p></div>      <div className="card mt-4 p-4">
-        <h3 className="font-bold text-white mb-3">Cash Count History</h3>
+  return <div><div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3"><Stat label="Expected Cash" v={money(expected)}/><Stat label="Actual Cash" v={money(actual)}/><Stat label={`Difference · ${status}`} v={money(diff)}/></div><div className="card border-2 border-slate-200 bg-white p-4 shadow-sm"><h3 className="mb-3 font-black text-slate-950">Count bills and coins</h3>{labels.map((l,i)=><div className="mb-2 grid grid-cols-[minmax(0,1fr)_84px_minmax(0,1fr)] items-center gap-3" key={l}><span className="whitespace-nowrap text-left text-sm font-bold text-slate-900 select-none">{l}</span><input className="input h-10 w-full min-h-0 text-center font-black text-slate-950 border-2 border-slate-300 tabular-nums px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:border-emerald-600" type="number" inputMode="numeric" min="0" step="1" value={q[i]??0} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=0){const a=[...q];a[i]=n;setQ(a)}}}/><span className="whitespace-nowrap text-right text-sm font-black tabular-nums pr-2 text-emerald-800">{money((q[i]??0)*(den[i]??0))}</span></div>)}<textarea className="input mt-3 w-full border-2 border-slate-300 font-medium text-slate-900" placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)}/><div className="mt-3 flex flex-wrap gap-2"><button className="btn-primary bg-emerald-600 hover:bg-emerald-700 font-bold" onClick={()=>void save()}>Save Cash Count</button><button className="btn-secondary border-2 border-slate-200 font-bold flex items-center gap-1 text-slate-800" disabled={busy} onClick={()=>lastSaved?void printRecord(lastSaved):null} title={lastSaved?'Print the last saved Cash Count':'Save a cash count first to print it'}><Printer className="h-4 w-4"/>Print</button><button className="btn-secondary border-2 border-slate-200 font-bold flex items-center gap-1 text-slate-800" onClick={()=>setPreview(tallyPreview())}><Eye className="h-4 w-4"/>Print Preview</button></div><p className="mt-2 text-xs font-medium text-slate-500">Print prints the last saved Cash Count using the configured receipt printer. Preview shows exactly what the printer receives.</p></div>      <div className="card border-2 border-slate-200 bg-white mt-4 p-4 shadow-sm">
+        <h3 className="font-black text-slate-950 mb-3">Cash Count History</h3>
 
         {/* Mobile Cash Count Cards */}
         <div className="space-y-2 md:hidden">
           {saved.map((r) => (
-            <div key={r.id} className="rounded-xl border border-ink-line/70 bg-ink-950/70 p-3 flex flex-col gap-2">
+            <div key={r.id} className="rounded-xl border-2 border-slate-200 bg-white p-3 flex flex-col gap-2 shadow-2xs">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="font-bold text-white text-xs block">{shortDateTime(r.created_at)}</span>
-                  <span className="text-xs text-slate-400">{r.cashier_name}</span>
+                  <span className="font-black text-slate-950 text-xs block">{shortDateTime(r.created_at)}</span>
+                  <span className="text-xs font-semibold text-slate-600">{r.cashier_name}</span>
                 </div>
-                <span className={`badge border text-[10px] ${r.status === 'BALANCED' ? 'border-emerald-500/30 text-emerald-400' : r.status === 'OVER' ? 'border-brand-500/30 text-brand-300' : 'border-amber-500/30 text-amber-400'}`}>
+                <span className={`badge border text-[10px] font-bold ${r.status === 'BALANCED' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : r.status === 'OVER' ? 'border-sky-300 bg-sky-50 text-sky-800' : 'border-amber-300 bg-amber-50 text-amber-800'}`}>
                   {r.status}
                 </span>
               </div>
-              <div className="flex items-center justify-between border-t border-ink-line/60 pt-2 text-xs">
+              <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
                 <div>
-                  <span className="text-slate-400 text-[10px] block">Expected / Actual</span>
-                  <span className="text-slate-200 font-mono text-xs">{money(r.expected_cash_c)} / {money(r.actual_cash_c)}</span>
+                  <span className="text-slate-500 text-[10px] block font-semibold">Expected / Actual</span>
+                  <span className="text-slate-950 font-mono font-bold text-xs">{money(r.expected_cash_c)} / {money(r.actual_cash_c)}</span>
                 </div>
                 <div className="flex gap-1.5">
-                  <button className="btn-ghost-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-300 border border-ink-line" onClick={() => setPreview(r)}>
+                  <button className="btn-secondary flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 border-2 border-slate-200" onClick={() => setPreview(r)}>
                     <Eye className="h-3.5 w-3.5" /> View
                   </button>
                   <button className="btn-ghost-2 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-300 border border-ink-line" disabled={busy} onClick={() => void printRecord(r)}>
@@ -586,7 +586,7 @@ function ReadPanel({report,finalize,onFinalized,onCashCount,onUpdate,onRefresh}:
         setReminder(true)
       }
     } catch {
-      toastError('Hindi masuri ang Cash Count', 'Pakisubukan muli bago mag-Z-Read.')
+      toastError('Unable to verify Cash Count', 'Please try again before finalizing Z-Read.')
     } finally {
       setBusy(false)
     }
@@ -625,8 +625,8 @@ function ReadPanel({report,finalize,onFinalized,onCashCount,onUpdate,onRefresh}:
       <button className="btn-primary flex gap-2 self-end" disabled={busy} onClick={()=>void requestFinalize()}><LockKeyhole className="h-4 w-4"/>Finalize Z-Read</button>
     </div>}
     {finalize && <p className="mt-3 text-sm text-amber-300">Finalization closes this shift. Transactions, payments, stock history, expenses, and customer ledgers remain saved.</p>}
-    {reminder && <Modal open onClose={()=>setReminder(false)} title="Cash Count Required" maxWidth="max-w-md" footer={<button className="btn-primary flex items-center gap-2" onClick={()=>{setReminder(false);onCashCount()}}><Coins className="h-4 w-4"/>Pumunta sa Cash Count</button>}>
-      <p>Wala pang naka-save na Cash Count para sa shift na ito. I-save muna ang Cash Count bago mag-Z-Read at isara ang shift. Hindi pa maaaring magpatuloy sa Z-Read.</p>
+    {reminder && <Modal open onClose={()=>setReminder(false)} title="Cash Count Required" maxWidth="max-w-md" footer={<button className="btn-primary flex items-center gap-2" onClick={()=>{setReminder(false);onCashCount()}}><Coins className="h-4 w-4"/>Go to Cash Count</button>}>
+      <p>No Cash Count has been saved for this shift yet. Please record and save a Cash Count before finalizing the Z-Read and closing the shift.</p>
     </Modal>}
     {preview && (
       <Modal open onClose={() => setPreview(null)} title="X-Read Print Preview" maxWidth="max-w-md" footer={

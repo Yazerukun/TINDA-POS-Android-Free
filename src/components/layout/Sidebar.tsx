@@ -10,11 +10,13 @@ import {
   HardDriveDownload,
   Settings,
   Users,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react'
 import { useNav, type PageKey } from '../../stores/nav'
 import { useAuth } from '../../stores/auth'
 import { useSettings } from '../../stores/settings'
+import { useLicenseStore } from '../../stores/license'
 import { hasPermission, type Permission } from '@shared/roles'
 import { ConnectionStatus } from '../ConnectionStatus'
 
@@ -30,6 +32,7 @@ export const NAV: { key: PageKey; label: string; icon: React.ReactNode; permissi
   { key: 'reports', label: 'Reports', icon: <BarChart3 className="h-4 w-4" />, permission: 'reports:view' },
   { key: 'backup', label: 'Backup', icon: <HardDriveDownload className="h-4 w-4" />, permission: 'backup:manage' },
   { key: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" />, permission: 'settings:manage' },
+  { key: 'license', label: 'VIP License', icon: <Sparkles className="h-4 w-4 text-emerald-600" />, permission: 'settings:manage' },
   { key: 'printer', label: 'Printer', icon: <Receipt className="h-4 w-4" />, permission: 'settings:manage' },
   { key: 'update', label: 'Update', icon: <HardDriveDownload className="h-4 w-4" />, permission: 'settings:manage' }
 ]
@@ -38,17 +41,25 @@ export function Sidebar(): React.JSX.Element {
   const { page, setPage } = useNav()
   const { user, logout } = useAuth()
   const { settings } = useSettings()
+  const { status: license } = useLicenseStore()
 
   const visible = NAV.filter((n) => (user ? hasPermission(user.roles, n.permission) : false))
 
   return (
     <aside className="hidden w-16 md:w-56 shrink-0 flex-col border-r border-slate-200 bg-white sm:flex transition-all duration-300 shadow-sm">
-      <div className="flex items-center justify-center md:justify-start gap-2.5 px-0 py-4 md:px-4">
+      <div className="flex items-center justify-center md:justify-start gap-2.5 px-0 py-4 md:px-4 cursor-pointer" onClick={() => setPage('license')}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-sm font-black text-white shadow-sm">
           TP
         </div>
         <div className="hidden min-w-0 md:block">
-          <p className="truncate text-sm font-bold leading-tight text-slate-900">TINDA POS</p>
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-sm font-bold leading-tight text-slate-900">TINDA POS</p>
+            {license?.isVip ? (
+              <span className={`shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-black text-white ${license.isDemo ? 'bg-amber-600' : 'bg-emerald-600'}`}>
+                {license.isDemo ? 'DEMO' : 'VIP'}
+              </span>
+            ) : null}
+          </div>
           <p className="truncate text-[11px] text-slate-500">{settings?.store_name ?? 'Sari-Sari Store'}</p>
         </div>
       </div>

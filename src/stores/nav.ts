@@ -13,6 +13,7 @@ export type PageKey =
   | 'settings'
   | 'printer'
   | 'update'
+  | 'license'
   | 'customers'
   | 'more'
 

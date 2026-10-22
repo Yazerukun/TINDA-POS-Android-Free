@@ -7,7 +7,6 @@ import {
   ShoppingCart,
   AlertTriangle,
   PlusCircle,
-  Sparkles,
   ChevronRight,
   ArrowDownLeft
 } from 'lucide-react'
@@ -15,7 +14,6 @@ import { SectionCard, StatusBadge, EmptyState } from '../components/ui/EmptyStat
 import type { Product, Sale, ReportSummary } from '@shared/types'
 import { money, moneyShort, shortDateTime, todayKey } from '@shared/format'
 import { useNav } from '../stores/nav'
-import { PriceGuideModal } from '../components/PriceGuideModal'
 import { PettyCashModal } from '../components/PettyCashModal'
 
 export function Dashboard(): React.JSX.Element | null {
@@ -26,7 +24,6 @@ export function Dashboard(): React.JSX.Element | null {
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [utang, setUtang] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
-  const [priceGuideOpen, setPriceGuideOpen] = useState(false)
   const [pettyCashOpen, setPettyCashOpen] = useState(false)
 
   const loadData = async () => {
@@ -135,10 +132,10 @@ export function Dashboard(): React.JSX.Element | null {
         </div>
       </div>
 
-      {/* 2. FAST ACTION TILES (5-GRID) */}
+      {/* 2. FAST ACTION TILES (4-GRID) */}
       <div>
         <p className="mb-2 px-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Quick Actions</p>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <button
             onClick={() => setPage('pos')}
             className="card flex flex-col items-center justify-center p-2 text-center transition active:scale-95 hover:border-brand-500/50 bg-white border border-slate-200 shadow-sm"
@@ -170,17 +167,6 @@ export function Dashboard(): React.JSX.Element | null {
             </div>
             <span className="mt-1.5 text-xs font-bold text-slate-900">Product</span>
             <span className="text-[10px] text-slate-400">Inventory</span>
-          </button>
-
-          <button
-            onClick={() => setPriceGuideOpen(true)}
-            className="card relative flex flex-col items-center justify-center p-2 text-center transition active:scale-95 hover:border-emerald-500/50 bg-emerald-50/50 border border-emerald-200 shadow-sm"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <span className="mt-1.5 text-xs font-bold text-emerald-800">Prices</span>
-            <span className="text-[10px] text-emerald-600 font-semibold">BANTAY</span>
           </button>
 
           <button
@@ -327,15 +313,6 @@ export function Dashboard(): React.JSX.Element | null {
           </div>
         )}
       </div>
-
-      {/* PRICE GUIDE MODAL */}
-      {priceGuideOpen && (
-        <PriceGuideModal
-          open={priceGuideOpen}
-          onClose={() => setPriceGuideOpen(false)}
-          products={allProducts}
-        />
-      )}
 
       {/* PETTY CASH MODAL */}
       {pettyCashOpen && (

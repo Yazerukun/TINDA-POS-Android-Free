@@ -127,17 +127,17 @@ export function Inventory(): React.JSX.Element {
       {/* 1. COMPACT HEADER & METRICS CHIP */}
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Inventory</h1>
-          <p className="text-xs text-slate-400">
-            {products.length} products · <span className="font-semibold text-brand-400">{money(totalValue)}</span> stock value
+          <h1 className="text-xl font-black tracking-tight text-slate-950">Inventory</h1>
+          <p className="text-xs font-semibold text-slate-600">
+            {products.length} products · <span className="font-black text-emerald-700">{money(totalValue)}</span> stock value
           </p>
         </div>
         <button
           onClick={() => setCatFilter(alertCount ? 'LOW' : 'ALL')}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition ${
             alertCount
-              ? 'border border-amber-500/30 bg-amber-500/10 text-amber-300'
-              : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+              ? 'border-2 border-amber-300 bg-amber-50 text-amber-800'
+              : 'border-2 border-emerald-300 bg-emerald-50 text-emerald-800'
           }`}
         >
           {alertCount ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
@@ -153,13 +153,13 @@ export function Inventory(): React.JSX.Element {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search product, barcode, or SKU…"
-            className="input h-11 w-full pl-10 pr-9 text-sm bg-ink-900/90 rounded-xl"
+            className="input h-11 w-full pl-10 pr-9 text-sm bg-white border-2 border-slate-300 font-medium text-slate-950 rounded-xl focus:border-emerald-600"
           />
           {q && (
             <button
               type="button"
               onClick={() => setQ('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
             >
               <X className="h-4 w-4" />
             </button>
@@ -168,11 +168,11 @@ export function Inventory(): React.JSX.Element {
         <button
           type="button"
           onClick={() => setScannerOpen(true)}
-          className="btn-primary flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold shadow-md active:scale-95 transition"
+          className="btn-primary flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold shadow-md active:scale-95 transition bg-emerald-600 hover:bg-emerald-700 text-white"
           title="Scan barcode to find product"
         >
           <ScanLine className="h-4 w-4" />
-          <span className="hidden sm:inline">Scan</span>
+          <span className="hidden sm:inline font-bold">Scan</span>
         </button>
       </div>
 
@@ -189,10 +189,10 @@ export function Inventory(): React.JSX.Element {
             key={String(item.value)}
             type="button"
             onClick={() => chooseFilter(item.value)}
-            className={`shrink-0 rounded-full px-3.5 py-1 text-xs font-semibold transition ${
+            className={`shrink-0 rounded-full px-3.5 py-1 text-xs font-bold transition ${
               catFilter === item.value
-                ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/20'
-                : 'border border-ink-line bg-ink-900/80 text-slate-400 hover:text-white'
+                ? 'bg-emerald-600 text-white border-2 border-emerald-700 shadow-sm'
+                : 'border-2 border-slate-200 bg-white text-slate-800 hover:bg-slate-50'
             }`}
           >
             {item.label}
@@ -223,63 +223,63 @@ export function Inventory(): React.JSX.Element {
 
         <button
           onClick={() => setRestocking(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
         >
-          <PackagePlus className="h-3.5 w-3.5 text-brand-400" />
+          <PackagePlus className="h-3.5 w-3.5 text-emerald-600" />
           <span>Restock</span>
         </button>
 
         <button
           onClick={() => setWithdrawing(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
         >
-          <PackageMinus className="h-3.5 w-3.5 text-amber-400" />
+          <PackageMinus className="h-3.5 w-3.5 text-amber-600" />
           <span>Withdraw</span>
         </button>
 
         <button
           onClick={() => setViewingReceiving(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
         >
-          <ClipboardList className="h-3.5 w-3.5 text-blue-400" />
+          <ClipboardList className="h-3.5 w-3.5 text-blue-600" />
           <span>Receive</span>
         </button>
 
         <button
           onClick={() => setExpirationOpen(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
         >
-          <ClipboardList className="h-3.5 w-3.5 text-purple-400" />
+          <ClipboardList className="h-3.5 w-3.5 text-purple-600" />
           <span>Expiry</span>
         </button>
 
         <button
           onClick={() => setViewingMovements(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
         >
-          <ArrowDownUp className="h-3.5 w-3.5 text-slate-400" />
+          <ArrowDownUp className="h-3.5 w-3.5 text-slate-600" />
           <span>History</span>
         </button>
 
         <button
           onClick={() => setManagingCategories(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
         >
-          <Tags className="h-3.5 w-3.5 text-slate-400" />
+          <Tags className="h-3.5 w-3.5 text-slate-600" />
           <span>Categories</span>
         </button>
 
         <button
           onClick={() => setImporting(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
         >
-          <Upload className="h-3.5 w-3.5 text-slate-400" />
+          <Upload className="h-3.5 w-3.5 text-slate-600" />
           <span>Import CSV</span>
         </button>
 
         <button
           onClick={() => void load()}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-ink-line bg-ink-900 px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-ink-800 transition active:scale-95"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-95 shadow-2xs"
           title="Refresh"
         >
           <RefreshCw className="h-3.5 w-3.5" />
@@ -296,13 +296,13 @@ export function Inventory(): React.JSX.Element {
         <>
         <div className="grid grid-cols-1 gap-3 md:hidden">
           {filtered.map((p) => (
-            <div key={p.id} className="card p-4">
+            <div key={p.id} className="card border-2 border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">{p.name}</p>
-                  <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                  <p className="truncate text-base font-black text-slate-950">{p.name}</p>
+                  <p className="text-xs font-semibold text-slate-600">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
                   {p.wholesale_price_c && p.wholesale_min_qty ? (
-                    <span className="mt-1 inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/20">
+                    <span className="mt-1 inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-800 border border-blue-300">
                       Wholesale: {money(p.wholesale_price_c)} ({p.wholesale_min_qty}+)
                     </span>
                   ) : null}
@@ -311,20 +311,20 @@ export function Inventory(): React.JSX.Element {
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <div>
-                  <p className="text-lg font-black tabular-nums text-white">{p.stock} <span className="text-xs font-medium text-slate-500">{p.base_unit}</span></p>
-                  <p className="text-xs text-slate-500">{money(p.purchase_cost_c)} cost</p>
+                  <p className="text-xl font-black tabular-nums text-slate-950">{p.stock} <span className="text-xs font-bold text-slate-600">{p.base_unit}</span></p>
+                  <p className="text-xs font-semibold text-slate-600">{money(p.purchase_cost_c)} cost</p>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setRestocking(p)}
-                    className="flex h-10 items-center gap-1 rounded-xl border border-brand-500/40 bg-brand-500/10 px-3 text-xs font-bold text-brand-300 hover:bg-brand-500/20 active:scale-95 transition"
+                    className="flex h-10 items-center gap-1 rounded-xl border-2 border-emerald-600 bg-emerald-50 px-3 text-xs font-black text-emerald-900 hover:bg-emerald-100 active:scale-95 transition"
                     title="Restock this product"
                   >
-                    <PackagePlus className="h-4 w-4" />
+                    <PackagePlus className="h-4 w-4 text-emerald-700" />
                     <span>Restock</span>
                   </button>
-                  <button onClick={() => setEditing(editProductForm(p))} className="btn-ghost-2 flex h-10 w-10 items-center justify-center rounded-xl" title="Edit"><Pencil className="h-4 w-4" /></button>
-                  <button onClick={() => void archive(p.id)} className="btn-ghost-2 flex h-10 w-10 items-center justify-center rounded-xl text-danger-400" title="Archive"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={() => setEditing(editProductForm(p))} className="btn-secondary flex h-10 w-10 items-center justify-center rounded-xl border-2 border-slate-200 text-slate-800" title="Edit"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => void archive(p.id)} className="btn-secondary flex h-10 w-10 items-center justify-center rounded-xl border-2 border-slate-200 text-danger-600" title="Archive"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
               <ProductExpiry product={p} />
@@ -332,40 +332,40 @@ export function Inventory(): React.JSX.Element {
           ))}
         </div>
         
-        <div className="hidden md:block overflow-x-auto rounded-xl border border-ink-line bg-ink-900 shadow-card">
+        <div className="hidden md:block overflow-x-auto rounded-xl border-2 border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-ink-line bg-ink-850">
-                <th className="p-4 text-xs font-semibold text-slate-400">Product</th>
-                <th className="p-4 text-xs font-semibold text-slate-400">Status</th>
-                <th className="p-4 text-xs font-semibold text-slate-400">Stock</th>
-                <th className="p-4 text-xs font-semibold text-slate-400">Cost</th>
-                <th className="p-4 text-xs font-semibold text-slate-400 text-right">Actions</th>
+              <tr className="border-b-2 border-slate-200 bg-slate-50">
+                <th className="p-4 text-xs font-black uppercase text-slate-700">Product</th>
+                <th className="p-4 text-xs font-black uppercase text-slate-700">Status</th>
+                <th className="p-4 text-xs font-black uppercase text-slate-700">Stock</th>
+                <th className="p-4 text-xs font-black uppercase text-slate-700">Cost</th>
+                <th className="p-4 text-xs font-black uppercase text-slate-700 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ink-line">
+            <tbody className="divide-y divide-slate-100">
               {filtered.map(p => (
-                <tr key={p.id} className="hover:bg-ink-800 transition-colors">
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4">
-                    <p className="font-semibold text-white">{p.name}</p>
-                    <p className="text-xs text-slate-500">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
+                    <p className="font-black text-slate-950">{p.name}</p>
+                    <p className="text-xs font-semibold text-slate-600">{p.sku} · {p.category_name ?? 'Uncategorized'}</p>
                     {p.wholesale_price_c && p.wholesale_min_qty ? (
-                      <span className="mt-1 inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/20">
+                      <span className="mt-1 inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-800 border border-blue-300">
                         Wholesale: {money(p.wholesale_price_c)} ({p.wholesale_min_qty}+)
                       </span>
                     ) : null}
                   </td>
                   <td className="p-4"><StockBadge status={p.stock_status} /></td>
                   <td className="p-4">
-                    <p className="font-bold tabular-nums text-white">{p.stock} <span className="text-xs font-medium text-slate-500">{p.base_unit}</span></p>
+                    <p className="font-black tabular-nums text-slate-950">{p.stock} <span className="text-xs font-bold text-slate-600">{p.base_unit}</span></p>
                     <ProductExpiry product={p} />
                   </td>
-                  <td className="p-4 tabular-nums text-slate-300">{money(p.purchase_cost_c)}</td>
+                  <td className="p-4 tabular-nums text-slate-900 font-bold">{money(p.purchase_cost_c)}</td>
                   <td className="p-4 text-right">
                     <div className="flex justify-end gap-1">
-                      <button onClick={() => setRestocking(p)} className="btn-ghost-2 flex h-9 w-9 items-center justify-center rounded-lg text-brand-400" title="Restock"><PackagePlus className="h-4 w-4" /></button>
-                      <button onClick={() => setEditing(editProductForm(p))} className="btn-ghost-2 flex h-9 w-9 items-center justify-center rounded-lg" title="Edit"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => void archive(p.id)} className="btn-ghost-2 flex h-9 w-9 items-center justify-center rounded-lg text-danger-400" title="Archive"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => setRestocking(p)} className="btn-secondary flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 text-emerald-700" title="Restock"><PackagePlus className="h-4 w-4" /></button>
+                      <button onClick={() => setEditing(editProductForm(p))} className="btn-secondary flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 text-slate-800" title="Edit"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => void archive(p.id)} className="btn-secondary flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-200 text-danger-600" title="Archive"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -449,7 +449,7 @@ function StockReceivingView({ onClose }: { onClose: () => void }): React.JSX.Ele
     </div>
     {detail && <Modal open onClose={() => setDetail(null)} title="Receiving Details" maxWidth="max-w-lg" footer={<button className="btn-ghost" onClick={() => setDetail(null)}>Close</button>}><dl className="grid grid-cols-2 gap-3 text-sm">{[
       ['Product', detail.product_name], ['Date / Time', new Date(detail.created_at.replace(' ', 'T')).toLocaleString()], ['Quantity', `${detail.quantity_received} ${detail.received_unit}`], ['Base Quantity', `${detail.base_quantity} ${detail.base_unit}`], ['Previous Stock', detail.previous_stock], ['New Stock', detail.new_stock], ['Supplier', detail.supplier_name || '—'], ['Unit Cost', detail.unit_cost_c == null ? '—' : money(detail.unit_cost_c)], ['Total Cost', detail.total_cost_c == null ? '—' : money(detail.total_cost_c)], ['Reference', detail.reference || '—'], ['Received By', detail.received_by || '—'], ['Source', detail.source], ['Notes', detail.notes || '—']
-    ].map(([label, value]) => <div key={String(label)} className={label === 'Notes' ? 'col-span-2' : ''}><dt className="text-xs text-slate-500">{label}</dt><dd className="font-medium text-slate-200">{value}</dd></div>)}</dl></Modal>}
+    ].map(([label, value]) => <div key={String(label)} className={label === 'Notes' ? 'col-span-2' : ''}><dt className="text-xs font-semibold text-slate-600">{label}</dt><dd className="font-bold text-slate-900">{value}</dd></div>)}</dl></Modal>}
   </Modal>
 }
 
@@ -597,8 +597,8 @@ function CategoryModal({ categories, onChanged, onClose }: { categories: Categor
       <div className="max-h-80 space-y-2 overflow-y-auto">
         {categories.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No categories yet.</p>}
         {categories.map((category) => (
-          <div key={category.id} className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2">
-            <span className="text-sm font-medium text-slate-200">{category.name}</span>
+          <div key={category.id} className="flex items-center justify-between rounded-xl border-2 border-slate-200 bg-white px-3 py-2">
+            <span className="text-sm font-bold text-slate-900">{category.name}</span>
             <button onClick={() => void remove(category)} disabled={busy} className="btn-ghost-2 rounded-lg p-2 text-danger-400" title="Delete category"><Trash2 className="h-4 w-4" /></button>
           </div>
         ))}
@@ -610,11 +610,11 @@ function CategoryModal({ categories, onChanged, onClose }: { categories: Categor
 
 function StockBadge({ status }: { status: string }): React.JSX.Element {
   const map: Record<string, string> = {
-    IN_STOCK: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-    LOW_STOCK: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-    OUT_OF_STOCK: 'bg-red-500/10 text-red-400 border-red-500/30'
+    IN_STOCK: 'bg-emerald-50 text-emerald-800 border-2 border-emerald-300 font-black',
+    LOW_STOCK: 'bg-amber-50 text-amber-800 border-2 border-amber-300 font-black',
+    OUT_OF_STOCK: 'bg-red-50 text-red-800 border-2 border-red-300 font-black'
   }
-  return <span className={`badge shrink-0 border ${map[status] ?? 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>{status.replace(/_/g, ' ')}</span>
+  return <span className={`badge shrink-0 border ${map[status] ?? 'bg-slate-100 text-slate-800 border-slate-300 font-bold'}`}>{status.replace(/_/g, ' ')}</span>
 }
 
 function ProductModal({ form, categories, onSave, onClose }: { form: ProductFormData; categories: Category[]; onSave: (f: ProductFormData) => Promise<void>; onClose: () => void }): React.JSX.Element {

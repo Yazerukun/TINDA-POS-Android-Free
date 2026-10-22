@@ -1,23 +1,34 @@
 import { useEffect, useState } from 'react'
-import { Save, Store, Receipt, Users, UserPlus, Pencil, KeyRound, Heart, Coffee, Copy, Check, DatabaseZap, FolderOpen, HardDriveDownload, RotateCcw, Printer, Database, RefreshCw, Loader2, Download, Sparkles, Bluetooth } from 'lucide-react'
+import { Save, Store, Receipt, Users, UserPlus, Pencil, KeyRound, Heart, Coffee, Copy, Check, DatabaseZap, FolderOpen, HardDriveDownload, RotateCcw, Printer, Database, RefreshCw, Loader2, Download, Sparkles, Bluetooth, Camera, Award, ShieldCheck, QrCode } from 'lucide-react'
 import type { BackupInfo, User } from '@shared/types'
 import type { DataLocationStatus, PrinterChoice } from '@shared/ipc'
 import { printerPick, printerStatusLabel } from '@shared/printer'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Modal } from '../components/ui/Modal'
 import { useSettings } from '../stores/settings'
+import { APP_VERSION } from '../data/system'
 import { toastSuccess, toastError } from '../stores/toast'
 import { useUpdate } from '../stores/update'
 import { ReceiptPaper } from '../components/ReceiptPaper'
+import { BarcodeScannerModal } from '../components/BarcodeScannerModal'
+import { DesktopMigrationModal } from '../components/DesktopMigrationModal'
 import tindaIcon from '../assets/tinda-icon.png'
+import { useLicenseStore } from '../stores/license'
+import { formatLicenseKeyInput, extractLicenseFromScannedText, validateLicenseSyntax } from '../services/securityService'
+import { LicenseService } from '../services/licenseService'
 
-type Tab = 'HOME' | 'RECEIPT' | 'USERS' | 'DATA' | 'ABOUT'
+type Tab = 'HOME' | 'RECEIPT' | 'USERS' | 'DATA' | 'LICENSE' | 'ABOUT'
 
 export function Settings({ defaultTab = 'HOME' }: { defaultTab?: Tab }): React.JSX.Element {
   const { load } = useSettings()
+  const { status: license, init: initLicense } = useLicenseStore()
   const [tab, setTab] = useState<Tab>(defaultTab)
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => { void initLicense() }, [initLicense])
+  useEffect(() => {
+    if (defaultTab) setTab(defaultTab)
+  }, [defaultTab])
 
   return (
     <div className="px-4 pt-3 pb-8 max-w-lg mx-auto md:max-w-3xl space-y-4">
@@ -28,15 +39,26 @@ export function Settings({ defaultTab = 'HOME' }: { defaultTab?: Tab }): React.J
           { id: 'RECEIPT', icon: Receipt, label: 'Receipt' },
           { id: 'USERS', icon: Users, label: 'Users' },
           { id: 'DATA', icon: DatabaseZap, label: 'Data' },
+          {
+            id: 'LICENSE',
+            icon: Sparkles,
+            label: license?.isVip ? (license.isDemo ? 'VIP Demo' : 'VIP Pro') : 'VIP License',
+            badge: license?.isVip ? (license.isDemo ? 'DEMO' : 'ACTIVE') : undefined
+          },
           { id: 'ABOUT', icon: Heart, label: 'About' }
         ].map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id as Tab)}
-            className={`shrink-0 flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition ${tab === t.id ? 'border-brand-500/50 bg-brand-600/20 text-brand-300' : 'border-ink-line bg-ink-850 text-slate-300 hover:bg-ink-800 hover:text-white'}`}
+            className={`shrink-0 flex items-center gap-2 rounded-full border-2 px-4 py-1.5 text-sm font-bold transition shadow-xs ${tab === t.id ? 'border-emerald-600 bg-emerald-600 text-white font-black' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
           >
             <t.icon className="h-4 w-4" />
             {t.label}
+            {t.badge && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${tab === t.id ? 'bg-white text-emerald-800' : 'bg-emerald-600 text-white'}`}>
+                {t.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -44,7 +66,8 @@ export function Settings({ defaultTab = 'HOME' }: { defaultTab?: Tab }): React.J
       {tab === 'RECEIPT' && <ReceiptSettingsTab />}
       {tab === 'USERS' && <UsersTab />}
       {tab === 'DATA' && <DataTab />}
-      {tab === 'ABOUT' && <AboutTab />}
+      {tab === 'LICENSE' && <LicenseTab />}
+      {tab === 'ABOUT' && <AboutTab onNavigateLicense={() => setTab('LICENSE')} />}
     </div>
   )
 }
@@ -60,6 +83,7 @@ function DataTab(): React.JSX.Element {
   const [backupDir, setBackupDir] = useState('Loading...')
   const [backups, setBackups] = useState<BackupInfo[] | null>(null)
   const [location, setLocation] = useState<DataLocationStatus | null>(null)
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false)
 
   const [confirmOp, setConfirmOp] = useState<{ title: string; desc: string; action: () => Promise<void> } | null>(null)
 
@@ -140,40 +164,68 @@ const startNewStore = async () => {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <div className="card p-5">
-        <h2 className="text-base font-semibold text-slate-100">Database & backups</h2>
+      {/* Desktop Database Migration Card */}
+      <div className="card p-5 border-2 border-emerald-500 bg-emerald-50/70 shadow-sm rounded-2xl space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shrink-0">
+              <Database className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-black text-slate-950">Desktop Database Migration</h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  VIP Feature
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Import <code className="text-emerald-800 font-bold">tindapos.db</code> SQLite or <code className="text-emerald-800 font-bold">.tinda-backup</code> directly from Windows PC.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMigrationModalOpen(true)}
+            className="btn-primary py-2.5 px-4 text-xs font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-md shrink-0 transition active:scale-95"
+          >
+            <Database className="h-4 w-4" /> Import Desktop DB
+          </button>
+        </div>
+      </div>
+
+      <div className="card p-5 border-2 border-slate-200 bg-white shadow-sm">
+        <h2 className="text-base font-extrabold text-slate-950">Database & backups</h2>
         <div className="mt-3 space-y-3 text-sm">
-          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Data Mode</p><p className="mt-1 font-semibold text-brand-300">{location?.label ?? 'Loading...'}</p></div>
-          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Database Location</p><p className="mt-1 break-all font-mono text-slate-300">{databaseFile}</p></div>
-          <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Backup Location</p><p className="mt-1 break-all font-mono text-slate-300">{backupDir}</p></div>
-          <p className="rounded-lg border border-sky-500/20 bg-sky-500/10 p-3 text-xs text-sky-300">Moving the TINDA POS executable does not move or reset your store database. Your store data is stored separately for safety.</p>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Data Mode</p><p className="mt-1 font-black text-emerald-700">{location?.label ?? 'Loading...'}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Database Location</p><p className="mt-1 break-all font-mono font-medium text-slate-900">{databaseFile}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Backup Location</p><p className="mt-1 break-all font-mono font-medium text-slate-900">{backupDir}</p></div>
+          <p className="rounded-xl border-2 border-sky-200 bg-sky-50 p-3 text-xs font-semibold text-sky-950">Moving the TINDA POS executable does not move or reset your store database. Your store data is stored separately for safety.</p>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button onClick={() => void window.api.app.openDataDir()} className="btn-ghost flex items-center gap-2"><FolderOpen className="h-4 w-4" /> Open Data Folder</button>
-          <button onClick={() => void backupNow()} className="btn-primary flex items-center gap-2"><HardDriveDownload className="h-4 w-4" /> Backup Now</button>
-          <button onClick={() => void showRestore()} className="btn-ghost flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Restore Backup</button>
+          <button onClick={() => void window.api.app.openDataDir()} className="btn-ghost flex items-center gap-2 border-2 border-slate-200 font-bold text-slate-800"><FolderOpen className="h-4 w-4" /> Open Data Folder</button>
+          <button onClick={() => void backupNow()} className="btn-primary flex items-center gap-2 bg-emerald-600 text-white font-bold"><HardDriveDownload className="h-4 w-4" /> Backup Now</button>
+          <button onClick={() => void showRestore()} className="btn-ghost flex items-center gap-2 border-2 border-slate-200 font-bold text-slate-800"><RotateCcw className="h-4 w-4" /> Restore Backup</button>
         </div>
       </div>
 
-      <div className="card p-5">
-        <h2 className="text-base font-semibold text-slate-100">Data mode</h2>
-        <p className="mt-2 text-sm text-slate-400">Shared AppData keeps one safe store database regardless of where the EXE is moved. Portable Data intentionally keeps a separate TindaPOS-Data folder beside the Portable EXE.</p>
-        {location?.mode === 'SHARED' ? <button onClick={() => setPortableOpen(true)} disabled={!location?.portableAvailable || resetting} className="btn-ghost mt-4 flex items-center gap-2"><Database className="h-4 w-4" /> Use Portable Data</button> : <button onClick={() => void switchToShared()} disabled={resetting} className="btn-ghost mt-4 flex items-center gap-2"><Database className="h-4 w-4" /> Use Shared AppData</button>}
-        {location && !location.portableAvailable && location.mode === 'SHARED' && <p className="mt-2 text-xs text-slate-500">Portable Data can be enabled only when running the Portable edition.</p>}
-        {location?.mode === 'PORTABLE' && location.sharedHasData && <p className="mt-2 text-xs text-amber-400">Shared AppData also contains a store. Switching selects it; neither database is overwritten.</p>}
+      <div className="card p-5 border-2 border-slate-200 bg-white shadow-sm">
+        <h2 className="text-base font-extrabold text-slate-950">Data mode</h2>
+        <p className="mt-2 text-sm font-medium text-slate-600">Shared AppData keeps one safe store database regardless of where the EXE is moved. Portable Data intentionally keeps a separate TindaPOS-Data folder beside the Portable EXE.</p>
+        {location?.mode === 'SHARED' ? <button onClick={() => setPortableOpen(true)} disabled={!location?.portableAvailable || resetting} className="btn-ghost mt-4 flex items-center gap-2 border-2 border-slate-200 font-bold text-slate-800"><Database className="h-4 w-4" /> Use Portable Data</button> : <button onClick={() => void switchToShared()} disabled={resetting} className="btn-ghost mt-4 flex items-center gap-2 border-2 border-slate-200 font-bold text-slate-800"><Database className="h-4 w-4" /> Use Shared AppData</button>}
+        {location && !location.portableAvailable && location.mode === 'SHARED' && <p className="mt-2 text-xs font-bold text-slate-500">Portable Data can be enabled only when running the Portable edition.</p>}
+        {location?.mode === 'PORTABLE' && location.sharedHasData && <p className="mt-2 text-xs font-bold text-amber-700">Shared AppData also contains a store. Switching selects it; neither database is overwritten.</p>}
       </div>
 
-      <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-5">
-        <h2 className="text-base font-bold text-amber-300">Start New Store</h2>
-        <p className="mt-2 text-sm text-slate-300">Creates a fresh store setup while protecting the previous store with a verified safety backup. Existing backup files remain.</p>
-        <button onClick={() => setNewStoreOpen(true)} className="btn-ghost mt-4">Start New Store</button>
+      <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-5 shadow-xs">
+        <h2 className="text-base font-extrabold text-amber-950">Start New Store</h2>
+        <p className="mt-2 text-sm font-medium text-amber-900">Creates a fresh store setup while protecting the previous store with a verified safety backup. Existing backup files remain.</p>
+        <button onClick={() => setNewStoreOpen(true)} className="btn-ghost mt-4 border-2 border-amber-300 bg-white font-bold text-amber-950">Start New Store</button>
       </div>
 
-      <div className="rounded-xl border border-red-500/40 bg-red-950/20 p-5">
-        <h2 className="text-base font-bold text-red-300">Danger zone — active store database</h2>
-        <p className="mt-2 text-sm font-semibold text-red-200">THIS WILL RESET THE ACTIVE STORE DATABASE.</p>
-        <p className="mt-1 text-sm text-slate-400">Administrative destructive reset for troubleshooting/reinitialization. Products, sales, users, shifts, and settings will be removed from the active database. A verified safety backup will be created first; if backup creation fails, reset is aborted.</p>
-        <button onClick={() => setOpen(true)} className="btn-danger mt-4 flex items-center gap-2"><DatabaseZap className="h-4 w-4" /> Reset Database</button>
+      <div className="rounded-xl border-2 border-rose-300 bg-rose-50 p-5 shadow-xs">
+        <h2 className="text-base font-extrabold text-rose-950">Danger zone — active store database</h2>
+        <p className="mt-2 text-sm font-black text-rose-800">THIS WILL RESET THE ACTIVE STORE DATABASE.</p>
+        <p className="mt-1 text-sm font-medium text-rose-950">Administrative destructive reset for troubleshooting/reinitialization. Products, sales, users, shifts, and settings will be removed from the active database. A verified safety backup will be created first; if backup creation fails, reset is aborted.</p>
+        <button onClick={() => setOpen(true)} className="btn-danger mt-4 flex items-center gap-2 font-bold"><DatabaseZap className="h-4 w-4" /> Reset Database</button>
       </div>
 
       {open && <Modal open onClose={() => { if (!resetting) { setOpen(false); setConfirmation('') } }} title="Reset Database" maxWidth="max-w-md" footer={
@@ -211,11 +263,569 @@ const startNewStore = async () => {
       }>
         <p className="text-sm text-slate-300">{confirmOp.desc}</p>
       </Modal>}
+
+      <DesktopMigrationModal
+        open={migrationModalOpen}
+        onClose={() => setMigrationModalOpen(false)}
+        onSuccess={() => {
+          void Promise.all([window.api.app.databaseFile(), window.api.backup.dir(), window.api.backup.locationStatus()]).then(([database, backup, status]) => {
+            setDatabaseFile(database)
+            setBackupDir(backup)
+            setLocation(status)
+          })
+        }}
+      />
     </div>
   )
 }
 
-function AboutTab(): React.JSX.Element {
+function LicenseTab(): React.JSX.Element {
+  const { status, activate, deactivate } = useLicenseStore()
+  const [keyInput, setKeyInput] = useState('')
+  const [customerInput, setCustomerInput] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [copiedMid, setCopiedMid] = useState(false)
+  const [copiedMaya, setCopiedMaya] = useState(false)
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [certOpen, setCertOpen] = useState(false)
+  const [keyValidity, setKeyValidity] = useState<'IDLE' | 'CHECKING' | 'MATCH' | 'MISMATCH' | 'INVALID'>('IDLE')
+
+  // Real-time cryptographic key check against current hardware Machine ID
+  useEffect(() => {
+    const clean = keyInput.trim().toUpperCase()
+    if (!clean) {
+      setKeyValidity('IDLE')
+      return
+    }
+    const syntax = validateLicenseSyntax(clean)
+    if (!syntax.formatOk) {
+      setKeyValidity('INVALID')
+      return
+    }
+    if (!status?.machineId) return
+
+    let active = true
+    setKeyValidity('CHECKING')
+    void LicenseService.getInstance().verifyKey(clean, status.machineId).then((valid) => {
+      if (active) {
+        setKeyValidity(valid ? 'MATCH' : 'MISMATCH')
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [keyInput, status?.machineId])
+
+  const copyMachineId = async () => {
+    if (!status?.machineId) return
+    try {
+      await navigator.clipboard.writeText(status.machineId)
+      setCopiedMid(true)
+      toastSuccess('Machine ID copied to clipboard!', status.machineId)
+      setTimeout(() => setCopiedMid(false), 2500)
+    } catch {
+      toastError('Could not copy Machine ID')
+    }
+  }
+
+  const copyMaya = async () => {
+    try {
+      await navigator.clipboard.writeText('09912255156')
+      setCopiedMaya(true)
+      toastSuccess('Maya number copied!', '0991 225 5156')
+      setTimeout(() => setCopiedMaya(false), 2500)
+    } catch {
+      toastError('Could not copy Maya number')
+    }
+  }
+
+  const handleScanQr = (scannedText: string) => {
+    const extracted = extractLicenseFromScannedText(scannedText)
+    if (extracted) {
+      setKeyInput(extracted)
+      toastSuccess('VIP License Key Scanned!', extracted)
+    } else {
+      toastError('No valid VIP License Key found in QR Code', scannedText.slice(0, 35))
+    }
+  }
+
+  const handleActivate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!keyInput.trim()) {
+      toastError('Please enter a license key')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await activate(keyInput.trim().toUpperCase(), customerInput.trim() || undefined)
+      if (res.ok) {
+        toastSuccess('License Activated!', res.message)
+        setKeyInput('')
+        setCustomerInput('')
+        setCertOpen(true)
+      } else {
+        toastError('Activation Failed', res.message)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeactivate = async () => {
+    setSubmitting(true)
+    try {
+      const res = await deactivate()
+      if (res.ok) {
+        toastSuccess('License Deactivated', res.message)
+        setConfirmDeactivate(false)
+      } else {
+        toastError('Deactivation Failed', res.message)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="max-w-2xl space-y-4">
+      {/* 1. STATUS BANNER */}
+      {status?.isVip && !status?.isDemo ? (
+        <div className="card p-5 border-2 border-emerald-500 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-black text-white shadow-xs">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  VIP PRO LIFETIME
+                </span>
+                <span className="rounded-full border border-emerald-300 bg-white px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                  OFFLINE ACTIVE
+                </span>
+              </div>
+              <h2 className="text-xl font-black text-slate-950 pt-1">
+                {status.customerName ? status.customerName : 'VIP Store Terminal'}
+              </h2>
+              <p className="text-xs font-bold text-slate-600">
+                {status.statusMessage}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setCertOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl border-2 border-emerald-600 bg-emerald-600 px-3.5 py-2 text-xs font-black text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition"
+              >
+                <Award className="h-4 w-4 text-amber-300 fill-amber-300" />
+                <span>Certificate</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDeactivate(true)}
+                className="btn-ghost text-xs text-rose-600 border border-rose-200 hover:bg-rose-50 px-2.5 py-1.5"
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-emerald-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div>
+              <span className="text-[10px] uppercase font-black text-slate-500">Official License Key</span>
+              <p className="font-mono font-black text-slate-900 break-all select-all">{status.licenseKey}</p>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-black text-slate-500">Activated Timestamp</span>
+              <p className="font-bold text-slate-900">
+                {status.activatedAt ? new Date(status.activatedAt).toLocaleString() : 'Permanent Lifetime'}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : status?.isDemo && status?.isVip ? (
+        <div className="card p-5 border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-white to-amber-50/40 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-3 py-1 text-xs font-black text-white shadow-xs">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  24-HOUR VIP DEMO
+                </span>
+                <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-black text-amber-800">
+                  TRIAL ACTIVE
+                </span>
+              </div>
+              <h2 className="text-xl font-black text-slate-950 pt-1">
+                Full VIP Features Unlocked
+              </h2>
+              <p className="text-xs font-bold text-amber-900">
+                Expires: {status.demoExpiresAt ? new Date(status.demoExpiresAt).toLocaleString() : 'In 24 Hours'}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card p-5 border-2 border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-black text-slate-800">
+                COMMUNITY EDITION
+              </span>
+              <h2 className="text-xl font-black text-slate-950 mt-1">Free 100% Offline POS</h2>
+              <p className="text-xs font-semibold text-slate-600">
+                Upgrade to VIP Pro for ₱500 one-time to permanently unlock multi-device features and desktop database import.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. HARDWARE MACHINE ID CARD */}
+      <div className="card p-5 border-2 border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-black uppercase tracking-wide text-slate-950">
+            Hardware Machine ID (Tablet / Mobile)
+          </h3>
+          <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full uppercase">
+            Hardware Anchored
+          </span>
+        </div>
+        <p className="text-xs text-slate-600 font-semibold mb-3">
+          This Machine ID uniquely identifies your Android tablet or phone. Share this ID with Dev Ian to receive your cryptographically signed VIP license key.
+        </p>
+
+        <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl border-2 border-slate-200 bg-slate-50">
+          <div className="min-w-0 flex-1">
+            <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+              Your Device Machine ID
+            </span>
+            <span className="block font-mono text-base sm:text-lg font-black text-slate-950 tracking-wider break-all select-all">
+              {status?.machineId || 'Loading...'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void copyMachineId()}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black bg-emerald-600 text-white shadow-xs active:scale-95 transition"
+          >
+            {copiedMid ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                <span>Copy ID</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* 3. ACTIVATION FORM WITH 1-TAP QR SCAN & AUTO-HYPHENATION */}
+      <div className="card p-5 border-2 border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-sm font-black uppercase tracking-wide text-slate-950">
+            Activate VIP License Key
+          </h3>
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border-2 border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-800 shadow-xs hover:bg-emerald-100 active:scale-95 transition"
+          >
+            <Camera className="h-3.5 w-3.5 text-emerald-700" />
+            <span>Scan License QR</span>
+          </button>
+        </div>
+        <p className="text-xs text-slate-600 font-semibold mb-4">
+          Enter the license key issued by Dev Ian, or scan the QR code directly from your other device screen.
+        </p>
+
+        <form onSubmit={handleActivate} className="space-y-3.5">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label mb-0">VIP License Key *</label>
+              <span className="text-[10px] font-bold text-slate-400">Auto-hyphenates</span>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                placeholder="VIP-XXXX-XXXX-XXXX-XXXX"
+                value={keyInput}
+                onChange={(e) => setKeyInput(formatLicenseKeyInput(e.target.value))}
+                className="input w-full font-mono text-base uppercase tracking-wider font-bold pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-emerald-700 transition"
+                title="Scan License QR with Camera"
+              >
+                <QrCode className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Live Real-Time Validation Pill */}
+            <div className="pt-2 text-xs font-bold">
+              {keyValidity === 'IDLE' && (
+                <span className="text-slate-500 font-medium">Format: VIP-XXXX-XXXX-XXXX-XXXX (24 characters)</span>
+              )}
+              {keyValidity === 'INVALID' && keyInput.length > 0 && (
+                <span className="text-slate-500 font-mono">
+                  {keyInput.length} / 24 chars {keyInput.length === 24 ? '(Prefix must be VIP or DEMO)' : ''}
+                </span>
+              )}
+              {keyValidity === 'CHECKING' && (
+                <span className="flex items-center gap-1 text-slate-600 font-semibold">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                  Verifying mathematical signature...
+                </span>
+              )}
+              {keyValidity === 'MATCH' && (
+                <span className="inline-flex items-center gap-1.5 text-emerald-900 font-black bg-emerald-100 border border-emerald-400 px-2.5 py-1 rounded-lg">
+                  <ShieldCheck className="h-4 w-4 text-emerald-700" />
+                  ✓ Authentic Key — Cryptographically Verified for this Device!
+                </span>
+              )}
+              {keyValidity === 'MISMATCH' && (
+                <span className="inline-flex items-center gap-1.5 text-amber-950 font-black bg-amber-100 border border-amber-400 px-2.5 py-1 rounded-lg">
+                  ⚠ Cryptographically valid key, but issued for a different Machine ID.
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Store / Customer Name (Optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. Aling Nena Store"
+              value={customerInput}
+              onChange={(e) => setCustomerInput(e.target.value)}
+              className="input w-full font-semibold"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting || !keyInput.trim()}
+            className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm font-black shadow-sm"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Verifying Cryptographic Key...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                <span>Activate VIP Pro Lifetime</span>
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+
+      {/* 4. MAYA PAYMENT & DEV CONTACT */}
+      <div className="card p-5 border-2 border-emerald-300 bg-emerald-50/40 shadow-xs">
+        <div className="flex items-center justify-between mb-3 border-b border-emerald-200/80 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-12 items-center justify-center rounded bg-white px-1 shadow-xs border border-emerald-200">
+              <MayaMark />
+            </div>
+            <div>
+              <span className="text-xs font-black uppercase text-emerald-950">Dev Ian (Maya Wallet)</span>
+              <p className="text-[10px] font-bold text-emerald-800">₱500 One-Time Lifetime License</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-black text-white">
+            100% Offline
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-200 bg-white shadow-xs">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+              Maya Mobile Number
+            </span>
+            <span className="font-mono text-lg font-black text-slate-950 tracking-wider">
+              0991 225 5156
+            </span>
+            <span className="text-[11px] text-slate-600 font-semibold block mt-0.5">
+              Account Name: <strong className="text-slate-900 font-black">Francis</strong>
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void copyMaya()}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black bg-emerald-600 text-white shadow-xs active:scale-95 transition"
+          >
+            {copiedMaya ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-emerald-200/60 text-xs text-slate-700 space-y-1.5 font-semibold">
+          <p className="font-black text-slate-950">How to get your VIP Pro license key:</p>
+          <ol className="list-decimal list-inside space-y-1 text-slate-600 pl-1 font-medium">
+            <li>Copy your <strong>Machine ID</strong> above.</li>
+            <li>Send ₱500 to Maya <strong>0991 225 5156</strong>.</li>
+            <li>Message Dev Ian on Facebook: <a href="https://www.facebook.com/Ukauru" target="_blank" rel="noreferrer" className="text-emerald-700 font-black underline">facebook.com/Ukauru</a> with your payment screenshot & Machine ID.</li>
+            <li>Receive your QR Code or 24-character key and activate instantly.</li>
+          </ol>
+        </div>
+      </div>
+
+      {/* 5. ROYAL CERTIFICATE OF AUTHENTICITY MODAL */}
+      {certOpen && status?.isVip && (
+        <Modal
+          open
+          onClose={() => setCertOpen(false)}
+          title="Certificate of Authenticity"
+          maxWidth="max-w-md"
+          footer={
+            <div className="flex items-center justify-between w-full gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const summary = [
+                    '═══════════════════════════════════════════',
+                    '💎 TINDA POS VIP PRO — CERTIFICATE OF AUTHENTICITY',
+                    '═══════════════════════════════════════════',
+                    `Store: ${status.customerName || 'Registered TINDA POS Merchant'}`,
+                    `Machine ID: ${status.machineId}`,
+                    `License Key: ${status.licenseKey}`,
+                    `Tier: VIP PRO LIFETIME`,
+                    `Validation: 100% Offline Cryptographically Signed`,
+                    `Authority: Francis (Dev Ian) • Maya 0991 225 5156`,
+                    `Activated: ${status.activatedAt ? new Date(status.activatedAt).toLocaleString() : 'Permanent'}`,
+                    '═══════════════════════════════════════════'
+                  ].join('\n')
+                  void navigator.clipboard.writeText(summary)
+                  toastSuccess('Official Certificate copied to clipboard!')
+                }}
+                className="btn-ghost flex items-center gap-1.5 text-xs font-black text-emerald-800 border-2 border-slate-200 bg-white"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span>Copy Certificate</span>
+              </button>
+              <button type="button" onClick={() => setCertOpen(false)} className="btn-primary">
+                Done
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4 py-1">
+            {/* Certificate Parchment Frame */}
+            <div className="relative rounded-2xl border-4 border-emerald-600 bg-gradient-to-b from-emerald-50/50 via-white to-amber-50/30 p-5 shadow-inner text-center">
+              {/* Crest Badge */}
+              <div className="mx-auto -mt-2 mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-200 text-amber-950 shadow-md border-2 border-amber-300">
+                <Award className="h-8 w-8 fill-amber-950 text-amber-950" />
+              </div>
+
+              <span className="block text-[10px] font-black uppercase tracking-widest text-emerald-800">
+                TINDA POS PHILIPPINES
+              </span>
+              <h3 className="text-lg font-black text-slate-950 uppercase tracking-tight mt-0.5">
+                Certificate of Authenticity
+              </h3>
+              <p className="text-[11px] font-bold text-slate-600 mb-4">
+                Official VIP Pro Lifetime License
+              </p>
+
+              <div className="rounded-xl border-2 border-slate-200 bg-white p-3 text-left space-y-2.5 text-xs shadow-xs">
+                <div>
+                  <span className="block text-[9px] font-black uppercase text-slate-400">Licensed Store / Merchant</span>
+                  <span className="block font-black text-slate-950 text-sm">
+                    {status.customerName || 'Official Registered Store'}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[9px] font-black uppercase text-slate-400">Hardware Machine ID</span>
+                  <span className="block font-mono font-bold text-emerald-900 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 text-xs break-all select-all">
+                    {status.machineId}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[9px] font-black uppercase text-slate-400">Cryptographic Key</span>
+                  <span className="block font-mono font-bold text-slate-800 text-xs break-all select-all">
+                    {status.licenseKey}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-[11px]">
+                  <div>
+                    <span className="block text-[9px] font-black uppercase text-slate-400">Activated Date</span>
+                    <span className="font-bold text-slate-800">
+                      {status.activatedAt ? new Date(status.activatedAt).toLocaleDateString() : 'Permanent'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-black uppercase text-slate-400">Issuing Authority</span>
+                    <span className="font-bold text-emerald-800">Dev Ian (Francis)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] font-black text-emerald-900 bg-emerald-100/70 border border-emerald-300 py-1.5 px-3 rounded-full">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
+                <span>100% OFFLINE VERIFIED • ZERO CLOUD REQUIRED</span>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 6. CAMERA QR SCANNER MODAL */}
+      {scannerOpen && (
+        <BarcodeScannerModal
+          open
+          onClose={() => setScannerOpen(false)}
+          onScan={handleScanQr}
+          title="Scan VIP License QR Code"
+        />
+      )}
+
+      {/* 7. CONFIRM DEACTIVATE MODAL */}
+      {confirmDeactivate && (
+        <Modal
+          open
+          onClose={() => setConfirmDeactivate(false)}
+          title="Deactivate VIP License"
+          maxWidth="max-w-md"
+          footer={
+            <>
+              <button onClick={() => setConfirmDeactivate(false)} className="btn-ghost">
+                Cancel
+              </button>
+              <button onClick={handleDeactivate} className="btn-danger">
+                Confirm Deactivate
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-700 font-medium">
+            Are you sure you want to deactivate VIP Pro on this device? The app will revert to Community Edition. Your transaction and inventory data will remain intact.
+          </p>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+function AboutTab({ onNavigateLicense }: { onNavigateLicense?: () => void }): React.JSX.Element {
+  const { status: license } = useLicenseStore()
   const [copiedMaya, setCopiedMaya] = useState(false)
   const copyMaya = async () => {
     try {
@@ -229,119 +839,134 @@ function AboutTab(): React.JSX.Element {
   return (
     <div className="max-w-xl space-y-4 pb-12">
       {/* 1. APP BRANDING HERO CARD */}
-      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-ink-900/90 via-ink-950 to-ink-950 p-6 text-center shadow-card">
-        {/* Ambient glow in background */}
-        <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 h-36 w-64 rounded-full bg-emerald-500/15 blur-3xl" />
-
+      <div className="relative overflow-hidden rounded-3xl border-2 border-slate-200 bg-white p-6 text-center shadow-sm">
         {/* Circular Animated Crest */}
         <div className="relative mx-auto flex items-center justify-center py-2 mb-3">
-          <div className="absolute h-24 w-24 rounded-full border border-dashed border-emerald-400/30 animate-orbit-ring" />
-          <div className="absolute h-20 w-20 rounded-full bg-emerald-500/20 blur-lg animate-pulse" />
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-emerald-400/70 bg-gradient-to-tr from-ink-950 via-ink-900 to-emerald-950/80 p-2.5 shadow-[0_0_24px_rgba(52,211,153,0.4)] animate-circle-glow">
+          <div className="absolute h-24 w-24 rounded-full border border-dashed border-emerald-400/40 animate-orbit-ring" />
+          <div className="absolute h-20 w-20 rounded-full bg-emerald-500/10 blur-lg animate-pulse" />
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-emerald-500 bg-white p-2.5 shadow-sm">
             <img
               src={tindaIcon}
               alt="TINDA POS"
-              className="h-full w-full rounded-full object-contain drop-shadow-[0_0_10px_rgba(52,211,153,0.75)]"
+              className="h-full w-full rounded-full object-contain"
             />
           </div>
         </div>
 
-        <h2 className="text-xl font-black tracking-tight text-white">
-          TINDA POS Free for Android
+        <h2 className="text-xl font-black tracking-tight text-slate-950">
+          TINDA POS Free for Android & Tablet
         </h2>
-        <p className="mt-0.5 text-xs text-emerald-400 font-medium">
-          Offline POS System for Philippine Sari-Sari Stores
+        <p className="mt-0.5 text-xs text-emerald-700 font-bold">
+          Offline POS System for Philippine Retail & Sari-Sari Stores
         </p>
 
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
-            v1.0.27 Stable
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-300 px-2.5 py-0.5 text-[11px] font-black text-emerald-800">
+            v{APP_VERSION} Stable
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-ink-800 border border-ink-line px-2.5 py-0.5 text-[11px] font-medium text-slate-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
             100% Offline Capable
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-ink-800 border border-ink-line px-2.5 py-0.5 text-[11px] font-medium text-slate-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
             Zero Cloud Dependency
           </span>
         </div>
 
-        <div className="mx-auto my-4 h-px max-w-xs bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+        <div className="mx-auto my-4 h-px max-w-xs bg-slate-200" />
 
-        <div className="flex items-center justify-center gap-1.5 text-sm text-slate-300">
-          <span className="italic text-slate-400">Crafted with care by</span>
-          <span className="font-bold text-emerald-400">Dev Francis</span>
+        <div className="flex items-center justify-center gap-1.5 text-sm text-slate-600">
+          <span className="italic text-slate-500 font-medium">Crafted with care by</span>
+          <span className="font-bold text-emerald-700">Dev Francis</span>
         </div>
       </div>
 
-      {/* 2. DEDICATED & ORGANIZED BUY ME A COFFEE / MAYA CARD */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-br from-ink-900 via-ink-900 to-ink-950 p-5 shadow-card">
-        {/* Subtle warm amber aura */}
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-500/10 blur-2xl" />
+      {/* 2. VIP PRO CALLOUT CARD */}
+      <div className="overflow-hidden rounded-2xl border-2 border-emerald-400 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 p-4 shadow-sm flex items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-emerald-600" />
+            <span className="text-xs font-black uppercase text-slate-950">
+              {license?.isVip ? (license.isDemo ? '24-Hour VIP Demo Active' : 'VIP Pro Lifetime Active') : 'Upgrade to VIP Pro'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-600 font-medium">
+            {license?.isVip
+              ? 'All premium tablet and hardware-locked features are unlocked.'
+              : 'Unlock tablet dual-pane counter, desktop database import, and lifetime support.'}
+          </p>
+        </div>
+        {onNavigateLicense && (
+          <button
+            onClick={onNavigateLicense}
+            className="shrink-0 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-black text-white shadow-xs active:scale-95 transition"
+          >
+            {license?.isVip ? 'Manage' : 'Upgrade'}
+          </button>
+        )}
+      </div>
 
+      {/* 3. DEDICATED BUY ME A COFFEE / MAYA CARD */}
+      <div className="relative overflow-hidden rounded-3xl border-2 border-emerald-300 bg-white p-5 shadow-sm">
         {/* Header with animated coffee cup */}
         <div className="flex items-center gap-3.5">
-          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/25 via-amber-900/30 to-ink-950 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-amber-300 bg-amber-50 text-amber-600 shadow-sm">
             <div className="pointer-events-none absolute -top-2 flex items-end gap-1">
-              <span className="h-2 w-0.5 rounded-full bg-amber-400/80 animate-steam-1" />
-              <span className="h-3 w-0.5 rounded-full bg-amber-300 animate-steam-2" />
-              <span className="h-2 w-0.5 rounded-full bg-amber-400/80 animate-steam-3" />
+              <span className="h-2 w-0.5 rounded-full bg-amber-500 animate-steam-1" />
+              <span className="h-3 w-0.5 rounded-full bg-amber-600 animate-steam-2" />
+              <span className="h-2 w-0.5 rounded-full bg-amber-500 animate-steam-3" />
             </div>
             <Coffee className="h-6 w-6 animate-coffee-catchy" />
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-black text-white">Buy me a coffee</h3>
-              <span className="rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+              <h3 className="text-base font-black text-slate-950">Buy me a coffee</h3>
+              <span className="rounded-full bg-amber-50 border border-amber-300 px-2 py-0.5 text-[10px] font-black text-amber-800">
                 Support Updates
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs font-semibold text-slate-600 mt-0.5">
               Support development & continuous free updates
             </p>
           </div>
         </div>
 
         {/* English Description */}
-        <p className="mt-3.5 text-xs text-slate-300 leading-relaxed">
+        <p className="mt-3.5 text-xs text-slate-700 font-medium leading-relaxed">
           TINDA POS is 100% free and offline-ready. If it helps your store thrive, you can support future development and upcoming updates by buying the developer a coffee!
         </p>
 
         {/* Dedicated Maya Payment Box */}
-        <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-500/40 bg-ink-950 shadow-inner">
-          <div className="flex items-center justify-between border-b border-ink-line/80 bg-ink-900/80 px-4 py-2">
+        <div className="mt-4 overflow-hidden rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 shadow-xs">
+          <div className="flex items-center justify-between border-b border-emerald-200 bg-emerald-100/50 px-4 py-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-12 items-center justify-center rounded-md bg-white px-1 shadow-sm">
+              <div className="flex h-6 w-12 items-center justify-center rounded-md bg-white px-1 shadow-xs border border-emerald-200">
                 <MayaMark />
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-900">
                 Maya Official Wallet
               </span>
             </div>
-            <span className="text-[10px] text-slate-400">Philippines</span>
+            <span className="text-[10px] font-bold text-emerald-800">Philippines</span>
           </div>
 
           <div className="flex items-center justify-between p-4 gap-3">
             <div className="min-w-0 flex-1">
-              <span className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+              <span className="block text-[10px] uppercase tracking-wider text-slate-600 font-black">
                 Account Number (Mobile)
               </span>
-              <span className="block font-mono text-xl font-black tracking-wider text-white select-all">
+              <span className="block font-mono text-xl font-black tracking-wider text-slate-950 select-all">
                 0991 225 5156
               </span>
-              <span className="block text-[11px] text-slate-400 mt-0.5">
-                Recipient: <span className="font-semibold text-slate-300">Francis</span>
+              <span className="block text-[11px] text-slate-600 mt-0.5 font-medium">
+                Recipient: <span className="font-bold text-slate-900">Francis</span>
               </span>
             </div>
 
             <button
               type="button"
               onClick={() => void copyMaya()}
-              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition shadow-sm active:scale-95 ${
-                copiedMaya
-                  ? 'bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]'
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
-              }`}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition shadow-sm active:scale-95 bg-emerald-600 text-white"
             >
               {copiedMaya ? (
                 <>
@@ -359,7 +984,7 @@ function AboutTab(): React.JSX.Element {
         </div>
 
         <p className="mt-3 text-center text-[10px] text-slate-500">
-          Voluntary donation · Dev Francis (0991 225 5156) · Daghang salamat sa inyong suporta!
+          Voluntary donation · Dev Francis (0991 225 5156) · Thank you for your support!
         </p>
       </div>
 
@@ -367,30 +992,30 @@ function AboutTab(): React.JSX.Element {
       <SoftwareUpdatePanel />
 
       {/* 4. APP SYSTEM SPECS / LOCAL STORAGE INFO */}
-      <div className="rounded-2xl border border-ink-line/70 bg-ink-900/60 p-4">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+      <div className="rounded-2xl border-2 border-slate-200 bg-slate-50 p-4 shadow-xs">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-600 mb-3">
           System Information
         </h4>
         <div className="grid grid-cols-2 gap-2.5 text-xs">
-          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
-            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Database Engine</span>
-            <span className="font-bold text-slate-200 mt-0.5 block">SQLite / IndexedDB</span>
-            <span className="text-[10px] text-emerald-400">Local & Secure</span>
+          <div className="rounded-xl border-2 border-slate-200 bg-white p-3 shadow-xs">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold">Database Engine</span>
+            <span className="font-extrabold text-slate-950 mt-0.5 block">SQLite / IndexedDB</span>
+            <span className="text-[10px] text-emerald-700 font-bold">Local & Secure</span>
           </div>
-          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
-            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Network State</span>
-            <span className="font-bold text-slate-200 mt-0.5 block">Zero Cloud</span>
-            <span className="text-[10px] text-emerald-400">Always Functional</span>
+          <div className="rounded-xl border-2 border-slate-200 bg-white p-3 shadow-xs">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold">Network State</span>
+            <span className="font-extrabold text-slate-950 mt-0.5 block">Zero Cloud</span>
+            <span className="text-[10px] text-emerald-700 font-bold">Always Functional</span>
           </div>
-          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
-            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Thermal Printer</span>
-            <span className="font-bold text-slate-200 mt-0.5 block">58mm / 80mm</span>
-            <span className="text-[10px] text-slate-400">Bluetooth & System</span>
+          <div className="rounded-xl border-2 border-slate-200 bg-white p-3 shadow-xs">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold">Thermal Printer</span>
+            <span className="font-extrabold text-slate-950 mt-0.5 block">58mm / 80mm</span>
+            <span className="text-[10px] text-slate-500 font-semibold">Bluetooth & System</span>
           </div>
-          <div className="rounded-xl border border-ink-line/50 bg-ink-950/60 p-3">
-            <span className="text-slate-500 block text-[10px] uppercase font-semibold">Target Platform</span>
-            <span className="font-bold text-slate-200 mt-0.5 block">Android 8.0 - 15+</span>
-            <span className="text-[10px] text-slate-400">Universal APK</span>
+          <div className="rounded-xl border-2 border-slate-200 bg-white p-3 shadow-xs">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold">Target Platform</span>
+            <span className="font-extrabold text-slate-950 mt-0.5 block">Android 8.0 - 15+</span>
+            <span className="text-[10px] text-slate-500 font-semibold">Universal APK</span>
           </div>
         </div>
       </div>
@@ -412,14 +1037,14 @@ function SoftwareUpdatePanel(): React.JSX.Element | null {
   return (
     <div className="card p-5">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-bold text-white"><Download className="h-4 w-4 text-brand-400" /> Software Update</h3>
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${event.status === 'ERROR' || event.status === 'OFFLINE' || event.status === 'UNABLE_TO_CHECK' ? 'bg-red-500/15 text-red-300' : event.status === 'CHECKING' || event.status === 'DOWNLOADING' ? 'bg-brand-500/15 text-brand-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{label}</span>
+        <h3 className="flex items-center gap-2 text-sm font-black text-slate-950"><Download className="h-4 w-4 text-emerald-600" /> Software Update</h3>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${event.status === 'ERROR' || event.status === 'OFFLINE' || event.status === 'UNABLE_TO_CHECK' ? 'bg-red-50 text-red-800 border border-red-300' : event.status === 'CHECKING' || event.status === 'DOWNLOADING' ? 'bg-emerald-50 text-emerald-800 border border-emerald-300' : 'bg-emerald-50 text-emerald-800 border border-emerald-300'}`}>{label}</span>
       </div>
-      <div className="space-y-1 text-sm text-slate-300">
-        <p>Installed version: <span className="font-mono text-white">v{installed}</span></p>
-        {available && <p>Available version: <span className="font-mono text-white">v{available}</span></p>}
-        {event.lastCheckedAt && <p className="text-xs text-slate-500">Last checked: {new Date(event.lastCheckedAt).toLocaleString()}</p>}
-        {note && <p className="pt-1 text-xs text-slate-400">{note}</p>}
+      <div className="space-y-1 text-sm font-semibold text-slate-700">
+        <p>Installed version: <span className="font-mono font-bold text-slate-950">v{installed}</span></p>
+        {available && <p>Available version: <span className="font-mono font-bold text-emerald-700">v{available}</span></p>}
+        {event.lastCheckedAt && <p className="text-xs text-slate-500 font-medium">Last checked: {new Date(event.lastCheckedAt).toLocaleString()}</p>}
+        {note && <p className="pt-1 text-xs text-slate-600 font-medium">{note}</p>}
         {event.status === 'DOWNLOADING' && event.progress && (
           <div className="pt-2">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
@@ -538,10 +1163,10 @@ function StoreSettingsTab(): React.JSX.Element {
           <div><label className="label">Default Tax (₱)</label><input type="number" min={0} value={f.default_tax_c / 100} onChange={(e) => set({ default_tax_c: Math.round(parseFloat(e.target.value || '0') * 100) })} className="input w-full" /></div>
           <div className="sm:col-span-2"><label className="label">Default Low Stock Alert</label><input type="number" min={0} value={f.default_low_stock} onChange={(e) => set({ default_low_stock: parseInt(e.target.value || '0', 10) })} className="input w-full" /></div>
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2">
+        <div className="flex items-center justify-between rounded-xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5">
           <div>
-            <p className="text-sm text-slate-200">Allow negative stock</p>
-            <p className="text-xs text-slate-500">Let sales go below zero stock</p>
+            <p className="text-sm font-bold text-slate-900">Allow negative stock</p>
+            <p className="text-xs font-medium text-slate-500">Let sales go below zero stock</p>
           </div>
           <Toggle on={f.allow_negative_inventory} onClick={() => set({ allow_negative_inventory: !f.allow_negative_inventory })} />
         </div>
@@ -610,9 +1235,9 @@ function ReceiptSettingsTab(): React.JSX.Element {
   }
 
   return (
-    <div className="card max-w-xl p-5">
+    <div className="card max-w-xl p-5 border-2 border-slate-200 bg-white shadow-sm">
       <div className="space-y-3">
-        <div className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2"><div><p className="text-sm text-slate-200">Show TINDA POS App Name</p><p className="text-xs text-slate-500">Turn this off to remove TINDA POS from the receipt heading.</p></div><Toggle on={f.receipt_show_app_name} onClick={() => set({receipt_show_app_name: !f.receipt_show_app_name})}/></div>
+        <div className="flex items-center justify-between rounded-xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5"><div><p className="text-sm font-bold text-slate-900">Show TINDA POS App Name</p><p className="text-xs font-medium text-slate-500">Turn this off to remove TINDA POS from the receipt heading.</p></div><Toggle on={f.receipt_show_app_name} onClick={() => set({receipt_show_app_name: !f.receipt_show_app_name})}/></div>
         <div><label className="label">Receipt Title</label><input value={f.receipt_title} onChange={e=>set({receipt_title:e.target.value})} placeholder="JUAN STORE" className="input w-full"/></div>
         <div><label className="label">Receipt Header (shown on top)</label><textarea value={f.receipt_header} onChange={(e) => set({ receipt_header: e.target.value })} rows={2} className="input w-full" /></div>
         <div><label className="label">Receipt Footer (message at bottom)</label><textarea value={f.receipt_footer} onChange={(e) => set({ receipt_footer: e.target.value })} rows={2} className="input w-full" /></div>
@@ -622,43 +1247,43 @@ function ReceiptSettingsTab(): React.JSX.Element {
             <button
                type="button"
                onClick={() => set({ receipt_printer: '' })}
-               className={`flex text-left flex-col items-start rounded-lg border p-3 transition ${!f.receipt_printer ? 'border-brand-500 bg-brand-500/10' : 'border-ink-line bg-ink-850 hover:bg-ink-800'}`}
+               className={`flex text-left flex-col items-start rounded-xl border-2 p-3 transition shadow-xs ${!f.receipt_printer ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800'}`}
             >
-              <span className={`font-semibold ${!f.receipt_printer ? 'text-brand-300' : 'text-slate-300'}`}>None</span>
-              <span className="text-xs text-slate-500 mt-0.5">Disable receipt printing</span>
+              <span className={`font-bold ${!f.receipt_printer ? 'text-emerald-700' : 'text-slate-900'}`}>None</span>
+              <span className="text-xs text-slate-500 mt-0.5 font-medium">Disable receipt printing</span>
             </button>
             {printers.map(p => (
                <button
                  key={p.name}
                  type="button"
                  onClick={() => set({ receipt_printer: p.name })}
-                 className={`flex text-left flex-col items-start rounded-lg border p-3 transition ${f.receipt_printer === p.name ? 'border-brand-500 bg-brand-500/10' : 'border-ink-line bg-ink-850 hover:bg-ink-800'}`}
+                 className={`flex text-left flex-col items-start rounded-xl border-2 p-3 transition shadow-xs ${f.receipt_printer === p.name ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800'}`}
                >
-                 <span className={`font-semibold line-clamp-1 ${f.receipt_printer === p.name ? 'text-brand-300' : 'text-slate-300'}`}>{p.displayName}</span>
-                 <span className="text-xs text-slate-500 mt-0.5">{p.isDefault ? 'System Default' : p.name}</span>
+                 <span className={`font-bold line-clamp-1 ${f.receipt_printer === p.name ? 'text-emerald-700' : 'text-slate-900'}`}>{p.displayName}</span>
+                 <span className="text-xs text-slate-500 mt-0.5 font-medium">{p.isDefault ? 'System Default' : p.name}</span>
                </button>
             ))}
             {pick.status === 'UNAVAILABLE' && (
-               <button type="button" className="flex text-left flex-col items-start rounded-lg border border-brand-500 bg-brand-500/10 p-3">
-                 <span className="font-semibold text-brand-300 line-clamp-1">{pick.name}</span>
-                 <span className="text-xs text-amber-400 mt-0.5">Currently unavailable</span>
+               <button type="button" className="flex text-left flex-col items-start rounded-xl border-2 border-amber-400 bg-amber-50 p-3 shadow-xs">
+                 <span className="font-bold text-amber-900 line-clamp-1">{pick.name}</span>
+                 <span className="text-xs text-amber-700 mt-0.5 font-semibold">Currently unavailable</span>
                </button>
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink-line px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5">
           <div>
-            <p className="text-sm text-slate-200">Status: <span className={`font-semibold ${pick.status === 'READY' ? 'text-emerald-400' : pick.status === 'UNAVAILABLE' ? 'text-amber-400' : 'text-slate-400'}`}>{printerStatusLabel(pick.status)}</span></p>
-            <p className="text-xs text-slate-500">Ready when selected printer is paired or available.</p>
+            <p className="text-sm font-bold text-slate-900">Status: <span className={`font-black ${pick.status === 'READY' ? 'text-emerald-700' : pick.status === 'UNAVAILABLE' ? 'text-amber-700' : 'text-slate-600'}`}>{printerStatusLabel(pick.status)}</span></p>
+            <p className="text-xs font-medium text-slate-500">Ready when selected printer is paired or available.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => void window.api.printer.openBluetoothSettings?.()} className="btn-ghost flex items-center gap-1.5 text-xs text-brand-300"><Bluetooth className="h-3.5 w-3.5" /> Pair Bluetooth</button>
-            <button type="button" onClick={() => void loadPrinters()} disabled={refreshing} className="btn-ghost flex items-center gap-1.5 text-xs">{refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Refresh</button>
+            <button type="button" onClick={() => void window.api.printer.openBluetoothSettings?.()} className="btn-ghost flex items-center gap-1.5 text-xs font-bold text-emerald-700 border-2 border-slate-200 bg-white"><Bluetooth className="h-3.5 w-3.5" /> Pair Bluetooth</button>
+            <button type="button" onClick={() => void loadPrinters()} disabled={refreshing} className="btn-ghost flex items-center gap-1.5 text-xs font-bold text-slate-800 border-2 border-slate-200 bg-white">{refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Refresh</button>
           </div>
         </div>
-        {pick.status === 'UNAVAILABLE' && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">Selected receipt printer is unavailable: <span className="font-mono">{pick.name}</span>. Check if Bluetooth is turned on and paired, then press Refresh. Sales are never blocked or rolled back.</p>}
-        {pick.status === 'NOT_CONFIGURED' && printers.length === 0 && <p className="rounded-lg border border-ink-line bg-ink-900 px-3 py-2 text-xs text-slate-400">No receipt printer configured. Select Android System Print (WiFi / PDF) or pair a Bluetooth thermal receipt printer (58mm/80mm), then press Refresh.</p>}
-        <div className="flex items-center justify-between rounded-lg border border-ink-line px-3 py-2"><div><p className="text-sm text-slate-200">Auto Print After Sale</p><p className="text-xs text-slate-500">One silent print job, sent immediately after the sale commits.</p></div><Toggle on={f.auto_print_after_sale} onClick={() => set({ auto_print_after_sale: !f.auto_print_after_sale })} /></div>
+        {pick.status === 'UNAVAILABLE' && <p className="rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">Selected receipt printer is unavailable: <span className="font-mono">{pick.name}</span>. Check if Bluetooth is turned on and paired, then press Refresh. Sales are never blocked or rolled back.</p>}
+        {pick.status === 'NOT_CONFIGURED' && printers.length === 0 && <p className="rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600">No receipt printer configured. Select Android System Print (WiFi / PDF) or pair a Bluetooth thermal receipt printer (58mm/80mm), then press Refresh.</p>}
+        <div className="flex items-center justify-between rounded-xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5"><div><p className="text-sm font-bold text-slate-900">Auto Print After Sale</p><p className="text-xs font-medium text-slate-500">One silent print job, sent immediately after the sale commits.</p></div><Toggle on={f.auto_print_after_sale} onClick={() => set({ auto_print_after_sale: !f.auto_print_after_sale })} /></div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Paper Width</label>
@@ -749,32 +1374,32 @@ function UsersTab(): React.JSX.Element {
       </div>
       <div className="grid grid-cols-1 gap-3 md:hidden">
          {users.map(u => (
-            <div key={u.id} className="card p-4 flex flex-col gap-2">
+            <div key={u.id} className="card border-2 border-slate-200 bg-white p-4 flex flex-col gap-2 shadow-sm">
                <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-bold text-white">{u.full_name}</p>
-                    <p className="text-sm text-slate-400">@{u.username}</p>
+                    <p className="font-black text-slate-950">{u.full_name}</p>
+                    <p className="text-sm font-semibold text-slate-600">@{u.username}</p>
                   </div>
-                  <div><span className={`badge ${u.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></div>
+                  <div><span className={`badge border ${u.is_active ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold' : 'bg-slate-100 text-slate-700 border-slate-300 font-bold'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></div>
                </div>
-               <p className="text-xs text-slate-500 uppercase tracking-wide">{u.roles.join(', ')}</p>
+               <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">{u.roles.join(', ')}</p>
                <div className="flex justify-end gap-2 mt-2">
-                  <button onClick={() => setEditing({ id: u.id, username: u.username, password: '', pin: '', full_name: u.full_name, roles: u.roles })} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="Edit"><Pencil className="h-4 w-4" /></button>
-                  <button onClick={() => setResetPin({ id: u.id, full_name: u.full_name })} className="btn-ghost-2 h-10 w-10 p-0 flex items-center justify-center rounded-lg" title="Reset PIN"><KeyRound className="h-4 w-4" /></button>
+                  <button onClick={() => setEditing({ id: u.id, username: u.username, password: '', pin: '', full_name: u.full_name, roles: u.roles })} className="btn-secondary border-2 border-slate-200 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-slate-800" title="Edit"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => setResetPin({ id: u.id, full_name: u.full_name })} className="btn-secondary border-2 border-slate-200 h-10 w-10 p-0 flex items-center justify-center rounded-lg text-slate-800" title="Reset PIN"><KeyRound className="h-4 w-4" /></button>
                </div>
             </div>
          ))}
       </div>
-      <div className="hidden md:block card overflow-hidden">
+      <div className="hidden md:block card border-2 border-slate-200 bg-white overflow-hidden shadow-sm">
         <table className="table">
           <thead><tr><th>User</th><th>Username</th><th>Roles</th><th>Status</th><th className="w-28 text-right">Actions</th></tr></thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
-                <td className="font-medium text-slate-200">{u.full_name}</td>
-                <td className="text-slate-400">{u.username}</td>
-                <td className="text-slate-300">{u.roles.join(', ')}</td>
-                <td><span className={`badge ${u.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-500/10 text-slate-400 border-slate-500/30'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td className="font-black text-slate-950">{u.full_name}</td>
+                <td className="text-slate-600 font-semibold">{u.username}</td>
+                <td className="text-slate-800 font-bold">{u.roles.join(', ')}</td>
+                <td><span className={`badge border ${u.is_active ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold' : 'bg-slate-100 text-slate-700 border-slate-300 font-bold'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
                 <td className="text-right">
                   <div className="flex justify-end gap-1">
                     <button onClick={() => setEditing({ id: u.id, username: u.username, password: '', pin: '', full_name: u.full_name, roles: u.roles })} className="btn-ghost-2 h-9 w-9 p-0 flex items-center justify-center rounded-lg" title="Edit"><Pencil className="h-4 w-4" /></button>

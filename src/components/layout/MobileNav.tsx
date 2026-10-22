@@ -5,6 +5,7 @@ import { useAuth } from '../../stores/auth'
 import { useSettings } from '../../stores/settings'
 import { hasPermission } from '@shared/roles'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
+import { useLicenseStore } from '../../stores/license'
 
 const SECONDARY: PageKey[] = ['customers', 'utang', 'expenses', 'suppliers', 'transactions', 'backup', 'settings']
 
@@ -19,6 +20,8 @@ const ITEMS: { key: PageKey; label: string; icon: React.ReactNode; permission?: 
 export function MobileTopBar(): React.JSX.Element {
   const { user } = useAuth()
   const { settings } = useSettings()
+  const { status: license } = useLicenseStore()
+  const { setPage } = useNav()
   const online = useOnlineStatus()
 
   return (
@@ -28,12 +31,32 @@ export function MobileTopBar(): React.JSX.Element {
         <img
           src={tindaIcon}
           alt="TINDA POS"
-          className="h-10 w-10 shrink-0 rounded-xl object-contain shadow-sm active:scale-95 transition"
+          onClick={() => setPage('license')}
+          className="h-10 w-10 shrink-0 rounded-xl object-contain shadow-sm active:scale-95 transition cursor-pointer"
         />
         <div className="min-w-0">
-          <h1 className="truncate text-base font-black leading-tight text-slate-900 tracking-tight">
-            {settings?.store_name ?? 'TINDA POS'}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-base font-black leading-tight text-slate-900 tracking-tight">
+              {settings?.store_name ?? 'TINDA POS'}
+            </h1>
+            {license?.isVip ? (
+              <button
+                onClick={() => setPage('license')}
+                className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-black text-white shadow-xs ${
+                  license.isDemo ? 'bg-amber-600' : 'bg-emerald-600'
+                }`}
+              >
+                {license.isDemo ? 'DEMO' : 'VIP PRO'}
+              </button>
+            ) : (
+              <button
+                onClick={() => setPage('license')}
+                className="shrink-0 inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-600"
+              >
+                FREE
+              </button>
+            )}
+          </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
             <span className="font-semibold text-slate-700">
               {user?.full_name ? user.full_name : 'Manager'}

@@ -72,11 +72,11 @@ export function TouchNumpad({ value, totalPesos, onChange }: TouchNumpadProps): 
   return (
     <div className="flex flex-col gap-1.5 select-none">
       {/* Quick Denominations */}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
           onClick={setExact}
-          className="flex-1 min-w-[65px] rounded-lg border border-brand-500/40 bg-brand-500/10 px-2 py-1 text-xs font-bold text-brand-300 hover:bg-brand-500/20 active:scale-95 transition"
+          className="flex-1 min-w-[75px] rounded-xl border-2 border-emerald-600 bg-emerald-50 px-2 py-1.5 text-xs font-black text-emerald-900 hover:bg-emerald-100 active:scale-95 transition shadow-xs"
         >
           Exact ₱{totalPesos}
         </button>
@@ -85,22 +85,26 @@ export function TouchNumpad({ value, totalPesos, onChange }: TouchNumpadProps): 
             key={b}
             type="button"
             onClick={() => setAmount(b)}
-            className={`rounded-lg border px-2 py-1 text-xs font-bold transition active:scale-95 ${b >= totalPesos ? 'border-ink-line bg-ink-900 text-white hover:border-brand-500/50' : 'border-ink-line/50 bg-ink-950/60 text-slate-500 hover:text-slate-300'}`}
+            className={`rounded-xl border px-2.5 py-1.5 text-xs font-black transition active:scale-95 shadow-xs ${
+              b >= totalPesos
+                ? 'border-slate-300 bg-white text-slate-950 hover:border-emerald-500 hover:bg-emerald-50/50'
+                : 'border-slate-200 bg-slate-100 text-slate-500'
+            }`}
           >
             ₱{b}
           </button>
         ))}
       </div>
 
-      {/* Additive Quick Chips (+₱20, +₱50, +₱100) */}
-      <div className="flex gap-1">
-        <span className="self-center text-[10px] font-semibold uppercase text-slate-500">Add:</span>
+      {/* Additive Quick Chips (+₱20, +₱50, +₱100, +₱500) */}
+      <div className="flex items-center gap-1.5 pt-0.5">
+        <span className="self-center text-[10px] font-black uppercase tracking-wider text-slate-700">Add:</span>
         {[20, 50, 100, 500].map((add) => (
           <button
             key={add}
             type="button"
             onClick={() => addAmount(add)}
-            className="flex-1 rounded-md border border-ink-line/80 bg-ink-900/60 py-0.5 text-xs font-semibold text-slate-300 hover:bg-ink-800 active:scale-95 transition"
+            className="flex-1 rounded-lg border border-slate-300 bg-white py-1 text-xs font-bold text-slate-800 hover:bg-slate-50 hover:border-emerald-500 active:scale-95 transition shadow-xs"
           >
             +{add}
           </button>
@@ -108,13 +112,13 @@ export function TouchNumpad({ value, totalPesos, onChange }: TouchNumpadProps): 
       </div>
 
       {/* Numeric Keypad Grid */}
-      <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+      <div className="grid grid-cols-3 gap-2 pt-1">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
           <button
             key={digit}
             type="button"
             onClick={() => handleKey(digit)}
-            className="flex h-10.5 items-center justify-center rounded-xl border border-ink-line bg-ink-900 text-xl font-bold text-white shadow-xs hover:bg-ink-800 active:scale-95 active:bg-brand-600 transition"
+            className="flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white text-2xl font-black text-slate-950 shadow-xs hover:bg-slate-50 hover:border-emerald-500 active:scale-95 active:bg-emerald-600 active:text-white transition"
           >
             {digit}
           </button>
@@ -124,16 +128,16 @@ export function TouchNumpad({ value, totalPesos, onChange }: TouchNumpadProps): 
         <button
           type="button"
           onClick={() => handleKey('CLEAR')}
-          className="flex h-10.5 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-bold text-red-300 hover:bg-red-500/20 active:scale-95 transition"
+          className="flex h-12 items-center justify-center rounded-xl border-2 border-rose-300 bg-rose-50 text-sm font-black text-rose-700 hover:bg-rose-100 active:scale-95 transition"
           title="Clear"
         >
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw className="h-5 w-5" />
         </button>
 
         <button
           type="button"
           onClick={() => handleKey('0')}
-          className="flex h-10.5 items-center justify-center rounded-xl border border-ink-line bg-ink-900 text-xl font-bold text-white shadow-xs hover:bg-ink-800 active:scale-95 active:bg-brand-600 transition"
+          className="flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white text-2xl font-black text-slate-950 shadow-xs hover:bg-slate-50 hover:border-emerald-500 active:scale-95 active:bg-emerald-600 active:text-white transition"
         >
           0
         </button>
@@ -141,10 +145,10 @@ export function TouchNumpad({ value, totalPesos, onChange }: TouchNumpadProps): 
         <button
           type="button"
           onClick={() => handleKey('BACKSPACE')}
-          className="flex h-10.5 items-center justify-center rounded-xl border border-ink-line bg-ink-900 text-white hover:bg-ink-800 active:scale-95 transition"
+          className="flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 hover:border-emerald-500 active:scale-95 transition shadow-xs"
           title="Backspace"
         >
-          <Delete className="h-4 w-4 text-slate-300" />
+          <Delete className="h-5 w-5 text-slate-800" />
         </button>
       </div>
     </div>

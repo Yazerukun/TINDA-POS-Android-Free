@@ -18,14 +18,14 @@ export function ToastHost(): React.JSX.Element {
         return (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-start gap-3 rounded-lg border bg-ink-800/95 p-3 shadow-pop backdrop-blur ${k.ring}`}
+            className={`pointer-events-auto flex items-start gap-3 rounded-xl border bg-slate-900 p-3.5 shadow-2xl backdrop-blur ${k.ring}`}
           >
             <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${k.accent}`} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white">{t.title}</p>
-              {t.message && <p className="mt-0.5 text-xs text-slate-300">{t.message}</p>}
+              <p className="text-sm font-bold text-white">{t.title}</p>
+              {t.message && <p className="mt-0.5 text-xs font-medium text-slate-300 leading-relaxed">{t.message}</p>}
             </div>
-            <button onClick={() => dismiss(t.id)} className="text-slate-500 hover:text-slate-200">
+            <button onClick={() => dismiss(t.id)} className="text-slate-400 hover:text-white p-0.5">
               <X className="h-4 w-4" />
             </button>
           </div>

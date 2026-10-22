@@ -66,13 +66,13 @@ export function FirstRun(): React.JSX.Element {
           {steps.map((s, i) => (
             <div key={i} className="flex flex-1 flex-col items-center gap-1">
               <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${
-                  i < step ? 'border-emerald-500 bg-emerald-500 text-white' : i === step ? 'border-brand-500 bg-brand-500/15 text-brand-400' : 'border-ink-line bg-ink-800 text-slate-500'
+                className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition ${
+                  i < step ? 'border-emerald-600 bg-emerald-600 text-white' : i === step ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold' : 'border-slate-200 bg-slate-100 text-slate-500'
                 }`}
               >
                 {i < step ? <Check className="h-4 w-4" /> : s.icon}
               </div>
-              <span className={`text-center text-[10px] font-semibold ${i === step ? 'text-brand-400' : 'text-slate-500'}`}>{s.title}</span>
+              <span className={`text-center text-[10px] font-bold ${i === step ? 'text-emerald-800' : 'text-slate-500'}`}>{s.title}</span>
             </div>
           ))}
         </div>
@@ -103,12 +103,12 @@ export function FirstRun(): React.JSX.Element {
               <Input label="Receipt Footer" value={receipt.footer} onChange={(v) => setReceipt({ ...receipt, footer: v })} />
               <button
                 onClick={() => setLoadDemo(!loadDemo)}
-                className="flex w-full items-center justify-between rounded-lg border border-ink-line px-3 py-2.5 text-left"
+                className="flex w-full items-center justify-between rounded-xl border-2 border-slate-200 bg-white px-3.5 py-3 text-left shadow-2xs"
               >
-                <span className="flex items-center gap-2 text-sm text-slate-200"><Database className="h-4 w-4 text-brand-400" /> Load sample data</span>
-                <span className={`h-6 w-11 rounded-full transition ${loadDemo ? 'bg-brand-600' : 'bg-ink-700'}`}><span className={`block h-5 w-5 rounded-full bg-white transition ${loadDemo ? 'translate-x-5' : 'translate-x-0.5'}`} /></span>
+                <span className="flex items-center gap-2 text-sm font-bold text-slate-950"><Database className="h-4 w-4 text-emerald-600" /> Load sample data</span>
+                <span className={`h-6 w-11 rounded-full transition ${loadDemo ? 'bg-emerald-600' : 'bg-slate-300'}`}><span className={`block h-5 w-5 rounded-full bg-white transition ${loadDemo ? 'translate-x-5' : 'translate-x-0.5'}`} /></span>
               </button>
-              <p className="text-xs text-slate-500">Sample data adds ~18 common sari-sari items so you can try the POS immediately.</p>
+              <p className="text-xs text-slate-500 font-medium">Sample data adds ~18 common sari-sari items so you can try the POS immediately.</p>
             </div>
           )}
         </div>
